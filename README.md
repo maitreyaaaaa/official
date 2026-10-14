@@ -47,7 +47,7 @@ Useful local endpoints:
 - `GET /api/campaigns/campaign-csv-launch/review` reads campaign data and returns findings. It does not seed or mutate the graph.
 - `POST /api/campaigns/campaign-csv-launch/fixture` initializes the sample only when local development, the fixture opt-in, loopback database, loopback caller, and same-origin checks pass.
 
-Compose binds FalkorDB ports to loopback. `.env.example` uses the local graph name `official`. Remote FalkorDB connections require `FALKORDB_TLS=true`; keep credentials in `.env` and never expose them to the client.
+Compose pins FalkorDB 6.0.2, runs a Redis health check, and binds its ports to loopback. `.env.example` uses the local graph name `official`. Remote FalkorDB connections require `FALKORDB_TLS=true`; keep credentials in `.env` and never expose them to the client.
 
 ## Checks
 
