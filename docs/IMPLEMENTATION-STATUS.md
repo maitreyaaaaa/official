@@ -5,6 +5,7 @@ This page separates verified repository work from behavior that still needs a li
 ## Implemented
 
 - Created the public Track 1 repository `maitreyaaaaa/official` and its initial project structure.
+- Published the initial implementation to the repository's `main` branch.
 - Added the React/Vite workspace, TypeScript/Express development server, shared finding types, and local FalkorDB client.
 - Added a synthetic CSV launch graph fixture with retryable idempotent seeding and the S4 rollout transition.
 - Added fixed parameterized Cypher reads for campaigns, direct/reused promises, current deployments, rollouts, tests, and sources.
@@ -17,7 +18,7 @@ This page separates verified repository work from behavior that still needs a li
 
 ## Verified checks
 
-- `npm test`: 14/14 deterministic tests pass, including initial fixture outcomes, S4 transition, source freshness/absence, conflicting facts, request guards, and interrupted seed retry.
+- `npm test`: 16/16 deterministic tests pass, including initial fixture outcomes, S4 transition, source freshness/absence, conflicting facts, request guards, and interrupted seed retry.
 - `npm run build`: TypeScript check and Vite production build pass.
 - `npm audit --audit-level=moderate`: 0 vulnerabilities reported.
 - The rendered unavailable-graph state was inspected at desktop and 320px widths. Mobile navigation and the help panel are reachable at 320px; no horizontal overflow appeared in the rendered viewport.
@@ -27,8 +28,6 @@ This page separates verified repository work from behavior that still needs a li
 ## Still needs verification
 
 - Start the pinned FalkorDB Compose service and verify `/api/health`, fixture initialization, initial findings, and the S4 transition against the live graph. Docker is not installed in the current environment, and port 6379 has no listener.
-- The initial implementation is published on the public repository's `main` branch.
-- Publish the current implementation changes to the public repository after final local review; the current working tree may be ahead of GitHub.
 
 ## Not implemented
 
