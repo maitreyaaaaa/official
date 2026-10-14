@@ -28,6 +28,8 @@ async function loadCampaign(): Promise<CampaignReview> {
   return payload as CampaignReview;
 }
 
+class DemoActionUnavailableError extends Error {}
+
 async function simulateRolloutExpansion(): Promise<CampaignReview> {
   const response = await fetch(`/api/campaigns/${campaignId}/demo-rollout`, { method: 'POST' });
   const payload: unknown = await response.json();
@@ -35,9 +37,17 @@ async function simulateRolloutExpansion(): Promise<CampaignReview> {
     const message = typeof payload === 'object' && payload !== null && 'error' in payload
       ? String(payload.error)
       : 'The demo rollout could not be updated.';
+    if (response.status === 404) throw new DemoActionUnavailableError(message);
     throw new Error(message);
   }
   return payload as CampaignReview;
+}
+
+async function readDemoRolloutAvailability(): Promise<boolean> {
+  const response = await fetch('/api/capabilities');
+  if (!response.ok) return false;
+  const payload: unknown = await response.json().catch(() => null);
+  return typeof payload === 'object' && payload !== null && 'demoRollout' in payload && payload.demoRollout === true;
 }
 
 function StatusPill({ status, decorative = false }: { status: FindingStatus; decorative?: boolean }) {
@@ -63,10 +73,11 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
+  const [demoRolloutAvailable, setDemoRolloutAvailable] = useState(false);
   const [showPath, setShowPath] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [scenarioMessage, setScenarioMessage] = useState<string | null>(null);
-  const [scenarioError, setScenarioError] = useState<string | null>(null);
+  const [scenarioError, setScenarioError] = useState<{ message: string; actionUnavailable: boolean } | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -104,13 +115,23 @@ export function App() {
       setSelectedId(result.findings.find((item) => item.needsReview)?.draftId ?? result.findings[0]?.draftId ?? null);
       setScenarioMessage('Synthetic rollout S4 now includes all accounts. Findings were rechecked; no drafts were changed.');
     } catch (cause) {
-      setScenarioError(cause instanceof Error ? cause.message : 'The demo rollout result could not be confirmed.');
+      setScenarioError({
+        message: cause instanceof Error ? cause.message : 'The demo rollout result could not be confirmed.',
+        actionUnavailable: cause instanceof DemoActionUnavailableError,
+      });
     } finally {
       setSimulating(false);
     }
   };
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    if (import.meta.env.DEV) {
+      void readDemoRolloutAvailability()
+        .then(setDemoRolloutAvailable)
+        .catch(() => setDemoRolloutAvailable(false));
+    }
+  }, [refresh]);
 
   const counts = useMemo(() => {
     const values = review?.findings ?? [];
@@ -148,7 +169,7 @@ export function App() {
       <main className="main-content" id="overview">
         <header className="topbar">
           <div className="breadcrumb"><span>Workspace</span><span className="slash">/</span><strong>Overview</strong></div>
-          <div className="topbar-actions"><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label="How campaign checks work" hidden={!showHelp}><strong>How to read a check</strong><p><b>Supported</b> means fresh reviewed rollout and test records back the promise for its named audience.</p><p><b>Contradicted</b> means a reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks are read-only; the demo control updates only the fictional local graph.</p></section></div><div className="avatar small" aria-hidden="true">O</div></div>
+          <div className="topbar-actions"><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label="How campaign checks work" hidden={!showHelp}><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks are read-only; the demo control updates only the fictional local graph when local demo writes are enabled.</p></section></div><div className="avatar small" aria-hidden="true">O</div></div>
         </header>
         <nav className="mobile-nav" aria-label="Main navigation">
           <a href="#overview"><span aria-hidden="true">◫</span>Overview</a>
@@ -158,12 +179,12 @@ export function App() {
 
         <section className="page-heading">
           <div><div className="eyebrow">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date()).toUpperCase()}</div><h1>Your launch workspace</h1><p className="subheading">The details behind each promise, in one place.</p></div>
-          <div className="heading-actions"><button className="secondary-button scenario-button" title="Updates only the local fictional graph fixture" onClick={() => void runRolloutScenario()} disabled={!import.meta.env.DEV || !review || loading || simulating}>{simulating ? 'Updating scenario…' : 'Simulate all-account rollout'}<span>↗</span></button><button className="primary-button" onClick={() => void refresh()} disabled={loading || simulating}><span className="button-spark">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
+          <div className="heading-actions"><button className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Updates only the local fictional graph fixture' : 'Enable local demo writes in the server settings'} onClick={() => void runRolloutScenario()} disabled={!import.meta.env.DEV || !demoRolloutAvailable || !review || loading || simulating}>{simulating ? 'Updating scenario…' : 'Simulate all-account rollout'}<span aria-hidden="true">↗</span></button><button className="primary-button" onClick={() => void refresh()} disabled={loading || simulating}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
         </section>
 
-        {error && <section className="connection-alert" role="alert"><div className="alert-icon">!</div><div><strong>Campaign check unavailable</strong><p>{error} Make sure FalkorDB is running, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh()}>Retry</button></section>}
+        {error && <section className="connection-alert" role="alert"><div className="alert-icon" aria-hidden="true">!</div><div><strong>{error.toLowerCase().includes('campaign not found') ? 'Campaign data unavailable' : 'Campaign check unavailable'}</strong><p>{error} Check that FalkorDB is reachable and the campaign data is loaded, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh()}>Retry</button></section>}
         {scenarioMessage && <section className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{scenarioMessage}</section>}
-        {scenarioError && <section className="scenario-alert scenario-alert-error" role="alert"><strong>Scenario result unconfirmed.</strong> {scenarioError} Earlier findings were cleared; run a fresh campaign check before relying on a result.</section>}
+        {scenarioError && <section className="scenario-alert scenario-alert-error" role="alert"><strong>{scenarioError.actionUnavailable ? 'Demo action unavailable.' : 'Scenario result unconfirmed.'}</strong> {scenarioError.message} {scenarioError.actionUnavailable ? 'The server rejected the request before any graph write. Refresh findings before relying on them.' : 'Earlier findings were cleared; run a fresh campaign check before relying on a result.'}</section>}
 
         <section className="campaign-banner" id="campaign">
           <div className="campaign-symbol"><span>✳</span></div>
@@ -174,13 +195,13 @@ export function App() {
 
         <section className="stats-row" aria-label="Campaign summary">
           <div className="stat-card stat-attention"><div className="stat-top"><span className="stat-icon">!</span><span className="stat-label">NEEDS ATTENTION</span><span className="stat-arrow">↗</span></div><div className="stat-value">{review ? counts.attention : '—'}<span>{review ? ' drafts' : ''}</span></div><div className="stat-note">{review ? 'Review before sharing' : 'Connect to check'}</div></div>
-          <div className="stat-card"><div className="stat-top"><span className="stat-icon supported-icon">✓</span><span className="stat-label">SUPPORTED</span></div><div className="stat-value">{review ? counts.supported : '—'}<span>{review ? ' promise' : ''}</span></div><div className="stat-note">{review ? 'Backed by current records' : 'No current result yet'}</div></div>
-          <div className="stat-card"><div className="stat-top"><span className="stat-icon unchecked-icon">○</span><span className="stat-label">NOT CHECKED</span></div><div className="stat-value">{review ? counts.unchecked : '—'}<span>{review ? ' draft' : ''}</span></div><div className="stat-note">{review ? 'No CSV export promise linked' : 'Awaiting graph check'}</div></div>
+          <div className="stat-card"><div className="stat-top"><span className="stat-icon supported-icon" aria-hidden="true">✓</span><span className="stat-label">SUPPORTED</span></div><div className="stat-value">{review ? counts.supported : '—'}<span>{review ? ' ' + (counts.supported === 1 ? 'draft' : 'drafts') : ''}</span></div><div className="stat-note">{review ? 'Backed by current records' : 'No current result yet'}</div></div>
+          <div className="stat-card"><div className="stat-top"><span className="stat-icon unchecked-icon" aria-hidden="true">○</span><span className="stat-label">NOT CHECKED</span></div><div className="stat-value">{review ? counts.unchecked : '—'}<span>{review ? ' ' + (counts.unchecked === 1 ? 'draft' : 'drafts') : ''}</span></div><div className="stat-note">{review ? 'No CSV export promise linked' : 'Awaiting graph check'}</div></div>
         </section>
 
         <div className="content-grid">
           <section className="drafts-panel" id="drafts">
-            <div className="section-heading"><div><div className="eyebrow">CAMPAIGN REVIEW</div><h2>Drafts and promises</h2></div><span className="filter-button" aria-label="Showing all drafts">All drafts <span aria-hidden="true">⌄</span></span></div>
+            <div className="section-heading"><div><div className="eyebrow">CAMPAIGN REVIEW</div><h2>Drafts and promises</h2></div><span className="filter-button">All drafts</span></div>
             <div className="draft-list">
               {(review?.findings ?? []).map((finding) => (
                 <button className={`draft-row ${finding.draftId === selectedId ? 'selected' : ''}`} key={finding.draftId} aria-label={`${finding.title}, ${finding.kind}, ${finding.status}`} aria-pressed={finding.draftId === selectedId} aria-controls="draft-details" onClick={() => setSelectedId(finding.draftId)}>
@@ -199,7 +220,8 @@ export function App() {
             <section className="detail-card" id="draft-details" aria-live="polite">
               <div className="detail-card-heading"><div><div className="eyebrow">{selected?.status === 'Supported' ? 'WHY THIS IS SUPPORTED' : selected?.status === 'Contradicted' ? 'WHY IT NEEDS ATTENTION' : selected?.status === 'Unknown' ? 'WHY IT NEEDS REVIEW' : 'DRAFT CHECK'}</div><h2>{selected?.title ?? (review?.findings.length === 0 ? 'No drafts yet' : 'Select a draft')}</h2></div>{selected && <StatusPill status={selected.status} />}</div>
               {selected ? <>
-                <div className="detail-promise"><span className="quote-mark">“</span><div><span className="micro-label">DRAFT PROMISE</span><p>{selected.text}</p>{selected.wordingSourceTitle && <p className="wording-source">Reuses wording from {selected.wordingSourceTitle}</p>}</div></div>
+                <div className="detail-claim"><span className="micro-label">DRAFT COPY</span><p className="claim-text">{selected.text || 'No draft copy was recorded.'}</p>{selected.wordingSourceTitle && <p className="wording-source">Reuses wording from {selected.wordingSourceTitle}</p>}</div>
+                <div className="detail-claim linked-promise"><span className="micro-label">LINKED PROMISE BEING CHECKED</span><p className="claim-text">{selected.promiseText ?? (selected.status === 'Not checked' ? 'No promise is linked to this draft.' : 'No readable promise text is available for this linked path.')}</p>{selected.promiseText && <p className="claim-context">Checked for {selected.audienceName || 'an unspecified audience'}{selected.featureName ? ' · ' + selected.featureName : ''}</p>}</div>
                 <p className="detail-reason">{selected.reason}</p>
                 <div className="trail-heading"><span>Evidence trail</span><span className="live-label"><i /> FROM FALKORDB</span></div>
                 <div className="evidence-list">

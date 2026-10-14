@@ -32,6 +32,10 @@ export function canSeedFixture(config: LocalDemoConfig): boolean {
   return isLocalFixtureConfig(config) && config.seedFixture === 'true';
 }
 
+export function canEnableDemoRollout(config: LocalDemoConfig): boolean {
+  return canSeedFixture(config) && config.enableDemoWrites === 'true';
+}
+
 function isSameLocalOrigin(config: LocalDemoConfig, request: DemoRequestContext): boolean {
   const port = config.port ?? 3001;
   return request.origin === `http://127.0.0.1:${port}` || request.origin === `http://localhost:${port}`;
@@ -48,7 +52,7 @@ export function isSecureGraphEndpoint(host: string | undefined, tlsEnabled: bool
 }
 
 export function canWriteDemo(config: LocalDemoConfig, request: DemoRequestContext): boolean {
-  if (!canSeedFixture(config) || config.enableDemoWrites !== 'true' || !isLoopbackAddress(request.remoteAddress)) {
+  if (!canEnableDemoRollout(config) || !isLoopbackAddress(request.remoteAddress)) {
     return false;
   }
 

@@ -15,7 +15,7 @@ interface FixtureData {
 
 const fixturePath = fileURLToPath(new URL('../../../data/fixtures/csv-launch.json', import.meta.url));
 const allowedLabels = ['Campaign', 'Draft', 'Promise', 'Feature', 'Audience', 'Deployment', 'Rollout', 'Test', 'Source'] as const;
-const fixtureVersion = 'csv-launch-v1';
+const fixtureVersion = 'csv-launch-v2';
 let seedInProgress: Promise<void> | undefined;
 
 const edgeQueries: Record<string, { from: string; to: string }> = {
@@ -34,9 +34,17 @@ const edgeQueries: Record<string, { from: string; to: string }> = {
 
 export async function seedFixture(graph: Graph): Promise<void> {
   const fixture = JSON.parse(await readFile(fixturePath, 'utf8')) as FixtureData;
+  const observedAt = new Date().toISOString();
+
+  await graph.query(
+    'MATCH (rollout:Rollout {id: $rolloutId}) SET rollout.current = false',
+    { params: { rolloutId: 'rollout-all-accounts' } },
+  );
 
   for (const label of allowedLabels) {
-    const records = fixture.nodes[label] ?? [];
+    const records = (fixture.nodes[label] ?? []).map((record) => (
+      Object.hasOwn(record, 'observedAt') ? { ...record, observedAt } : record
+    ));
     if (!records.length) continue;
     await graph.query(
       `UNWIND $records AS record MERGE (node:${label} {id: record.id}) SET node += record`,

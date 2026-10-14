@@ -2,9 +2,9 @@ import type { Graph } from 'falkordb';
 import type { CampaignReview, DraftFinding, EvidenceItem } from '../../shared/contracts.js';
 
 type Row = unknown[];
-interface DeploymentFact { id: string; revision: string; environment: string; includesFeature: boolean; reviewed: boolean; evidence: EvidenceItem[]; }
-interface RolloutFact { id: string; name: string; environment: string; reviewed: boolean; includedIds: string[]; excludedIds: string[]; evidence: EvidenceItem[]; }
-interface TestFact { id: string; revision: string; environment: string; passed: boolean; reviewed: boolean; evidence: EvidenceItem[]; }
+interface DeploymentFact { id: string; revision: string; environment: string; includesFeature: boolean; reviewed: boolean; evidence: EvidenceItem[]; conflicting: boolean; }
+interface RolloutFact { id: string; name: string; environment: string; reviewed: boolean; includedIds: string[]; excludedIds: string[]; evidence: EvidenceItem[]; conflicting: boolean; }
+interface TestFact { id: string; revision: string; environment: string; passed: boolean; reviewed: boolean; evidence: EvidenceItem[]; conflicting: boolean; }
 interface FeatureFacts { deployments: DeploymentFact[]; rollouts: RolloutFact[]; tests: TestFact[]; }
 
 const MAX_FACT_AGE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -25,7 +25,7 @@ OPTIONAL MATCH (promise)-[:TARGETS]->(audience:Audience)
 RETURN DISTINCT draft.id, draft.title, draft.kind, draft.text, draft.status,
        promise.id, promise.text, promise.reviewed,
        feature.id, feature.name, audience.id, audience.name, reusedDraft.id, reusedDraft.title,
-       directPromise.id IS NOT NULL, reusedPromise.id IS NOT NULL
+       directPromise IS NOT NULL, reusedPromise IS NOT NULL
 ORDER BY draft.position`;
 
 const deploymentQuery = `
@@ -71,7 +71,7 @@ function evidence(id: unknown, label: unknown, detail: unknown, kind: EvidenceIt
 }
 
 function evidenceFromRow(row: Row, offset: number, kind: EvidenceItem['kind']): EvidenceItem[] {
-  if (!asString(row[offset])) return [];
+  if (!asString(row[offset]).trim()) return [];
   return [{
     ...evidence(row[offset], row[offset + 1], row[offset + 2], kind),
     observedAt: asString(row[offset + 3]),
@@ -79,7 +79,21 @@ function evidenceFromRow(row: Row, offset: number, kind: EvidenceItem['kind']): 
   }];
 }
 
-function mergeFactSources<T extends { id: string; evidence: EvidenceItem[] }>(facts: T[]): T[] {
+function sameEvidence(left: EvidenceItem, right: EvidenceItem): boolean {
+  return left.label === right.label
+    && left.detail === right.detail
+    && left.observedAt === right.observedAt
+    && left.reviewedBy === right.reviewedBy;
+}
+
+function sameStringValues(left: string[], right: string[]): boolean {
+  return JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+}
+
+function mergeFactSources<T extends { id: string; evidence: EvidenceItem[]; conflicting: boolean }>(
+  facts: T[],
+  sameFact: (left: T, right: T) => boolean,
+): T[] {
   const byId = new Map<string, T>();
   let anonymousIndex = 0;
   for (const fact of facts) {
@@ -89,11 +103,15 @@ function mergeFactSources<T extends { id: string; evidence: EvidenceItem[] }>(fa
       byId.set(key, { ...fact, evidence: [...fact.evidence] });
       continue;
     }
-    const sourceIds = new Set(existing.evidence.map((item) => item.id));
+    if (!sameFact(existing, fact)) existing.conflicting = true;
+    const sourcesById = new Map(existing.evidence.map((item) => [item.id, item]));
     for (const source of fact.evidence) {
-      if (!sourceIds.has(source.id)) {
+      const existingSource = sourcesById.get(source.id);
+      if (!existingSource) {
         existing.evidence.push(source);
-        sourceIds.add(source.id);
+        sourcesById.set(source.id, source);
+      } else if (!sameEvidence(existingSource, source)) {
+        existing.conflicting = true;
       }
     }
   }
@@ -105,7 +123,9 @@ function hasFreshReviewedSource(sources: EvidenceItem[], checkedAt: Date): boole
   if (!Number.isFinite(now)) return false;
   return sources.some((source) => {
     const observedAt = Date.parse(source.observedAt);
-    return Boolean(source.id)
+    return Boolean(source.id.trim())
+      && Boolean(source.label.trim())
+      && Boolean(source.detail.trim())
       && Boolean(source.reviewedBy.trim())
       && Number.isFinite(observedAt)
       && observedAt <= now + ALLOWED_FUTURE_CLOCK_SKEW_MS
@@ -123,18 +143,28 @@ async function getFeatureFacts(graph: Graph, featureId: string): Promise<Feature
   const deployments = mergeFactSources(deploymentRows.map((row): DeploymentFact => ({
     id: asString(row[0]), revision: asString(row[1]), environment: asString(row[2]),
     includesFeature: asBoolean(row[3]), reviewed: asBoolean(row[4]),
-    evidence: evidenceFromRow(row, 5, 'deployment'),
-  })));
+    evidence: evidenceFromRow(row, 5, 'deployment'), conflicting: false,
+  })), (left, right) => left.revision === right.revision
+    && left.environment === right.environment
+    && left.includesFeature === right.includesFeature
+    && left.reviewed === right.reviewed);
   const rollouts = mergeFactSources(rolloutRows.map((row): RolloutFact => ({
     id: asString(row[0]), name: asString(row[1]), environment: asString(row[2]), reviewed: asBoolean(row[3]),
     includedIds: asStringArray(row[4]), excludedIds: asStringArray(row[5]),
-    evidence: evidenceFromRow(row, 6, 'rollout'),
-  })));
+    evidence: evidenceFromRow(row, 6, 'rollout'), conflicting: false,
+  })), (left, right) => left.name === right.name
+    && left.environment === right.environment
+    && left.reviewed === right.reviewed
+    && sameStringValues(left.includedIds, right.includedIds)
+    && sameStringValues(left.excludedIds, right.excludedIds));
   const tests = mergeFactSources(testRows.map((row): TestFact => ({
     id: asString(row[0]), revision: asString(row[1]), environment: asString(row[2]),
     passed: asBoolean(row[3]), reviewed: asBoolean(row[4]),
-    evidence: evidenceFromRow(row, 5, 'test'),
-  })));
+    evidence: evidenceFromRow(row, 5, 'test'), conflicting: false,
+  })), (left, right) => left.revision === right.revision
+    && left.environment === right.environment
+    && left.passed === right.passed
+    && left.reviewed === right.reviewed);
 
   return { deployments, rollouts, tests };
 }
@@ -156,6 +186,11 @@ function classifyPromise(
 
   if (!promiseReviewed) {
     return { status: 'Unknown', reason: 'This promise has not been reviewed by a person.', evidence: evidenceItems };
+  }
+
+  if ([...facts.deployments, ...facts.rollouts, ...facts.tests]
+    .some((fact) => fact.environment === environment && fact.conflicting)) {
+    return { status: 'Unknown', reason: 'Current graph facts with the same ID disagree about their data or source.', evidence: evidenceItems };
   }
 
   const currentRollouts = facts.rollouts.filter((fact) => fact.reviewed && fact.environment === environment);
@@ -264,7 +299,9 @@ export async function checkCampaign(graph: Graph, campaignId: string, checkedAt 
     const featureId = asString(row[8]);
     const audienceId = asString(row[10]);
     const audienceName = asString(row[11]);
-    const hasPromise = Boolean(promiseId);
+    const hasDirectPromise = asBoolean(row[14]);
+    const hasReusedPromise = asBoolean(row[15]);
+    const hasPromise = hasDirectPromise || hasReusedPromise;
 
     if (!hasPromise) {
       return {
@@ -274,7 +311,7 @@ export async function checkCampaign(graph: Graph, campaignId: string, checkedAt 
       };
     }
 
-    if (asBoolean(row[14]) && asBoolean(row[15])) {
+    if (hasDirectPromise && hasReusedPromise) {
       return {
         draftId, title: asString(row[1]), kind: asString(row[2]), text: asString(row[3]),
         promiseText: null, wordingSourceTitle: null, featureName: null, audienceName: null, status: 'Unknown',
@@ -287,6 +324,15 @@ export async function checkCampaign(graph: Graph, campaignId: string, checkedAt 
         draftId, title: asString(row[1]), kind: asString(row[2]), text: asString(row[3]),
         promiseText: null, wordingSourceTitle: null, featureName: null, audienceName: null, status: 'Unknown',
         reason: 'More than one promise or audience path is linked to this draft.', evidence: [], needsReview: true,
+      };
+    }
+
+    if (!promiseId.trim() || !asString(row[6]).trim()) {
+      return {
+        draftId, title: asString(row[1]), kind: asString(row[2]), text: asString(row[3]),
+        promiseText: asString(row[6]) || null, wordingSourceTitle: asString(row[13]) || null,
+        featureName: asString(row[9]) || null, audienceName: audienceName || null, status: 'Unknown',
+        reason: 'The linked promise is missing its stable ID or claim text.', evidence: [], needsReview: true,
       };
     }
 

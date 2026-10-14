@@ -4,7 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import { checkCampaign } from './checks/campaign.js';
 import { closeGraph, getGraph } from './graph/client.js';
 import { expandDemoRollout, seedFixtureIfMissing } from './graph/fixture.js';
-import { canInitializeFixture, canWriteDemo } from './config/guards.js';
+import { canEnableDemoRollout, canInitializeFixture, canWriteDemo } from './config/guards.js';
 
 const app = express();
 
@@ -28,6 +28,18 @@ function demoWritesEnabled(request: express.Request): boolean {
     port,
   }, { remoteAddress: request.socket.remoteAddress, origin: request.get('origin') });
 }
+
+app.get('/api/capabilities', (_request, response) => {
+  response.set('Cache-Control', 'no-store').json({
+    demoRollout: canEnableDemoRollout({
+      nodeEnv: process.env.NODE_ENV,
+      seedFixture: process.env.SEED_FIXTURE,
+      enableDemoWrites: process.env.ENABLE_DEMO_WRITES,
+      graph: process.env.FALKORDB_GRAPH,
+      falkordbHost: process.env.FALKORDB_HOST,
+    }),
+  });
+});
 
 function safeErrorDetails(error: unknown): { errorName: string; errorCode?: string } {
   const rawName = error instanceof Error ? error.name : 'UnknownError';

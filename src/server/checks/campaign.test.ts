@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { Graph } from 'falkordb';
 import { checkCampaign } from './campaign.js';
 import { seedFixtureIfMissing } from '../graph/fixture.js';
-import { canInitializeFixture, canSeedFixture, canWriteDemo, isLoopbackHost, isSecureGraphEndpoint } from '../config/guards.js';
+import { canEnableDemoRollout, canInitializeFixture, canSeedFixture, canWriteDemo, isLoopbackHost, isSecureGraphEndpoint } from '../config/guards.js';
 
 type Row = unknown[];
 
@@ -149,6 +149,35 @@ test('multiple promise paths for one draft are reported as Unknown', async () =>
   assert.equal(review.findings.length, 4);
 });
 
+test('a linked promise with a missing ID or claim text is Unknown', async () => {
+  const missingId = [...baseDraftRows[0]];
+  missingId[5] = '';
+  missingId[14] = true;
+  const missingText = [...baseDraftRows[0]];
+  missingText[6] = '   ';
+  const [missingIdReview, missingTextReview] = await Promise.all([
+    runCheck({ draftRows: [missingId, ...baseDraftRows.slice(1)] }),
+    runCheck({ draftRows: [missingText, ...baseDraftRows.slice(1)] }),
+  ]);
+
+  assert.equal(missingIdReview.findings[0].status, 'Unknown');
+  assert.match(missingIdReview.findings[0].reason, /missing its stable ID or claim text/);
+  assert.equal(missingTextReview.findings[0].status, 'Unknown');
+  assert.match(missingTextReview.findings[0].reason, /missing its stable ID or claim text/);
+});
+
+test('duplicate current fact IDs with conflicting data are Unknown', async () => {
+  const review = await runCheck({
+    rolloutRows: [
+      rolloutRow('rollout-duplicate', ['audience-all-accounts', 'audience-internal-testers'], []),
+      rolloutRow('rollout-duplicate', ['audience-internal-testers'], ['audience-all-accounts']),
+    ],
+  });
+
+  assert.equal(review.findings[0].status, 'Unknown');
+  assert.match(review.findings[0].reason, /same ID disagree/);
+});
+
 test('a draft with both direct and reused promises is reported as Unknown', async () => {
   const ambiguous = [...baseDraftRows[1].slice(0, 14), true, true];
   const review = await runCheck({ draftRows: [baseDraftRows[0], ambiguous, ...baseDraftRows.slice(2)] });
@@ -160,6 +189,7 @@ test('a draft with both direct and reused promises is reported as Unknown', asyn
 test('fixture and demo writes require a local development graph', () => {
   const local = { nodeEnv: 'development', seedFixture: 'true', enableDemoWrites: 'true', graph: 'official', falkordbHost: 'localhost', port: 3001 };
   assert.equal(canSeedFixture(local), true);
+  assert.equal(canEnableDemoRollout(local), true);
   assert.equal(canInitializeFixture(local, { remoteAddress: '127.0.0.1', origin: 'http://127.0.0.1:3001' }), true);
   assert.equal(canInitializeFixture(local, { remoteAddress: '127.0.0.1', origin: 'https://attacker.example' }), false);
   assert.equal(canInitializeFixture(local, { remoteAddress: '127.0.0.1' }), false);
@@ -171,6 +201,7 @@ test('fixture and demo writes require a local development graph', () => {
   assert.equal(canSeedFixture({ ...local, nodeEnv: undefined }), false);
   assert.equal(canWriteDemo(local, { remoteAddress: '127.0.0.1', origin: 'http://127.0.0.1:3001' }), true);
   assert.equal(canWriteDemo({ ...local, falkordbHost: 'falkordb.example.com' }, { remoteAddress: '127.0.0.1', origin: 'http://127.0.0.1:3001' }), false);
+  assert.equal(canEnableDemoRollout({ ...local, enableDemoWrites: 'false' }), false);
   assert.equal(canWriteDemo(local, { remoteAddress: '127.0.0.1', origin: 'https://attacker.example' }), false);
   assert.equal(canWriteDemo(local, { remoteAddress: '127.0.0.1' }), false);
   assert.equal(canWriteDemo(local, { remoteAddress: '10.0.0.2', origin: 'http://127.0.0.1:3001' }), false);
@@ -235,6 +266,55 @@ test('source-less deployment and test records remain Unknown', async () => {
 
   assert.equal(deploymentReview.findings[0].status, 'Unknown');
   assert.equal(testReview.findings[0].status, 'Unknown');
+});
+
+test('blank source IDs and source content cannot support a promise', async () => {
+  const rollout = rolloutRow('rollout-all-accounts', ['audience-all-accounts', 'audience-internal-testers'], []);
+  const blankId = [...rollout];
+  blankId[6] = '   ';
+  const blankDetail = [...rollout];
+  blankDetail[8] = '   ';
+  const blankIdReview = await runCheck({ rolloutRows: [blankId] });
+  const blankDetailReview = await runCheck({ rolloutRows: [blankDetail] });
+
+  assert.equal(blankIdReview.findings[0].status, 'Unknown');
+  assert.equal(blankDetailReview.findings[0].status, 'Unknown');
+  assert.match(blankDetailReview.findings[0].reason, /missing a fresh source/);
+});
+
+test('fixture seed refreshes source timestamps and clears the prior S4 rollout', async () => {
+  const sourceTimes: string[] = [];
+  let resetRolloutId = '';
+  let markerVersion = '';
+  const beforeSeed = Date.now();
+  const graph = {
+    async query(query: string, options?: { params?: Record<string, unknown> }) {
+      if (query.includes('MATCH (state:FixtureState')) return { data: [] };
+      if (query.includes('MATCH (rollout:Rollout')) {
+        resetRolloutId = String(options?.params?.rolloutId ?? '');
+        return { data: [] };
+      }
+      if (query.includes('UNWIND $records AS record MERGE (node:Source')) {
+        const records = options?.params?.records as Array<Record<string, unknown>>;
+        sourceTimes.push(...records.map((record) => String(record.observedAt)));
+      }
+      if (query.includes('MERGE (state:FixtureState')) {
+        markerVersion = String(options?.params?.version ?? '');
+      }
+      return { data: [] };
+    },
+  } as unknown as Graph;
+
+  await seedFixtureIfMissing(graph);
+
+  const afterSeed = Date.now();
+  assert.equal(resetRolloutId, 'rollout-all-accounts');
+  assert.equal(markerVersion, 'csv-launch-v2');
+  assert.equal(sourceTimes.length, 3);
+  assert.ok(sourceTimes.every((value) => {
+    const timestamp = Date.parse(value);
+    return timestamp >= beforeSeed && timestamp <= afterSeed;
+  }));
 });
 
 test('a partial fixture seed is retried because completion is marked last', async () => {
