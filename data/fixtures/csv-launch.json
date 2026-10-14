@@ -1,0 +1,59 @@
+{
+  "nodes": {
+    "Campaign": [
+      { "id": "campaign-csv-launch", "name": "CSV export launch", "environment": "production", "audience": "All customer accounts", "updatedAt": "2026-10-14T18:46:00.000Z" }
+    ],
+    "Draft": [
+      { "id": "draft-landing", "title": "Landing page", "kind": "Landing page", "text": "CSV export is available to every account.", "position": 1, "status": "draft" },
+      { "id": "draft-email", "title": "Launch email", "kind": "Email", "text": "Every account can download reports as CSV today.", "position": 2, "status": "draft" },
+      { "id": "draft-social", "title": "Tester announcement", "kind": "Social post", "text": "Internal testers can use CSV export today.", "position": 3, "status": "draft" },
+      { "id": "draft-dashboard", "title": "Dashboard update", "kind": "Email", "text": "See your work in one dashboard.", "position": 4, "status": "draft" }
+    ],
+    "Promise": [
+      { "id": "promise-all-accounts", "text": "CSV export is available now to all accounts.", "reviewed": true },
+      { "id": "promise-testers", "text": "CSV export is available now to internal testers.", "reviewed": true }
+    ],
+    "Feature": [
+      { "id": "feature-csv-export", "name": "CSV export" }
+    ],
+    "Audience": [
+      { "id": "audience-all-accounts", "name": "All accounts" },
+      { "id": "audience-internal-testers", "name": "Internal testers" }
+    ],
+    "Deployment": [
+      { "id": "deployment-r17", "revision": "R17", "environment": "production", "includesFeature": true, "reviewed": true, "current": true, "observedAt": "2026-10-15T00:05:00+05:30" }
+    ],
+    "Rollout": [
+      { "id": "rollout-testers-only", "name": "Tester-only rollout", "environment": "production", "reviewed": true, "current": true, "observedAt": "2026-10-15T00:10:00+05:30" }
+    ],
+    "Test": [
+      { "id": "test-csv-r17", "name": "CSV export smoke test", "revision": "R17", "environment": "production", "passed": true, "reviewed": true, "current": true, "observedAt": "2026-10-15T00:15:00+05:30" }
+    ],
+    "Source": [
+      { "id": "source-s1", "label": "S1 · Running version", "text": "Production is running revision R17. R17 includes CSV export.", "reviewedBy": "Product teammate", "observedAt": "2026-10-15T00:05:00+05:30" },
+      { "id": "source-s2", "label": "S2 · Rollout", "text": "CSV export is enabled for internal tester accounts only. All other accounts are excluded.", "reviewedBy": "Product teammate", "observedAt": "2026-10-15T00:10:00+05:30" },
+      { "id": "source-s3", "label": "S3 · Functional test", "text": "The CSV export smoke test passed on production revision R17.", "reviewedBy": "Product teammate", "observedAt": "2026-10-15T00:15:00+05:30" }
+    ]
+  },
+  "edges": [
+    { "type": "IN_CAMPAIGN", "from": "draft-landing", "to": "campaign-csv-launch" },
+    { "type": "IN_CAMPAIGN", "from": "draft-email", "to": "campaign-csv-launch" },
+    { "type": "IN_CAMPAIGN", "from": "draft-social", "to": "campaign-csv-launch" },
+    { "type": "IN_CAMPAIGN", "from": "draft-dashboard", "to": "campaign-csv-launch" },
+    { "type": "MAKES_PROMISE", "from": "draft-landing", "to": "promise-all-accounts" },
+    { "type": "MAKES_PROMISE", "from": "draft-social", "to": "promise-testers" },
+    { "type": "REUSES_DRAFT", "from": "draft-email", "to": "draft-landing" },
+    { "type": "ABOUT", "from": "promise-all-accounts", "to": "feature-csv-export" },
+    { "type": "ABOUT", "from": "promise-testers", "to": "feature-csv-export" },
+    { "type": "TARGETS", "from": "promise-all-accounts", "to": "audience-all-accounts" },
+    { "type": "TARGETS", "from": "promise-testers", "to": "audience-internal-testers" },
+    { "type": "RUNNING_AS", "from": "feature-csv-export", "to": "deployment-r17" },
+    { "type": "HAS_ROLLOUT", "from": "feature-csv-export", "to": "rollout-testers-only" },
+    { "type": "HAS_TEST", "from": "feature-csv-export", "to": "test-csv-r17" },
+    { "type": "INCLUDES", "from": "rollout-testers-only", "to": "audience-internal-testers" },
+    { "type": "EXCLUDES", "from": "rollout-testers-only", "to": "audience-all-accounts" },
+    { "type": "HAS_SOURCE", "from": "deployment-r17", "to": "source-s1" },
+    { "type": "HAS_SOURCE", "from": "rollout-testers-only", "to": "source-s2" },
+    { "type": "HAS_SOURCE", "from": "test-csv-r17", "to": "source-s3" }
+  ]
+}

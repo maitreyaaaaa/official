@@ -1,30 +1,68 @@
 # official
 
-**official** is the Track 1 project for the FalkorDB hackathon, *Agents That Act on Connected Data*.
+**official** is the standalone Track 1 application for the Graph Hacks track **Agents That Act on Connected Data**. It checks whether draft launch promises match reviewed deployment, rollout, and test evidence for the audience named by each promise.
 
-It checks whether launch drafts make promises supported by reviewed product facts for the audience named in each promise. It traces each finding through FalkorDB and proposes targeted draft changes for a person to review.
+FalkorDB is part of the decision path: graph relationships connect drafts to promises, audiences, product facts, and evidence sources. The current slice runs on request and returns a source trail. Background monitoring, an agent, proposal approval, and persistent activity history are planned phases.
+
+The workspace takes product interaction cues from [AirJelly](https://www.airjelly.ai/en), while focusing on launch claims. The fixture is entirely fictional. A finding is not an approval to publish. The demo rollout action changes only the local synthetic graph.
 
 ## Current scope
 
-This repository is initialized with a code-free application structure. Product behavior and implementation remain to be built. The first demo is planned around a fictional CSV export launch with four drafts, reviewed rollout and test facts, and explicit Supported, Contradicted, and Unknown results.
+- A fixed, parameterized FalkorDB checker returns **Supported**, **Contradicted**, **Unknown**, or **Not checked** for linked draft promises.
+- Missing, stale, unreviewed, or conflicting fact sources fail closed to **Unknown**. A reviewed current rollout exclusion can produce **Contradicted** for its named audience.
+- Checks are read-only. The optional S4 scenario action updates the fictional local graph and rechecks it; it does not change drafts or contact external systems.
+- The server serves only in `NODE_ENV=development` until authentication and authorization are implemented.
+- [Implementation status](docs/IMPLEMENTATION-STATUS.md) lists the verified code paths and remaining work. [Graph model and queries](docs/GRAPH-MODEL-AND-QUERIES.md) documents the schema and decision queries.
 
-- FalkorDB must determine which drafts are affected and why.
-- Missing or conflicting evidence must not produce a Supported result.
-- Draft pauses and edits require a human approval step.
-- The app does not publish campaign content or change live product settings.
-- Use fictional, public, or participant-owned data only.
+## Requirements
 
-## Repository layout
+- Node.js `^20.19.0` or `>=22.12.0`
+- Docker Engine with the Docker Compose plugin, or another FalkorDB 6 server reachable from the local app
 
-- `src/client/` — campaign review experience
-- `src/server/` — API, FalkorDB queries, checks, agent tools, approvals, and activity history
-- `src/shared/` — types and contracts shared by client and server
-- `data/fixtures/` — fictional demo data
-- `docs/` — architecture and implementation notes
-- `tests/` — checks for the fixed demo cases
+## Local setup
 
-## Development status
+From the repository root in PowerShell:
 
-No application runtime, dependencies, or product behavior have been added yet. Setup commands will be documented after the runtime and framework are selected.
+```powershell
+Copy-Item .env.example .env
+docker compose up -d
+npm ci
+npm run dev
+```
 
-The planning source set remains in the workspace at `D:\Project 101\Documents\Track-1-official\`; it is not bundled into this application repository. Track 2 and Track 3 have separate application folders and repositories.
+Open `http://127.0.0.1:3001`. The development client sends a same-origin POST to initialize the fictional fixture when `SEED_FIXTURE=true`, then loads the campaign review. The expected initial statuses are:
+
+| Draft | Expected status |
+| --- | --- |
+| Landing page | Contradicted |
+| Launch email | Contradicted |
+| Tester announcement | Supported |
+| Dashboard update | Not checked |
+
+The “Simulate all-account rollout” control writes the reviewed S4 rollout to the local `official` graph and reruns the check. The landing page and launch email should then become **Supported**. This is synthetic fixture data.
+
+Useful local endpoints:
+
+- `GET /api/health` runs a FalkorDB readiness query and returns `200` when connected or `503` otherwise.
+- `GET /api/campaigns/campaign-csv-launch/review` reads campaign data and returns findings. It does not seed or mutate the graph.
+- `POST /api/campaigns/campaign-csv-launch/fixture` initializes the sample only when local development, the fixture opt-in, loopback database, loopback caller, and same-origin checks pass.
+
+Compose binds FalkorDB ports to loopback. `.env.example` uses the local graph name `official`. Remote FalkorDB connections require `FALKORDB_TLS=true`; keep credentials in `.env` and never expose them to the client.
+
+## Checks
+
+```powershell
+npm test
+npm run build
+npm audit --audit-level=moderate
+```
+
+The deterministic tests use a query double. They verify decision rules and fixture retry behavior, but do not prove that the Cypher executes against a live FalkorDB server. Start Compose and open `/api/health` to verify the local database connection.
+
+## Submission readiness
+
+- The public repository is `maitreyaaaaa/official`.
+- A demo video has not been recorded or linked yet.
+- AI assistance disclosure: Codex assisted with research, implementation, and documentation. The project owner must review the final submission and demo.
+
+Track 2 and Track 3 remain separate applications and repositories.

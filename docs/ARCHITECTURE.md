@@ -1,27 +1,52 @@
-# Architecture outline
+# Architecture
 
-This is the initial code-free structure for **official**. The detailed product, interface, graph, fixture, and evaluation decisions remain in the workspace at `D:\Project 101\Documents\Track-1-official\`; they are not bundled into this repository.
+## Product shape
 
-## Proposed request flow
+**official** is a proactive campaign review workspace. The current slice runs a check on request and surfaces any mismatch in a review feed. Background detection of product-information changes is planned but not implemented. Each finding links the exact draft promise to its feature, deployment, rollout, audience, test, and sources.
 
-1. The client submits a campaign check or opens a saved finding.
-2. Server API modules validate inputs and call fixed, parameterized graph queries.
-3. The checker applies reviewed-fact rules and records the facts used for Supported, Contradicted, or Unknown.
-4. The agent may select a small set of named tools to explain findings or draft a proposal. It has no arbitrary Cypher or publishing permission.
-5. The review service applies an internal draft change only after explicit human approval and a freshness check.
-6. Activity history records checks, proposals, decisions, and failures.
+AirJelly is a product-experience reference for timely suggestions, reusable context, and an activity timeline. official applies those patterns to campaign facts and review actions. It does not capture desktop screens or build general personal memory.
 
-## Proposed module boundaries
+## Data and decision path
 
-- `src/client/` — campaign, product fact, review queue, and activity UI.
-- `src/server/api/` — validated application endpoints.
-- `src/server/graph/` — FalkorDB connection and fixed Cypher queries.
-- `src/server/checks/` — deterministic promise status rules.
+FalkorDB stores the connected campaign facts and relationships used to select affected drafts. The server runs fixed, parameterized Cypher queries. A deterministic checker maps reviewed facts to:
+
+- **Supported** — current reviewed evidence satisfies the promise for its named audience.
+- **Contradicted** — current reviewed evidence clearly excludes that audience or disagrees with the promise.
+- **Unknown** — required evidence is missing, stale, unreviewed, or conflicting.
+- **Not checked** — no reviewed promise is linked to the draft for this check.
+
+Unknown and Not checked must never be shown as a positive result. FalkorDB failure must stop the check rather than serve stale Supported findings as current.
+
+## User flow
+
+1. The user opens the fictional CSV launch campaign and sees the latest check and items needing review.
+2. The user checks the campaign. A focused question panel is planned.
+3. The server traverses the graph, applies fixed rules, and returns findings with their evidence paths.
+4. The review feed surfaces affected drafts returned by the graph check. A later step will trigger a recheck when product facts change.
+5. A constrained agent may explain a finding or prepare an internal pause/edit proposal.
+6. A person reviews and approves or rejects each proposal. Approval rechecks the draft and fact revisions. No publication or live rollout controls are available.
+7. Activity history records checks, source updates, proposals, decisions, and failures.
+
+The current implementation covers steps 1, 3, and the on-demand parts of steps 2 and 4. Steps 5–7 describe planned behavior; proposal, approval, and persistent history modules are not implemented.
+
+## Module boundaries
+
+- `src/client/` — campaign workspace, review feed, evidence trail, and latest-check card.
+- `src/server/index.ts` — local API routes and development server; production serving is blocked until access control is implemented.
+- `src/server/graph/` — FalkorDB connection, fixture loading, and fixed Cypher queries.
+- `src/server/checks/` — deterministic promise-status rules.
 - `src/server/agent/` — constrained orchestration and named tool contracts.
-- `src/server/review/` — approval, rejection, pause, resume, and stale-proposal checks.
-- `src/server/activity/` — human-readable history.
-- `src/shared/` — shared data contracts.
-- `data/fixtures/` — fictional records only.
-- `tests/` — expected fixture and approval behavior.
+- `src/server/review/` — approval, rejection, pause/resume, and stale-proposal checks.
+- `src/server/activity/` — planned human-readable action and check history.
+- `src/shared/` — shared request and response types.
+- `data/fixtures/` — fictional campaign data only.
 
-Framework, exact graph labels, client version, query syntax, and runtime commands remain to be selected and verified during implementation.
+## Evidence freshness
+
+Every current deployment, rollout, and test used in a finding needs at least one source with a stable ID, a reviewer, and an `observedAt` timestamp no more than 30 days before the check. Timestamps more than five minutes in the future are invalid. Missing or stale provenance produces **Unknown**. The current fixture uses reviewed `Source` nodes for all three fact types.
+
+## Initial fixture contract
+
+The first graph contains one campaign, four drafts, two reviewed promises, the R17 production record, a tester-only rollout, a passing R17 functional check, and source records. The all-account landing page and email are Contradicted; the tester post is Supported; the dashboard copy is Not checked for CSV export. Replacing the rollout with all-account access should change only dependent findings. Missing tests and conflicting rollout facts must produce Unknown as specified in the workspace planning source.
+
+The exact labels, relationships, current markers, status rules, and representative Cypher are in [Graph model and queries](GRAPH-MODEL-AND-QUERIES.md). The source code is authoritative if this document and implementation drift. Live Cypher execution against the pinned image is still pending.

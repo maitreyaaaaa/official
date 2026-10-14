@@ -1,3 +1,3 @@
 # Client
 
-Campaign review and evidence presentation will live here. Keep status decisions and approval enforcement on the server.
+The React workspace displays the current campaign review, draft findings, proactive review items, and evidence returned by the server. Status decisions and approval enforcement stay on the server. Background monitoring and approval controls are planned, not implemented.
