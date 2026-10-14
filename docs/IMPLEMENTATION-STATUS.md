@@ -27,6 +27,7 @@ This page separates verified repository work from behavior that still needs a li
 ## Still needs verification
 
 - Start the pinned FalkorDB Compose service and verify `/api/health`, fixture initialization, initial findings, and the S4 transition against the live graph. Docker is not installed in the current environment, and port 6379 has no listener.
+- The initial implementation is published on the public repository's `main` branch.
 - Publish the current implementation changes to the public repository after final local review; the current working tree may be ahead of GitHub.
 
 ## Not implemented
