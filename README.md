@@ -27,4 +27,4 @@ This repository is initialized with a code-free application structure. Product b
 
 No application runtime, dependencies, or product behavior have been added yet. Setup commands will be documented after the runtime and framework are selected.
 
-The planning source set is in the parent workspace at `Documents/Track-1-official/`. This repository is the separate Track 1 application; Track 2 and Track 3 have separate application folders and repositories.
+The planning source set remains in the workspace at `D:\Project 101\Documents\Track-1-official\`; it is not bundled into this application repository. Track 2 and Track 3 have separate application folders and repositories.

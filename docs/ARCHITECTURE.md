@@ -1,6 +1,6 @@
 # Architecture outline
 
-This is the initial code-free structure for **official**. The detailed product, interface, graph, fixture, and evaluation decisions remain documented in `../../Documents/Track-1-official/` in the planning workspace.
+This is the initial code-free structure for **official**. The detailed product, interface, graph, fixture, and evaluation decisions remain in the workspace at `D:\Project 101\Documents\Track-1-official\`; they are not bundled into this repository.
 
 ## Proposed request flow
 

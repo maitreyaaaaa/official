@@ -1,1 +1,3 @@
-# API boundary`n`nValidated server endpoints will live here.
+# API boundary
+
+Validated server endpoints will live here.

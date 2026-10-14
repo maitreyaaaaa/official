@@ -1,1 +1,3 @@
-# FalkorDB access`n`nKeep the database connection and fixed, parameterized Cypher queries here. Never expose database credentials to the client.
+# FalkorDB access
+
+Keep the database connection and fixed, parameterized Cypher queries here. Never expose database credentials to the client.
