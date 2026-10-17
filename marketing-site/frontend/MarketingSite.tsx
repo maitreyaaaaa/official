@@ -44,9 +44,9 @@ function Navigation({ page, open, onClose }: { page: MarketingPage; open: boolea
             {item.label}
           </a>
         ))}
-        <a className="mobile-demo-link" href="/app">Explore the demo <span aria-hidden="true">↗</span></a>
+        <a className="mobile-demo-link" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a>
       </nav>
-      <a className="nav-demo" href="/app">Explore the demo <span aria-hidden="true">↗</span></a>
+      <a className="nav-demo" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a>
     </>
   );
 }
@@ -93,7 +93,7 @@ function HomePage() {
           <p className="eyebrow">TRACK 1 <i>·</i> LAUNCH CLAIM REVIEW</p>
           <h1 aria-label="Make every launch promise match the product."><span>Make every</span><span>launch promise</span><em>match the product.</em></h1>
           <p className="hero-intro">Know what your campaign can say—because every promise points to reviewed product and rollout evidence.</p>
-          <div className="hero-actions"><a className="button button-dark" href="/app">Start the reviewer walkthrough <span aria-hidden="true">→</span></a><a className="text-link" href="/method">How it works <span aria-hidden="true">↓</span></a></div>
+          <div className="hero-actions"><a className="button button-dark" href="/app">Open reviewer app <span aria-hidden="true">→</span></a><a className="text-link" href="/method">How it works <span aria-hidden="true">↓</span></a></div>
           <p className="hero-note"><span aria-hidden="true">✳</span> A two-minute local walkthrough. All company records are fictional.</p>
         </div>
         <EvidenceMap />
@@ -105,6 +105,7 @@ function HomePage() {
         <div className="proof-intro"><p className="eyebrow">BUILT FOR THE MOMENT BEFORE LAUNCH</p><h2>Catch the small mismatch<br />that changes the <em>whole claim.</em></h2></div>
         <div className="proof-note"><span className="proof-number">01 / 03</span><p>CSV export is running. But the current rollout still includes internal testers only.</p><a className="text-link" href="/review">See what the review finds <span aria-hidden="true">→</span></a></div>
       </section>
+      <section className="closing-cta content-width"><div><p className="eyebrow">READY TO EXPLORE</p><h2>See the reviewer<br /><em>app in action.</em></h2><p>Open the working demo and follow the campaign review from claim to evidence.</p></div><a className="button button-dark" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a></section>
     </main>
   );
 }
@@ -170,7 +171,7 @@ function GuardrailsPage() {
 }
 
 function SiteFooter() {
-  return <footer className="marketing-footer"><div className="content-width footer-inner"><Brand /><span>Track 1 concept <i>·</i> Fictional demo data</span><a href="/guardrails">Review the guardrails <span aria-hidden="true">↗</span></a></div></footer>;
+  return <footer className="marketing-footer"><div className="content-width footer-inner"><Brand /><span>Track 1 concept <i>·</i> Fictional demo data</span><a href="/app">Open reviewer app <span aria-hidden="true">↗</span></a></div></footer>;
 }
 
 function NotFoundPage() {
