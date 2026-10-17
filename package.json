@@ -7,10 +7,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "tsx watch src/server/index.ts",
+    "dev": "tsx watch src/server/dev-server.ts",
     "test": "tsx --test marketing-site/frontend/routes.test.ts src/server/index.test.ts src/server/config/guards.test.ts src/server/config/api-rate-limit.test.ts src/server/checks/campaign.test.ts src/server/activity/activity.test.ts src/server/review/review.test.ts src/server/graph/fixture.test.ts src/server/agent/assistant.test.ts src/server/agent/mcp.test.ts",
     "build": "tsc --noEmit && vite build",
-    "start": "tsx src/server/index.ts",
+    "start": "tsx src/server/dev-server.ts",
     "mcp": "tsx src/server/agent/mcp.ts"
   },
   "dependencies": {
