@@ -3,6 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
   "rewrites": [
+    { "source": "/api/workspace/:workspaceRoute*", "destination": "/api/workspace?__workspaceRoute=:workspaceRoute*" },
     { "source": "/:path((?!api/).*)", "destination": "/index.html" }
   ]
 }
