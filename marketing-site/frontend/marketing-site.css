@@ -14,6 +14,8 @@
   font-display: swap;
 }
 
+html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100px; }
+
 .marketing-site {
   --site-paper: #ffd500;
   --site-white: #fffefa;
@@ -384,6 +386,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html.marketing-scroll-smooth { scroll-behavior: auto; }
   .launch-statement-reveal { min-height: auto !important; }
   .launch-statement-reveal .scroll-reveal-stage { position: relative; min-height: 360px; padding-block: 80px 48px; }
   .launch-statement-reveal .scroll-reveal-hint { display: none; }

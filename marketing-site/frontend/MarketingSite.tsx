@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import './marketing-site.css';
 import type { MarketingPage } from './routes.js';
 import { ScrollRevealText } from './ScrollRevealText.js';
@@ -85,11 +85,19 @@ function Reveal({ children, className, delay = 0 }: { children: ReactNode; class
 
 function HeroArtwork() {
   const reduceMotion = useReducedMotion();
+  const artworkRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: artworkRef,
+    offset: ['start end', 'end start'],
+  });
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [34, -34]);
   return (
     <motion.div
+      ref={artworkRef}
       className="mascot-display"
       initial={reduceMotion ? false : { opacity: 0, scale: 0.96, rotateY: -7 }}
       animate={reduceMotion ? undefined : { opacity: 1, scale: 1, rotateY: 0 }}
+      style={reduceMotion ? undefined : { y: parallaxY }}
       transition={{ duration: 0.85, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
     >
       <motion.img
@@ -308,6 +316,11 @@ export function MarketingSite({ page }: { page: MarketingPage }) {
     document.querySelector('meta[name="description"]')?.setAttribute('content', pageDetails[page].description);
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffd500');
   }, [page]);
+
+  useEffect(() => {
+    document.documentElement.classList.add('marketing-scroll-smooth');
+    return () => document.documentElement.classList.remove('marketing-scroll-smooth');
+  }, []);
 
   return (
     <div className="marketing-site">
