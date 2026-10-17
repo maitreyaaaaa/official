@@ -1,0 +1,29 @@
+.connected-shell .company-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.connected-shell .workspace-monogram,
+.connected-shell .connected-mark {
+  overflow: hidden;
+  background: var(--company-sage);
+}
+
+.connected-shell .workspace-monogram .company-logo { padding: 4px; }
+.connected-shell .connected-mark .company-logo { padding: 5px; }
+
+.connected-shell .company-avatar {
+  overflow: hidden;
+  background: var(--company-sage);
+}
+
+.connected-shell .company-avatar .company-logo { padding: 3px; }
+
+.connected-shell .company-option-mark {
+  overflow: hidden;
+  background: var(--company-sage);
+}
+
+.connected-shell .company-option-mark .company-logo { padding: 2px; }

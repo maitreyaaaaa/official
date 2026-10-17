@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, BookOpenText, Check, ChevronRight, CircleHelp, FileText, GitBranch, Search, ShieldCheck, Users } from 'lucide-react';
 import type { KnowledgeNote, WorkspaceSnapshot, WriterDraft } from '../../shared/contracts.js';
 import type { DemoCompany } from '../../shared/demo-companies.js';
+import { CompanyLogo } from './CompanyLogo.js';
 import { LocalTabs } from './LocalTabs.js';
 import { BrainGraph } from './BrainGraph.js';
 
@@ -100,7 +101,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
 
   return <div className="connected-page" id={view}>
     <div className="connected-masthead">
-      <div className="connected-mark" aria-hidden="true">{company.monogram}</div>
+      <div className="connected-mark" aria-hidden="true"><CompanyLogo company={company} /></div>
       <div><span className="connected-overline">{workspace.company.name} <span aria-hidden="true">/</span> {workspace.project.name}</span>
         <h1 tabIndex={-1}>{view === 'memory' ? 'Agent memory & handoffs' : 'Company Brain'}</h1>
         <p>{view === 'memory'

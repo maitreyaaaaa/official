@@ -1,6 +1,6 @@
 export const demoCompanies = [
   {
-    key: 'alder-finch', shortName: 'Alder & Finch', monogram: 'A&F',
+    key: 'alder-finch', shortName: 'Alder & Finch', monogram: 'A&F', logoPath: '/brand/companies/alder-finch.png',
     campaignId: 'campaign-csv-launch', companyId: 'company-alder-finch', projectId: 'project-spring-reporting',
     featureId: 'feature-csv-export', broadAudienceId: 'audience-all-accounts', limitedAudienceId: 'audience-internal-testers',
     baselineRolloutId: 'rollout-testers-only', expandedRolloutId: 'rollout-all-accounts', testId: 'test-csv-r17',
@@ -16,7 +16,7 @@ export const demoCompanies = [
     unknownAvailability: 'We are reviewing CSV export availability and will share access details after the evidence is confirmed.',
   },
   {
-    key: 'northstar', shortName: 'Northstar Parcel', monogram: 'NP',
+    key: 'northstar', shortName: 'Northstar Parcel', monogram: 'NP', logoPath: '/brand/companies/northstar-parcel.png',
     campaignId: 'campaign-route-timeline', companyId: 'company-northstar-parcel', projectId: 'project-delivery-timeline',
     featureId: 'feature-live-timeline', broadAudienceId: 'audience-all-merchants', limitedAudienceId: 'audience-pilot-merchants',
     baselineRolloutId: 'rollout-pilot-merchants', expandedRolloutId: 'rollout-all-merchants', testId: 'test-timeline-n24',
