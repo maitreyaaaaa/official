@@ -86,38 +86,18 @@ function HeroArtwork() {
   const reduceMotion = useReducedMotion();
   return (
     <motion.div
-      className="hero-artwork"
-      aria-label="The official mascot beside a claim-to-evidence path"
+      className="mascot-display"
       initial={reduceMotion ? false : { opacity: 0, scale: 0.96, rotateY: -7 }}
       animate={reduceMotion ? undefined : { opacity: 1, scale: 1, rotateY: 0 }}
       transition={{ duration: 0.85, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="artwork-topline"><span>EXAMPLE EVIDENCE PATH</span><span><i /> FALKORDB IN THE APP</span></div>
-      <div className="mascot-stage">
-        <div className="orbit orbit-one" aria-hidden="true" />
-        <div className="orbit orbit-two" aria-hidden="true" />
-        <svg className="orbit-nodes" viewBox="0 0 500 370" aria-hidden="true">
-          <path d="M54 268 C126 268 139 215 206 215 S304 271 371 226 S427 140 451 92" />
-          <circle cx="54" cy="268" r="5" /><circle cx="206" cy="215" r="5" /><circle cx="371" cy="226" r="5" /><circle cx="451" cy="92" r="5" />
-        </svg>
-        <div className="mascot-shadow" aria-hidden="true" />
-        <motion.img
-          className="evidence-mascot"
-          src="/brand/official-mascot.png"
-          alt=""
-          aria-hidden="true"
-          animate={reduceMotion ? undefined : { y: [0, -7, 0], rotateZ: [0, 0.6, 0] }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 5.4, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <span className="orbit-label orbit-label-top">PRODUCT FACT</span>
-        <span className="orbit-label orbit-label-bottom">NAMED AUDIENCE</span>
-      </div>
-      <div className="artwork-finding">
-        <div className="finding-icon" aria-hidden="true">×</div>
-        <div><span>CONTRADICTED</span><strong>“Every account”</strong><small>The rollout says testers only</small></div>
-        <span className="finding-arrow" aria-hidden="true">↗</span>
-      </div>
-      <div className="artwork-footline"><span>ONE PROMISE</span><span>LINKED TO REVIEWED SOURCES</span><span>ONE CLEAR REASON</span></div>
+      <motion.img
+        className="evidence-mascot"
+        src="/brand/official-mascot.png"
+        alt="Official's purple mascot waving"
+        animate={reduceMotion ? undefined : { y: [0, -9, 0], rotateZ: [0, 1.2, 0] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 4.8, repeat: Infinity, ease: 'easeInOut' }}
+      />
     </motion.div>
   );
 }
