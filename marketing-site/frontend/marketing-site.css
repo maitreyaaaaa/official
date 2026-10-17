@@ -1,3 +1,19 @@
+@font-face {
+  font-family: 'Open Sauce Sans';
+  src: url('/fonts/OpenSauceSans-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sauce Sans';
+  src: url('/fonts/OpenSauceSans-Black.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
 .marketing-site {
   --site-paper: #ffd500;
   --site-white: #fffefa;
@@ -8,6 +24,7 @@
   --site-lime: #d1ceff;
   --site-line: #d9d4f2;
   --site-mascot: #6a70fb;
+  --site-display: 'Open Sauce Sans', 'DM Sans', Inter, ui-sans-serif, system-ui, sans-serif;
   min-height: 100vh;
   overflow: clip;
   background: var(--site-paper);
@@ -26,10 +43,10 @@
 .marketing-site .content-width { width: min(1240px, calc(100% - 96px)); margin-inline: auto; }
 .marketing-site h1,
 .marketing-site h2,
-.marketing-site h3,
+.marketing-site h3 { margin: 0; font-family: var(--site-display); font-weight: 700; letter-spacing: -.065em; }
 .marketing-site blockquote { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: -.052em; }
 .marketing-site h1 em,
-.marketing-site h2 em { font-weight: 400; }
+.marketing-site h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: -.045em; }
 
 .marketing-header { position: sticky; top: 12px; z-index: 10; display: flex; justify-content: center; padding: 18px 24px 0; }
 .marketing-nav-wrap { display: flex; width: min(920px, 100%); min-height: 66px; align-items: center; gap: 33px; padding: 8px 9px 8px 24px; border: 1px solid rgb(49 37 111 / 17%); border-radius: 100px; background: var(--site-mascot); color: #111026; box-shadow: 0 12px 36px rgb(49 37 111 / 18%); backdrop-filter: blur(18px); }
@@ -52,7 +69,7 @@
 .eyebrow { margin: 0 0 23px; color: var(--site-olive); font-size: 10px; font-weight: 700; letter-spacing: .16em; line-height: 1.5; }
 .eyebrow i { padding-inline: 6px; color: #77729b; font-style: normal; }
 .eyebrow-dot { display: inline-block; width: 7px; height: 7px; margin: 0 7px 0 1px; border-radius: 50%; background: var(--site-mascot); box-shadow: 0 0 0 4px rgb(106 112 251 / 18%); }
-.hero-copy h1 { max-width: 640px; font-size: clamp(56px, 6.15vw, 83px); line-height: .99; }
+.hero-copy h1 { max-width: 640px; font-size: clamp(56px, 6.15vw, 83px); font-weight: 900; line-height: .97; letter-spacing: -.075em; }
 .hero-copy h1 em { color: var(--site-olive); }
 .hero-intro { max-width: 530px; margin: 24px 0 0; color: #49445f; font-size: clamp(16px, 1.35vw, 18px); line-height: 1.65; letter-spacing: -.015em; }
 .hero-actions { display: flex; align-items: center; gap: 28px; margin-top: 32px; }
@@ -74,7 +91,7 @@
 .intro-strip { background: var(--site-mascot); color: #111026; }
 .launch-statement-reveal { color: #111026; }
 .scroll-reveal-stage { position: sticky; top: 0; display: grid; min-height: 100svh; align-content: center; padding: 100px 48px 50px; }
-.scroll-reveal-text { width: min(1150px, 100%); margin: 0 auto; font-size: clamp(38px, 5.7vw, 76px); line-height: 1.08; }
+.scroll-reveal-text { width: min(1150px, 100%); margin: 0 auto; font-family: var(--site-display); font-size: clamp(38px, 5.7vw, 76px); font-weight: 700; line-height: 1.08; letter-spacing: -.065em; }
 .scroll-reveal-line { position: relative; display: block; }
 .scroll-reveal-muted { display: block; }
 .scroll-reveal-visible { position: absolute; inset: 0; display: block; }
@@ -87,7 +104,7 @@
 .section-heading .eyebrow,
 .status-intro .eyebrow { margin-bottom: 18px; }
 .section-heading h2,
-.status-intro h2 { font-size: clamp(41px, 4.8vw, 62px); line-height: .99; }
+.status-intro h2 { font-size: clamp(41px, 4.8vw, 62px); font-weight: 700; line-height: .99; }
 .section-heading h2 em,
 .status-intro h2 em { color: var(--site-olive); }
 .section-heading > p:last-child,
@@ -104,7 +121,7 @@
 .example-section { padding-block: 100px; background: var(--site-olive-dark); color: white; }
 .example-layout { display: grid; grid-template-columns: minmax(270px, .8fr) 1.2fr; align-items: center; gap: clamp(48px, 8vw, 110px); }
 .example-copy .eyebrow { color: var(--site-lime); }
-.example-copy h2 { font-size: clamp(44px, 5.1vw, 66px); line-height: .98; }
+.example-copy h2 { font-size: clamp(44px, 5.1vw, 66px); font-weight: 700; line-height: .98; }
 .example-copy h2 em { color: var(--site-lime); }
 .example-copy > p:not(.eyebrow) { max-width: 430px; margin: 21px 0 25px; color: rgb(245 248 241 / 70%); font-size: 13px; line-height: 1.7; }
 .light-link { color: var(--site-lime); }
