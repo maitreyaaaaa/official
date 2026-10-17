@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title description">
+  <title id="title">official wordmark on white</title>
+  <desc id="description">The official wordmark: its deep olive circle mark beside the lowercase Georgia wordmark, centered on a white landscape canvas.</desc>
+  <rect width="1920" height="1080" fill="#ffffff"/>
+  <circle cx="523" cy="535" r="54" fill="#48583b"/>
+  <text x="646" y="615" fill="#201d19" font-family="Georgia, 'Times New Roman', serif" font-size="244" font-weight="500" letter-spacing="0">official</text>
+</svg>
