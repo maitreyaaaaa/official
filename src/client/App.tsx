@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpenText, LayoutDashboard, MessageCircle, PanelLeftClose, PanelLeftOpen, Workflow } from 'lucide-react';
+import { BookOpenText, LayoutDashboard, MessageCircle, Workflow } from 'lucide-react';
 import './workspace.css';
 import './connected.css';
 import type { ActionProposal, ActivityEntry, CampaignAssistantResponse, CampaignProposalPreview, CampaignReview, DraftFinding, FindingStatus, ProposalAction, WorkspaceSnapshot, WriterDraft } from '../shared/contracts.js';
@@ -9,21 +9,41 @@ import { AppleMailTabs, reviewFilterIcons, type ReviewFilter, type ReviewFilterT
 import { MagneticDock } from './components/MagneticDock.js';
 import { ConnectedWorkspace } from './components/ConnectedWorkspace.js';
 import { WorkspaceChat } from './components/WorkspaceChat.js';
+import { WorkspaceOverview } from './components/WorkspaceOverview.js';
+import { LocalTabs } from './components/LocalTabs.js';
 
 const campaignId = 'campaign-csv-launch';
-type NavigationSection = 'overview' | 'campaign' | 'activity' | 'memory' | 'brain';
+type NavigationSection = 'overview' | 'campaign' | 'memory' | 'brain';
+type LaunchTab = 'drafts' | 'approvals' | 'history';
+type BrainTab = 'notes' | 'coverage' | 'history';
 type DataState = 'loading' | 'ready' | 'unavailable';
 const dockItems = [
-  { id: 'overview', label: 'Launch review', href: '#overview', icon: LayoutDashboard },
+  { id: 'overview', label: 'Overview', href: '#overview', icon: LayoutDashboard },
+  { id: 'campaign', label: 'Launch review', href: '#campaign', icon: LayoutDashboard },
   { id: 'memory', label: 'Agent memory', href: '#memory', icon: Workflow },
   { id: 'brain', label: 'Company Brain', href: '#brain', icon: BookOpenText },
 ];
 
 function navigationSectionFromHash(): NavigationSection {
   const hash = window.location.hash.slice(1);
-  if (hash === 'campaign' || hash === 'drafts') return 'campaign';
-  if (hash === 'activity' || hash === 'memory' || hash === 'brain') return hash;
+  if (hash === 'campaign' || hash === 'drafts' || hash === 'approvals' || hash === 'review-queue' || hash === 'activity') return 'campaign';
+  if (hash === 'memory') return 'memory';
+  if (hash === 'brain' || hash === 'coverage' || hash === 'brain-history') return 'brain';
   return 'overview';
+}
+
+function launchTabFromHash(): LaunchTab {
+  const hash = window.location.hash.slice(1);
+  if (hash === 'approvals' || hash === 'review-queue') return 'approvals';
+  if (hash === 'activity') return 'history';
+  return 'drafts';
+}
+
+function brainTabFromHash(): BrainTab {
+  const hash = window.location.hash.slice(1);
+  if (hash === 'coverage') return 'coverage';
+  if (hash === 'brain-history') return 'history';
+  return 'notes';
 }
 
 async function initializeFixture(): Promise<void> {
@@ -186,6 +206,17 @@ function formatActivityAt(value: string): string {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
+// Iconsax Linear sidebar-left, with the chevron reversed for the closed state.
+function SidebarIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M21.97 15V9C21.97 4 19.97 2 14.97 2H8.96997C3.96997 2 1.96997 4 1.96997 9V15C1.96997 20 3.96997 22 8.96997 22H14.97C19.97 22 21.97 20 21.97 15Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.96997 2V22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={expanded ? 'M14.97 9.43994L12.41 11.9999L14.97 14.5599' : 'M12.41 9.43994L14.97 11.9999L12.41 14.5599'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function App() {
   const [review, setReview] = useState<CampaignReview | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
@@ -209,8 +240,10 @@ export function App() {
   const [scenarioMessage, setScenarioMessage] = useState<string | null>(null);
   const [scenarioError, setScenarioError] = useState<{ message: string; actionUnavailable: boolean } | null>(null);
   const [activeSection, setActiveSection] = useState<NavigationSection>(navigationSectionFromHash);
+  const [launchTab, setLaunchTab] = useState<LaunchTab>(launchTabFromHash);
+  const [brainTab, setBrainTab] = useState<BrainTab>(brainTabFromHash);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 920 && window.localStorage.getItem('official-sidebar-open') !== 'false');
-  const [chatOpen, setChatOpen] = useState(() => window.innerWidth >= 1360);
+  const [chatOpen, setChatOpen] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
@@ -229,16 +262,35 @@ export function App() {
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
   const [proposalError, setProposalError] = useState<string | null>(null);
   const proposalFeedbackRef = useRef<HTMLElement>(null);
+  const sidebarOpenButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarFocusTarget = useRef<'open' | 'close' | null>(null);
+  const focusViewHeading = useRef(false);
   const assistantRequestVersion = useRef(0);
   const supportingDataRequestVersion = useRef(0);
   const rolloutExpanded = review?.findings.some((finding) => finding.evidence.some((item) => item.id === 'source-s4')) ?? false;
 
   useEffect(() => {
-    document.title = `${activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : 'Campaign review'} — official`;
+    document.title = `${activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'} — official`;
     document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, agent memory, and company knowledge in one connected official workspace.');
   }, [activeSection]);
 
   useEffect(() => { window.localStorage.setItem('official-sidebar-open', String(sidebarOpen)); }, [sidebarOpen]);
+  useEffect(() => {
+    if (sidebarFocusTarget.current === (sidebarOpen ? 'close' : 'open')) {
+      // The opening sidebar is visibility-hidden until its transition finishes.
+      const focusTarget = () => (sidebarOpen ? sidebarCloseButtonRef.current : sidebarOpenButtonRef.current)?.focus();
+      const timer = sidebarOpen ? window.setTimeout(focusTarget, 240) : window.requestAnimationFrame(focusTarget);
+      sidebarFocusTarget.current = null;
+      return () => { if (sidebarOpen) window.clearTimeout(timer); else window.cancelAnimationFrame(timer); };
+    }
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    if (!focusViewHeading.current) return;
+    focusViewHeading.current = false;
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.main-content h1')?.focus());
+  }, [activeSection]);
   useEffect(() => {
     let wasWide = window.innerWidth > 920;
     const onResize = () => {
@@ -249,7 +301,12 @@ export function App() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  const handleSidebarNavigation = () => { if (window.innerWidth <= 920) setSidebarOpen(false); };
+  const closeSidebar = () => { sidebarFocusTarget.current = 'open'; setSidebarOpen(false); };
+  const openSidebar = () => { sidebarFocusTarget.current = 'close'; setSidebarOpen(true); };
+  const handleSidebarNavigation = () => {
+    focusViewHeading.current = true;
+    if (window.innerWidth <= 920) setSidebarOpen(false);
+  };
 
   const refreshWorkspace = useCallback(async (unavailable: boolean) => {
     setWorkspaceLoading(true);
@@ -495,6 +552,7 @@ export function App() {
       setProposalCopy('');
       await refresh();
       setProposalMessage(action === 'pause' ? 'Pause proposal created. The draft has not changed.' : 'Edit proposal created. The draft has not changed.');
+      showLaunchTab('approvals');
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'The proposal could not be created.';
       await refresh();
@@ -594,6 +652,7 @@ export function App() {
       setAssistantResult((current) => current ? { ...current, proposalPreview: undefined } : current);
       await refresh();
       setProposalMessage('Pending proposal created. Review it in the queue; the draft has not changed.');
+      showLaunchTab('approvals');
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'The proposal could not be created.';
       await refresh();
@@ -621,35 +680,15 @@ export function App() {
   }, [refresh]);
 
   useEffect(() => {
-    const syncActiveSection = () => setActiveSection(navigationSectionFromHash());
-    window.addEventListener('hashchange', syncActiveSection);
-    const initialTargetId = window.location.hash.slice(1);
-    if (initialTargetId) {
-      window.requestAnimationFrame(() => {
-        document.getElementById(initialTargetId)?.scrollIntoView({ block: 'start' });
-      });
-    }
-    const targets = (['overview', 'campaign', 'activity'] as const)
-      .map((id) => ({ id, element: document.getElementById(id) }))
-      .filter((item): item is { id: 'overview' | 'campaign' | 'activity'; element: HTMLElement } => item.element instanceof HTMLElement);
-    const observer = new IntersectionObserver((entries) => {
-      if (window.location.hash === '#memory' || window.location.hash === '#brain') return;
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-      const target = targets.find((item) => item.element === visible?.target);
-      if (target) setActiveSection(target.id);
-    }, { rootMargin: '-22% 0px -62% 0px', threshold: [0, 0.1, 0.25, 0.5] });
-    targets.forEach(({ element }) => observer.observe(element));
-    return () => {
-      window.removeEventListener('hashchange', syncActiveSection);
-      observer.disconnect();
+    const syncActiveSection = () => {
+      setActiveSection(navigationSectionFromHash());
+      setLaunchTab(launchTabFromHash());
+      setBrainTab(brainTabFromHash());
+      window.scrollTo({ top: 0 });
     };
-  }, [activeSection === 'memory' || activeSection === 'brain']);
-
-  useEffect(() => {
-    if (activeSection === 'memory' || activeSection === 'brain') window.scrollTo({ top: 0 });
-  }, [activeSection]);
+    window.addEventListener('hashchange', syncActiveSection);
+    return () => window.removeEventListener('hashchange', syncActiveSection);
+  }, []);
 
   const counts = useMemo(() => {
     const values = review?.findings ?? [];
@@ -680,13 +719,21 @@ export function App() {
   const testScenarioMissing = review?.findings.some((finding) => finding.reason.includes('No current passing') && finding.reason.includes('test')) ?? false;
 
   const scrollTo = (id: string) => {
-    window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({
       behavior: reduceMotion ? 'auto' : 'smooth',
       block: 'center',
-    }));
+    })));
+  };
+
+  const showLaunchTab = (tab: LaunchTab) => {
+    if (activeSection !== 'campaign') focusViewHeading.current = true;
+    setActiveSection('campaign');
+    setLaunchTab(tab);
+    window.location.hash = tab === 'drafts' ? '#campaign' : tab === 'approvals' ? '#approvals' : '#activity';
   };
 
   const openLandingFinding = () => {
+    showLaunchTab('drafts');
     setDraftFilter('all');
     setSelectedId('draft-landing');
     setShowPath(false);
@@ -694,6 +741,7 @@ export function App() {
   };
 
   const showLandingSources = () => {
+    showLaunchTab('drafts');
     setDraftFilter('all');
     setSelectedId('draft-landing');
     setShowPath(true);
@@ -736,12 +784,13 @@ export function App() {
     <div className={`app-shell connected-shell ${sidebarOpen ? '' : 'sidebar-closed'} ${chatOpen ? 'chat-open' : 'chat-closed'}`}>
       <aside className="sidebar" aria-label="Workspace sidebar">
         <div className="sidebar-top"><a className="brand" href="/" aria-label="official marketing site">
-          <span className="brand-mark">o</span><span>official</span>
-        </a><button className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={() => setSidebarOpen(false)}><PanelLeftClose size={18} /></button></div>
+          <span className="brand-dot" aria-hidden="true" />official
+        </a><button ref={sidebarCloseButtonRef} className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={closeSidebar}><SidebarIcon expanded /></button></div>
         <div className="workspace-identity"><div className="workspace-monogram">A<span>&amp;</span>F</div><div><strong>{workspace?.company.shortName ?? 'Alder & Finch'}</strong><small>Spring reporting release</small></div></div>
         <div className="workspace-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
-          <a className={`nav-item ${activeSection === 'overview' || activeSection === 'campaign' || activeSection === 'activity' ? 'active' : ''}`} href="#overview" onClick={handleSidebarNavigation} aria-current={activeSection === 'overview' || activeSection === 'campaign' || activeSection === 'activity' ? 'location' : undefined}><span className="nav-icon">◫</span> Launch review <span className="nav-count">1</span></a>
+          <a className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`} href="#overview" onClick={handleSidebarNavigation} aria-current={activeSection === 'overview' ? 'page' : undefined}><span className="nav-icon"><LayoutDashboard size={17} /></span> Overview</a>
+          <a className={`nav-item ${activeSection === 'campaign' ? 'active' : ''}`} href="#campaign" onClick={handleSidebarNavigation} aria-current={activeSection === 'campaign' ? 'page' : undefined}><span className="nav-icon">◫</span> Launch review <span className="nav-count">{review?.findings.filter((item) => item.needsReview).length ?? '—'}</span></a>
           <a className={`nav-item ${activeSection === 'memory' ? 'active' : ''}`} href="#memory" onClick={handleSidebarNavigation} aria-current={activeSection === 'memory' ? 'location' : undefined}><span className="nav-icon"><Workflow size={17} /></span> Agent memory</a>
           <a className={`nav-item ${activeSection === 'brain' ? 'active' : ''}`} href="#brain" onClick={handleSidebarNavigation} aria-current={activeSection === 'brain' ? 'location' : undefined}><span className="nav-icon"><BookOpenText size={17} /></span> Company Brain <span className="nav-count">{workspace?.notes.length ?? '—'}</span></a>
         </nav>
@@ -755,55 +804,38 @@ export function App() {
         </div>
       </aside>
 
-      <main className="main-content" id="overview">
+      <main className="main-content">
         <header className="topbar">
-          {!sidebarOpen && <button className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={() => setSidebarOpen(true)}><PanelLeftOpen size={20} /></button>}
-          <a className="brand" href="/" aria-label="official marketing site"><span className="brand-mark">o</span><span>official</span></a>
-          <div className="header-context"><span>{workspace?.company.shortName ?? 'Alder & Finch'}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : 'Launch review'}</strong></div>
+          {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={openSidebar}><SidebarIcon expanded={false} /></button>}
+          <a className="brand" href="/" aria-label="official marketing site"><span className="brand-dot" aria-hidden="true" />official</a>
+          <div className="header-context"><span>{workspace?.company.shortName ?? 'Alder & Finch'}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
           <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask agent</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label="How campaign checks work" hidden={!showHelp}><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></section></div><div className="avatar small" aria-hidden="true">A</div></div>
         </header>
         <div className="app-dock">
-          <MagneticDock items={dockItems.map((item) => ({ ...item, active: item.id === 'overview' ? activeSection === 'overview' || activeSection === 'campaign' || activeSection === 'activity' : activeSection === item.id }))} />
+          <MagneticDock items={dockItems.map((item) => ({ ...item, active: activeSection === item.id }))} />
         </div>
 
         {activeSection === 'memory' || activeSection === 'brain' ? <ConnectedWorkspace key={brainEpoch}
           view={activeSection} workspace={workspace} loading={workspaceLoading} error={workspaceError}
+          brainTab={brainTab} onBrainTabChange={(tab) => { setBrainTab(tab); window.location.hash = tab === 'notes' ? '#brain' : tab === 'coverage' ? '#coverage' : '#brain-history'; }}
           canWrite={demoRolloutAvailable} busy={workspaceBusy} message={workspaceMessage}
           ownerUnavailable={ownerUnavailable} selectedNoteId={selectedNoteId}
           onSelectNote={setSelectedNoteId} onOwnerUnavailable={setOwnerUnavailable}
           onAction={(action) => void workspaceAction(action)}
           onReviewDraft={(draft, decision) => void reviewWriterDraftAction(draft, decision)}
           onRefresh={() => void refreshWorkspace(ownerUnavailable)}
+        /> : activeSection === 'overview' ? <WorkspaceOverview
+          review={review} workspace={workspace} loading={loading || workspaceLoading} error={error ?? workspaceError}
+          onRefresh={() => { void refresh(); void refreshWorkspace(ownerUnavailable); }}
+          onOpenFinding={openLandingFinding} onOpenSources={showLandingSources}
+          onOpenLaunch={() => showLaunchTab('drafts')} onOpenMemory={() => { focusViewHeading.current = true; window.location.hash = '#memory'; }}
+          onOpenBrain={() => { focusViewHeading.current = true; window.location.hash = '#brain'; }} onOpenCoverage={() => { focusViewHeading.current = true; window.location.hash = '#coverage'; }}
+          onReset={() => void resetDemo()} canReset={demoRolloutAvailable && !resetBusy && !loading && !simulating && !proposalBusy && !workspaceBusy}
+          resetBusy={resetBusy}
         /> : <>
-        <section className="page-heading">
-          <div><div className="eyebrow">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date()).toUpperCase()} <span className="eyebrow-divider" aria-hidden="true">/</span> EVIDENCE WORKSPACE</div><h1>Launch claims, grounded in evidence.</h1><p className="subheading">Connect campaign copy to the reviewed product facts, rollouts, and tests behind it.</p></div>
+        <section className="page-heading review-page-heading" id="campaign">
+          <div><div className="eyebrow">SPRING REPORTING RELEASE <span className="eyebrow-divider" aria-hidden="true">/</span> FICTIONAL DEMO</div><h1 tabIndex={-1}>Launch review</h1><p className="subheading">{review ? `${review.findings.filter((item) => item.needsReview).length} drafts need a decision. Choose one to inspect its evidence.` : 'Choose a draft to inspect its claim and current evidence.'}</p></div>
           <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? 'Restore tester-only rollout' : 'Include all accounts'}</button><button type="button" onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
-        </section>
-
-        <section className="reviewer-guide" id="reviewer-guide" aria-labelledby="reviewer-guide-title">
-          <div className="reviewer-guide-intro">
-            <div className="eyebrow">ONE CONNECTED DEMO <span aria-hidden="true">·</span> ABOUT 3 MINUTES</div>
-            <h2 id="reviewer-guide-title">One launch. Three connected decisions.</h2>
-            <p>Follow the same fictional release from a campaign claim to writer memory and team coverage. Open each step to inspect its graph evidence and review controls.</p>
-          </div>
-          <div className="reviewer-guide-steps">
-            <article className="reviewer-guide-step">
-              <span className="guide-step-number">01</span>
-              <div><h3>Check the claim</h3><p>The landing page promises CSV export to every account. Compare that with the reviewed rollout and test.</p></div>
-              <div className="guide-step-actions"><button className="guide-link" type="button" onClick={openLandingFinding} disabled={!review}>Open claim <span aria-hidden="true">→</span></button><button className="guide-link" type="button" onClick={showLandingSources} disabled={!review}>See evidence <span aria-hidden="true">→</span></button></div>
-            </article>
-            <article className="reviewer-guide-step">
-              <span className="guide-step-number">02</span>
-              <div><h3>Refresh the writer</h3><p>Approve the calm tone instruction, then run the writer. Review its draft before any external use.</p></div>
-              <a className="guide-link" href="#memory">Open agent memory <span aria-hidden="true">→</span></a>
-            </article>
-            <article className="reviewer-guide-step">
-              <span className="guide-step-number">03</span>
-              <div><h3>Cover the owner</h3><p>Simulate an unavailable owner. Follow the linked guide, propose a backup, and confirm the assignment.</p></div>
-              <a className="guide-link" href="#brain">Open Company Brain <span aria-hidden="true">→</span></a>
-            </article>
-          </div>
-          <div className="reviewer-guide-footer"><p className="reviewer-guide-note">Alder &amp; Finch and all campaign records are fictional. Reset restores rollout, test, tone, and launch backup for another walkthrough; earlier audit records stay in the graph.</p><button className="text-button" type="button" onClick={() => void resetDemo()} disabled={!demoRolloutAvailable || resetBusy || loading || simulating || Boolean(proposalBusy) || Boolean(workspaceBusy)}>{resetBusy ? 'Resetting…' : 'Reset fictional demo'}</button></div>
         </section>
 
         {error && <section className="connection-alert" role="alert"><div className="alert-icon" aria-hidden="true">!</div><div><strong>{error.toLowerCase().includes('campaign not found') ? 'Campaign data unavailable' : 'Campaign check unavailable'}</strong><p>{error} Check that FalkorDB is reachable and the campaign data is loaded, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh(demoRolloutAvailable)}>Retry</button></section>}
@@ -812,23 +844,14 @@ export function App() {
         {proposalMessage && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{proposalMessage}</section>}
         {proposalError && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert scenario-alert-error" role="alert"><strong>Review action unavailable.</strong> {proposalError}</section>}
 
-        <section className="campaign-banner" id="campaign">
-          <div className="campaign-symbol"><span>01</span></div>
-          <div className="campaign-info"><div className="campaign-kicker">{review?.campaign.companyName ?? 'Alder & Finch Commerce'} <span aria-hidden="true">·</span> FICTIONAL DEMO</div><h2>{review?.campaign.name ?? 'Spring reporting release'}</h2><p>For {review?.campaign.audience.toLowerCase() ?? 'all customer accounts'}</p><span className="campaign-details">{review?.campaign.industry ?? 'Multi-brand retail'} <i>·</i> {review?.campaign.region ?? 'North America'} <i>·</i> {review?.campaign.ownerTeam ?? 'Product marketing'} <i>·</i> {review?.campaign.releaseWindow ?? 'Spring 2026'}</span></div>
-          <div className="campaign-meta"><div className="meta-icon">⌁</div><div><span>Latest evaluation</span><strong>{review ? formatCheckedAt(review.checkedAt) : 'Waiting for graph'}</strong></div></div>
-          <a className="arrow-button" href="#drafts" aria-label="See campaign drafts">↘</a>
-        </section>
+        <div className="review-context"><strong>{review?.campaign.name ?? 'Spring reporting release'}</strong><span>{review ? `${counts.contradicted} contradicted · ${counts.unknown} unknown · ${counts.supported} supported · ${counts.notChecked} not checked` : 'Waiting for the graph check'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : 'Not available'}</small></div>
+        <LocalTabs label="Launch review sections" idPrefix="launch" tabs={[
+          { id: 'drafts' as const, label: 'Drafts', count: review?.findings.length ?? '—' },
+          { id: 'approvals' as const, label: 'Approvals', count: proposalState === 'ready' ? proposals.filter((item) => item.status === 'pending').length : '—' },
+          { id: 'history' as const, label: 'History' },
+        ]} value={launchTab} onChange={showLaunchTab} />
 
-        <section className="stats-row" aria-label="Campaign summary">
-          <div className="stat-card stat-contradicted"><div className="stat-top"><span className="stat-icon contradicted-icon" aria-hidden="true">!</span><span className="stat-label">CONTRADICTED</span></div><div className="stat-value">{review ? counts.contradicted : '—'}<span>{review ? ` ${counts.contradicted === 1 ? 'draft' : 'drafts'}` : ''}</span></div><div className="stat-note">{review ? 'Conflicts with current facts' : 'Awaiting graph evaluation'}</div></div>
-          <div className="stat-card"><div className="stat-top"><span className="stat-icon unknown-icon" aria-hidden="true">?</span><span className="stat-label">UNKNOWN</span></div><div className="stat-value">{review ? counts.unknown : '—'}<span>{review ? ` ${counts.unknown === 1 ? 'draft' : 'drafts'}` : ''}</span></div><div className="stat-note">{review ? 'Evidence is missing or unclear' : 'Awaiting graph evaluation'}</div></div>
-          <div className="stat-card"><div className="stat-top"><span className="stat-icon supported-icon" aria-hidden="true">✓</span><span className="stat-label">SUPPORTED</span></div><div className="stat-value">{review ? counts.supported : '—'}<span>{review ? ` ${counts.supported === 1 ? 'draft' : 'drafts'}` : ''}</span></div><div className="stat-note">{review ? 'Backed by current records' : 'Awaiting graph evaluation'}</div></div>
-          <div className="stat-card"><div className="stat-top"><span className="stat-icon unchecked-icon" aria-hidden="true">○</span><span className="stat-label">NOT CHECKED</span></div><div className="stat-value">{review ? counts.notChecked : '—'}<span>{review ? ` ${counts.notChecked === 1 ? 'draft' : 'drafts'}` : ''}</span></div><div className="stat-note">{review ? 'No product promise linked' : 'Awaiting graph evaluation'}</div></div>
-        </section>
-
-
-
-        <div className="content-grid">
+        {launchTab === 'drafts' && <div className="content-grid" role="tabpanel" id="launch-panel-drafts" aria-labelledby="launch-tab-drafts">
           <section className="drafts-panel" id="drafts">
             <div className="section-heading drafts-heading"><div><div className="eyebrow">CAMPAIGN REVIEW</div><h2>Drafts and promises</h2></div><AppleMailTabs tabs={reviewTabs} value={draftFilter} onValueChange={changeDraftFilter} /></div>
             <div className="draft-list" id="draft-list" role="tabpanel" aria-labelledby={`draft-filter-${draftFilter}`}>
@@ -881,10 +904,12 @@ export function App() {
                 <ol className="connection-path" id="connection-path" hidden={!showPath}><li>{selected.title}</li>{selected.wordingSourceTitle && <li>Reuses wording from {selected.wordingSourceTitle}</li>}{selected.promiseText && <li>{selected.promiseText}</li>}{selected.featureName && <li>{selected.featureName}</li>}{selected.audienceName && <li>{selected.audienceName}</li>}{selected.evidence.map((item) => <li key={`path-${item.id}`}>{item.label}</li>)}</ol>
               </> : <div className="empty-detail">{review?.findings.length === 0 ? 'No drafts are linked to this campaign yet.' : review ? 'Select a draft to inspect its evidence and relationship path.' : error ? 'Draft details are unavailable until a fresh graph check succeeds.' : 'Campaign details will appear after the graph check completes.'}</div>}
             </section>
-
+          </aside>
+        </div>}
+        {launchTab === 'approvals' && <div className="approval-layout" role="tabpanel" id="launch-panel-approvals" aria-labelledby="launch-tab-approvals">
             <section className="proactive-card">
-              <div className="proactive-head"><div className="proactive-orb">✳</div><div><div className="eyebrow">PROACTIVE REVIEW</div><h2>What needs a look</h2></div></div>
-              {review?.proactiveItems.length ? <div className="proactive-list">{review.proactiveItems.map((item) => <button className="proactive-item" key={item.id} onClick={() => setSelectedId(item.id)}><span className={`proactive-status ${item.status.toLowerCase()}`} aria-hidden="true" /><span><strong>{item.title}</strong><small><span className="status-label">{item.status}</span> · {item.detail}</small></span><span className="row-chevron" aria-hidden="true">›</span></button>)}</div> : <p className="proactive-empty" role="status" aria-live="polite" aria-atomic="true">{review ? 'No promises currently need a review.' : 'Review suggestions will appear when campaign evidence is available.'}</p>}
+              <div className="proactive-head"><div className="proactive-orb">✳</div><div><div className="eyebrow">NEEDS ATTENTION</div><h2>Drafts to review</h2></div></div>
+              {review?.proactiveItems.length ? <div className="proactive-list">{review.proactiveItems.map((item) => <button className="proactive-item" key={item.id} onClick={() => { showLaunchTab('drafts'); setSelectedId(item.id); scrollTo('draft-details'); }}><span className={`proactive-status ${item.status.toLowerCase()}`} aria-hidden="true" /><span><strong>{item.title}</strong><small><span className="status-label">{item.status}</span> · {item.detail}</small></span><span className="row-chevron" aria-hidden="true">›</span></button>)}</div> : <p className="proactive-empty" role="status" aria-live="polite" aria-atomic="true">{review ? 'No promises currently need a review.' : 'Review suggestions will appear when campaign evidence is available.'}</p>}
             </section>
 
             <section className="review-queue-card" id="review-queue">
@@ -899,13 +924,12 @@ export function App() {
                   {proposal.status === 'pending' && demoRolloutAvailable && <div className="proposal-compose-actions"><button className="primary-button" aria-label={`Approve proposal for ${draft?.title ?? proposal.draftId}`} onClick={() => void decideProposal(proposal, 'approve')} disabled={proposalState !== 'ready' || Boolean(proposalBusy) || loading || simulating}>{proposalBusy === proposal.id ? 'Saving…' : 'Approve'}</button><button className="text-button" aria-label={`Reject proposal for ${draft?.title ?? proposal.draftId}`} onClick={() => void decideProposal(proposal, 'reject')} disabled={proposalState !== 'ready' || Boolean(proposalBusy) || loading || simulating}>Reject</button></div>}
                   {proposal.status === 'pending' && !demoRolloutAvailable && <p className="proposal-help">Decision controls are unavailable. Enable local demo writes to review this proposal.</p>}
                 </article>;
-              })}</div> : <p className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">No proposals are waiting. A contradicted draft can be paused or revised for a named audience.</p>}
+              })}</div> : <div className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">No proposals are waiting. Review the drafts to prepare an internal change.<button className="text-button" type="button" onClick={() => showLaunchTab('drafts')}>Open drafts</button></div>}
               <p className="proposal-help">Approval is limited to internal drafts. The local demo does not verify reviewer identity or publish content.</p>
             </section>
 
-          </aside>
-        </div>
-        <section className="activity-card" id="activity"><div className="activity-heading"><span className="activity-icon">◷</span><div><div className="eyebrow">ACTIVITY HISTORY</div><h2>Campaign activity</h2></div></div><div className="activity-list" aria-live="polite">{activityState === 'loading' ? <div className="activity-empty">Loading campaign activity…</div> : activityState === 'unavailable' ? <div className="activity-empty">Campaign activity history is unavailable. Refresh to try again.</div> : activity.length ? activity.map((entry) => <div className="activity-entry" key={entry.id}><span className="activity-line" /><span className="activity-dot" /><div><strong>{entry.title}</strong><small>{formatActivityAt(entry.occurredAt)} · {entry.detail}</small>{entry.runId && <small className="activity-run-id">Run ID: {entry.runId}</small>}</div></div>) : <div className="activity-empty">No persisted activity is available yet. Enable local demo writes to keep check history.</div>}</div></section>
+        </div>}
+        {launchTab === 'history' && <section className="activity-card" id="launch-panel-history" role="tabpanel" aria-labelledby="launch-tab-history"><div className="activity-heading"><span className="activity-icon">◷</span><div><div className="eyebrow">ACTIVITY HISTORY</div><h2>Campaign activity</h2></div></div><div className="activity-list" aria-live="polite">{activityState === 'loading' ? <div className="activity-empty">Loading campaign activity…</div> : activityState === 'unavailable' ? <div className="activity-empty">Campaign activity history is unavailable. Refresh to try again.</div> : activity.length ? activity.map((entry) => <div className="activity-entry" key={entry.id}><span className="activity-line" /><span className="activity-dot" /><div><strong>{entry.title}</strong><small>{formatActivityAt(entry.occurredAt)} · {entry.detail}</small>{entry.runId && <small className="activity-run-id">Run ID: {entry.runId}</small>}</div></div>) : <div className="activity-empty">No persisted activity is available yet. Enable local demo writes to keep check history.</div>}</div></section>}
         <footer className="page-footer"><span>Built around evidence, not assumptions.</span><span>Fictional product data <span className="footer-separator">·</span> No external actions</span><a href="/">Marketing site <span aria-hidden="true">↗</span></a></footer>
         </>}
       </main>

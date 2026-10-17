@@ -1,0 +1,142 @@
+@font-face {
+  font-family: 'Open Sauce Sans';
+  src: url('/fonts/OpenSauceSans-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sauce Sans';
+  src: url('/fonts/OpenSauceSans-Black.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+.app-shell.connected-shell {
+  --ink: #201e3c;
+  --muted: #716d82;
+  --line: #e9e4d6;
+  --green: #6a70fb;
+  --green-dark: #4d45ad;
+  --mint: #eeedff;
+  --panel: #fffefa;
+  --official-paper: #fff9e5;
+  --official-lavender: #efedff;
+  --official-purple: #6a70fb;
+  --official-purple-dark: #4d45ad;
+  min-height: 100vh;
+  background: var(--official-paper);
+  color: var(--ink);
+}
+
+.app-shell.connected-shell .sidebar {
+  background: #fffdf5;
+  border-color: #e9e4d6;
+}
+
+.app-shell.connected-shell .sidebar .brand-mark,
+.app-shell.connected-shell .brand-mark {
+  background: var(--official-purple);
+}
+
+.app-shell.connected-shell .workspace-identity {
+  border-color: #e4e0fa;
+  background: linear-gradient(135deg, #fffdf5, #f1efff);
+}
+
+.app-shell.connected-shell .nav-item.active {
+  background: var(--official-lavender);
+  color: var(--official-purple-dark);
+}
+
+.app-shell.connected-shell .nav-item.active .nav-icon,
+.app-shell.connected-shell .nav-count {
+  color: var(--official-purple-dark);
+}
+
+.app-shell.connected-shell .nav-count,
+.app-shell.connected-shell .campaign-symbol,
+.app-shell.connected-shell .connected-icon,
+.app-shell.connected-shell .guide-step-number {
+  background: var(--official-lavender);
+}
+
+.app-shell.connected-shell .nav-count {
+  border: 1px solid #e3dfff;
+}
+
+.app-shell.connected-shell .main-content {
+  background: var(--official-paper);
+}
+
+.app-shell.connected-shell .topbar {
+  border-color: #e9e4d6;
+}
+
+.app-shell.connected-shell .primary-button {
+  background: var(--official-purple-dark);
+  box-shadow: 0 3px 8px #4d45ad24;
+}
+
+.app-shell.connected-shell .primary-button:hover:not(:disabled) {
+  background: #393184;
+  box-shadow: 0 6px 15px #4d45ad30;
+}
+
+.app-shell.connected-shell .secondary-button:hover:not(:disabled),
+.app-shell.connected-shell .filter-button:hover,
+.app-shell.connected-shell .arrow-button:hover {
+  border-color: #d3cef8;
+  background: #f7f5ff;
+}
+
+.app-shell.connected-shell .selected,
+.app-shell.connected-shell .note-row:hover,
+.app-shell.connected-shell .note-row.selected,
+.app-shell.connected-shell .draft-row.selected {
+  background: #f4f2ff;
+}
+
+.app-shell.connected-shell .guide-link,
+.app-shell.connected-shell .text-button,
+.app-shell.connected-shell .knowledge-link {
+  color: var(--official-purple-dark);
+}
+
+.app-shell.connected-shell button:focus-visible,
+.app-shell.connected-shell a:focus-visible,
+.app-shell.connected-shell summary:focus-visible,
+.app-shell.connected-shell textarea:focus-visible,
+.app-shell.connected-shell select:focus-visible {
+  outline-color: var(--official-purple);
+}
+
+.app-shell.connected-shell .main-content h1,
+.app-shell.connected-shell .main-content h2,
+.app-shell.connected-shell .main-content h2 em {
+  font-family: 'Open Sauce Sans', 'DM Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -.045em;
+}
+
+.app-shell.connected-shell .connected-masthead h1,
+.app-shell.connected-shell .note-reader h2 {
+  color: #211e48;
+}
+
+.app-shell.connected-shell .connected-card-heading h2,
+.app-shell.connected-shell .connected-events h2,
+.app-shell.connected-shell .section-heading h2,
+.app-shell.connected-shell .detail-card-heading h2,
+.app-shell.connected-shell .proactive-head h2,
+.app-shell.connected-shell .activity-heading h2 {
+  color: #29264b;
+}
+
+@media (max-width: 680px) {
+  .app-shell.connected-shell .main-content {
+    background: var(--official-paper);
+  }
+}

@@ -60,21 +60,18 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   padding: 0;
-  color: var(--ink);
-  font: 800 21px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #111026;
+  font: 500 29px/.95 Georgia, 'Times New Roman', serif;
+  letter-spacing: -1.8px;
 }
 
-.app-shell .brand-mark {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border-radius: 11px 11px 11px 4px;
-  background: #3d7756;
-  color: #fff;
-  font: 700 20px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+.app-shell .brand-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #30256f;
 }
 
 .app-shell .header-context,
@@ -497,8 +494,7 @@
 @media (max-width: 640px) {
   .app-shell .main-content { padding: 0 18px calc(142px + env(safe-area-inset-bottom)); }
   .app-shell .topbar { min-height: 68px; gap: 12px; }
-  .app-shell .brand { gap: 8px; font-size: 19px; }
-  .app-shell .brand-mark { width: 29px; height: 29px; border-radius: 10px 10px 10px 4px; font-size: 18px; }
+  .app-shell .brand { font-size: 25px; }
   .app-shell .topbar-actions { gap: 10px; }
   .app-shell .connection-inline { font-size: 0; }
   .app-shell .connection-inline .connection-dot { width: 9px; height: 9px; }

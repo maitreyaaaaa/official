@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import './official-theme.css';
 import { resolveClientRoute } from '../../marketing-site/frontend/routes.js';
 
 const route = resolveClientRoute(window.location.pathname);
