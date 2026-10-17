@@ -17,18 +17,18 @@ import {
 } from './review/review.js';
 import { closeGraph, getGraph } from './graph/client.js';
 import { expandDemoRollout, isFixtureReady, restoreDemoRollout, seedFixtureIfMissing, setDemoTestAvailability } from './graph/fixture.js';
-import { canInitializeFixture, canSeedFixture, canServeLocalApp, canWriteDemo, localDemoConfigFromEnvironment } from './config/guards.js';
+import { canInitializeFixture, canSeedFixture, canServeDemoApp, canWriteDemo, localDemoConfigFromEnvironment } from './config/guards.js';
 import { ApiRequestLimiter } from './config/api-rate-limit.js';
 import { AssistantServiceError, AssistantUnavailableError, runCampaignAssistant } from './agent/assistant.js';
 import type { CampaignAssistantResponse } from '../shared/contracts.js';
 
 export const app = express();
 app.use((request, response, next) => {
-  if (!canServeLocalApp(localDemoConfigFromEnvironment(process.env), {
+  if (!canServeDemoApp(localDemoConfigFromEnvironment(process.env), {
     remoteAddress: request.socket.remoteAddress,
     host: request.get('host'),
   })) {
-    response.status(403).json({ error: 'This application is only available in local development.' });
+    response.status(403).json({ error: 'The reviewer demo is not enabled for this deployment.' });
     return;
   }
   next();
@@ -510,6 +510,8 @@ async function start(): Promise<void> {
 
 const isDirectExecution = process.argv[1] !== undefined
   && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+
+export default app;
 
 if (isDirectExecution) {
   void start().catch((error: unknown) => {

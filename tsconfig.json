@@ -12,5 +12,5 @@
     "allowSyntheticDefaultImports": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "marketing-site/frontend", "vite.config.ts"]
+  "include": ["api", "src", "marketing-site/frontend", "vite.config.ts"]
 }

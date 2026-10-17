@@ -110,7 +110,7 @@ test('rollout scenario requires an explicit access state before graph access', a
 test('local app rejects an attacker-controlled Host header before graph access', async () => {
   const response = await requestWithHost('/api/health', 'attacker.example');
   assert.equal(response.statusCode, 403);
-  assert.deepEqual(JSON.parse(response.body), { error: 'This application is only available in local development.' });
+  assert.deepEqual(JSON.parse(response.body), { error: 'The reviewer demo is not enabled for this deployment.' });
   assert.equal(graphAccessCount, 0);
 });
 
@@ -201,7 +201,7 @@ test('imported app refuses production requests before graph access', async () =>
   try {
     const response = await fetch(`${baseUrl}/api/health`);
     assert.equal(response.status, 403);
-    assert.deepEqual(await response.json(), { error: 'This application is only available in local development.' });
+    assert.deepEqual(await response.json(), { error: 'The reviewer demo is not enabled for this deployment.' });
     assert.equal(graphAccessCount, 0);
   } finally {
     process.env.NODE_ENV = 'development';

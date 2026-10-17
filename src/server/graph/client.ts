@@ -14,7 +14,7 @@ export async function getGraph(): Promise<Graph> {
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       throw new Error('FALKORDB_PORT must be an integer between 1 and 65535.');
     }
-    if (!isSecureGraphEndpoint(host, tlsEnabled)) {
+    if (!isSecureGraphEndpoint(host, tlsEnabled) && process.env.ALLOW_INSECURE_FALKORDB !== 'true') {
       throw new Error('Remote FalkorDB hosts require FALKORDB_TLS=true.');
     }
     connection = FalkorDB.connect({

@@ -14,7 +14,7 @@ The workspace takes product interaction cues from [AirJelly](https://www.airjell
 - A local proposal can pause a contradicted draft or replace its text and linked promise for a named audience. Creation never changes a draft. Only an explicit approve action applies it after a fresh check and revision comparison; reject and resume are separate reviewer actions. No action publishes content or changes live product settings.
 - Five bounded tools provide campaign checks, one-draft explanations, affected-draft lookup, status-only saved-check comparisons, and proposal preparation. The assistant only returns an unsaved proposal preview; a user click is required to save a pending proposal. An explicit MCP proposal tool call may create a pending proposal. Neither path applies a proposal. No raw Cypher is exposed. The optional assistant is local-development-only, uses one tool call at a time, has a four-call limit, and sends the prompt and synthetic tool results to OpenAI when configured. The API defaults proposal permission to false and rejects non-boolean permission values. `.env.example` uses `OPENAI_API_KEY` and optional `OPENAI_MODEL`; the key stays server-side.
 - `npm run mcp` starts the same tools over stdio for an MCP client. Fixture seeding, history writes, and proposals follow the local opt-in flags.
-- The app accepts requests only in `NODE_ENV=development` from a loopback client with a loopback Host header, including when imported by another module; normal startup also binds to `127.0.0.1`. JSON and other request bodies are limited to 8 KiB. Authentication and authorization are not implemented.
+- Local requests require a loopback client and Host header. A hosted reviewer demo is available only with `ENABLE_PUBLIC_DEMO=true`, and only on the exact Vercel deployment or production host. Demo writes require same-origin HTTPS. JSON and other request bodies are limited to 8 KiB. Reviewer identity and account authentication are not implemented.
 - [Implementation status](docs/IMPLEMENTATION-STATUS.md) lists the verified code paths and remaining work. [Graph model and queries](docs/GRAPH-MODEL-AND-QUERIES.md) documents the schema and decision queries.
 
 ## Requirements
@@ -46,6 +46,27 @@ $repoLinuxPath = (wsl.exe -d Ubuntu -u root -- wslpath -a (Get-Location).Path).T
 wsl.exe -d Ubuntu -u root -- docker compose -f "$repoLinuxPath/compose.yaml" down
 wsl.exe --terminate Ubuntu
 ```
+
+## Vercel reviewer demo
+
+The Vercel entry point serves the Express API as a function and the built Vite site as static files. Set these **server-side** environment variables for the Production environment:
+
+```text
+ENABLE_PUBLIC_DEMO=true
+SEED_FIXTURE=true
+ENABLE_DEMO_WRITES=true
+FALKORDB_HOST=<host from FalkorDB Connect>
+FALKORDB_PORT=<port from FalkorDB Connect>
+FALKORDB_TLS=false
+ALLOW_INSECURE_FALKORDB=true
+FALKORDB_USERNAME=<database username>
+FALKORDB_PASSWORD=<database password>
+FALKORDB_GRAPH=official
+```
+
+FalkorDB Free does not provide TLS or persistence. `ALLOW_INSECURE_FALKORDB` is an explicit demo-only override: database credentials, queries, and results travel without TLS between the Vercel function and FalkorDB. Use only synthetic reviewer data. The fixture can be recreated after a database restart. The app still exposes only its fixed, validated demo operations; it does not accept arbitrary Cypher or publish content.
+
+Vercel supplies `VERCEL_URL` for each deployment and `VERCEL_PROJECT_PRODUCTION_URL` when a production domain is configured. The app checks the incoming Host against those values and requires same-origin HTTPS for demo writes. Keep database credentials out of `VITE_` variables and out of Git.
 
 The Docker service is enabled under systemd in Ubuntu, so it starts when the distro starts. Run the setup block again to restart the local runtime. With Docker Engine already available in the current shell, use `docker compose up -d` instead and omit the WSL keepalive step.
 

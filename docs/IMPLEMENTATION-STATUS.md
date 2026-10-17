@@ -55,11 +55,12 @@ This page separates verified repository work from behavior that still needs a li
 ## Still needs verification
 
 - The optional assistant remains disabled until `OPENAI_API_KEY` is configured; no live OpenAI call was made.
+- Vercel Express function and SPA routing have been added behind explicit demo environment flags. The Vercel deployment has not been created, the public function has not been exercised, and the Free FalkorDB connection has not yet been verified from Vercel.
 
 ## Not implemented
 
 - Background change detection, fact intake, or real product integrations.
-- Verified reviewer identity, user authentication, authorization, or production deployment. The local API has a bounded request limit, but it is an in-process local safeguard and does not replace authenticated access control. Keep the server loopback-bound and development-only until identity, authorization, persistence, and production operations are designed and verified.
+- Verified reviewer identity or account authentication. The optional Vercel mode is a public synthetic-data demo with same-origin write checks and fixed demo operations; it is not suitable for real customer data. Free FalkorDB has no persistence, and its no-TLS connection exposes traffic in transit. Keep all data synthetic.
 - A recorded demo video.
 
 ## Next implementation phases
