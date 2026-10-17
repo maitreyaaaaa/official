@@ -87,7 +87,7 @@ function HeroArtwork() {
   return (
     <motion.div
       className="hero-artwork"
-      aria-label="A 3D evidence guide beside a claim-to-evidence path"
+      aria-label="The official mascot beside a claim-to-evidence path"
       initial={reduceMotion ? false : { opacity: 0, scale: 0.96, rotateY: -7 }}
       animate={reduceMotion ? undefined : { opacity: 1, scale: 1, rotateY: 0 }}
       transition={{ duration: 0.85, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
@@ -103,7 +103,7 @@ function HeroArtwork() {
         <div className="mascot-shadow" aria-hidden="true" />
         <motion.img
           className="evidence-mascot"
-          src="/brand/evidence-guide.png"
+          src="/brand/official-mascot.png"
           alt=""
           aria-hidden="true"
           animate={reduceMotion ? undefined : { y: [0, -7, 0], rotateZ: [0, 0.6, 0] }}

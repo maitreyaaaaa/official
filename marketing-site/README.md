@@ -2,7 +2,7 @@
 
 The marketing frontend is a static React experience mounted at `/`, `/review`, `/method`, and `/guardrails`. It explains official in plain language, shows the claim-to-evidence path, and links reviewers to the working application at `/app`.
 
-The pages do not call the campaign API or perform actions. Their Alder & Finch example is fictional and illustrative. The 3D evidence guide is a decorative generated image; CSS depth, sparse Motion entrances, and the evidence path animate around it. Reduced-motion preferences disable continuous motion. The official mark and wordmark are exact SVG exports derived from the current site mark and type treatment.
+The pages do not call the campaign API or perform actions. Their Alder & Finch example is fictional and illustrative. The supplied purple character is the decorative official mascot; its transparent cutout floats beside the evidence path. CSS depth and sparse Motion entrances animate the hero, with reduced-motion preferences respected. The official mark and wordmark are exact SVG exports derived from the current site mark and type treatment.
 
 ## Page map
 
