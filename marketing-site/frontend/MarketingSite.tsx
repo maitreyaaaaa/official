@@ -317,7 +317,7 @@ export function MarketingSite({ page }: { page: MarketingPage }) {
   useEffect(() => {
     document.title = pageDetails[page].title;
     document.querySelector('meta[name="description"]')?.setAttribute('content', pageDetails[page].description);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f5f6f0');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffd500');
   }, [page]);
 
   return (
