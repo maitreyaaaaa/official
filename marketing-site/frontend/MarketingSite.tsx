@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import './marketing-site.css';
 import type { MarketingPage } from './routes.js';
+import { ScrollRevealText } from './ScrollRevealText.js';
 
 const pageDetails: Record<MarketingPage, { title: string; description: string }> = {
   home: {
@@ -139,11 +140,19 @@ function HomePage() {
       </section>
 
       <section className="intro-strip">
-        <div className="content-width intro-strip-inner">
-          <span className="intro-label">THE PROBLEM</span>
-          <p>A feature can work in production while its rollout still excludes the people your campaign promises.</p>
-          <span className="intro-mark" aria-hidden="true">↘</span>
-        </div>
+        <ScrollRevealText
+          className="launch-statement-reveal"
+          lines={[
+            'A feature can work in production,',
+            'while its rollout still excludes',
+            'the people your campaign',
+            'promises.',
+          ]}
+          scrollLength={172}
+          scrollHint="THE PROBLEM · SCROLL TO REVEAL"
+          revealColor="#111026"
+          mutedColor="#4b498f"
+        />
       </section>
 
       <section className="workflow-section content-width" id="how-it-works">
