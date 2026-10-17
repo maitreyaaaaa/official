@@ -36,7 +36,7 @@ async function initializeFixture(): Promise<void> {
 }
 
 async function loadCampaign(recordCheck = false): Promise<CampaignReview> {
-  if (import.meta.env.DEV) await initializeFixture();
+  await initializeFixture();
   const response = await fetch(`/api/campaigns/${campaignId}/${recordCheck ? 'check' : 'review'}`, {
     method: recordCheck ? 'POST' : 'GET',
     ...(recordCheck ? {} : { cache: 'no-store' as RequestCache }),
@@ -496,17 +496,15 @@ export function App() {
 
   useEffect(() => {
     void refresh();
-    if (import.meta.env.DEV) {
-      void readCapabilities()
-        .then((capabilities) => {
-          setDemoRolloutAvailable(capabilities.demoRollout);
-          setAssistantAvailable(capabilities.assistant);
-        })
-        .catch(() => {
-          setDemoRolloutAvailable(false);
-          setAssistantAvailable(false);
-        });
-    }
+    void readCapabilities()
+      .then((capabilities) => {
+        setDemoRolloutAvailable(capabilities.demoRollout);
+        setAssistantAvailable(capabilities.assistant);
+      })
+      .catch(() => {
+        setDemoRolloutAvailable(false);
+        setAssistantAvailable(false);
+      });
   }, [refresh]);
 
   useEffect(() => {
@@ -631,7 +629,7 @@ export function App() {
 
         <section className="page-heading">
           <div><div className="eyebrow">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date()).toUpperCase()} <span className="eyebrow-divider" aria-hidden="true">/</span> EVIDENCE WORKSPACE</div><h1>Launch claims, grounded in evidence.</h1><p className="subheading">Connect campaign copy to the reviewed product facts, rollouts, and tests behind it.</p></div>
-          <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the local fictional graph fixture' : 'Enable local demo writes in the server settings'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!import.meta.env.DEV || !demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? 'Restore tester-only rollout' : 'Include all accounts'}</button><button type="button" onClick={() => void runTestScenario()} disabled={!import.meta.env.DEV || !demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records local status history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
+          <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? 'Restore tester-only rollout' : 'Include all accounts'}</button><button type="button" onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
         </section>
 
         <section className="reviewer-guide" id="reviewer-guide" aria-labelledby="reviewer-guide-title">
@@ -654,7 +652,7 @@ export function App() {
             <article className="reviewer-guide-step">
               <span className="guide-step-number">03</span>
               <div><h3>Change access</h3><p>Current access: <strong>{rolloutExpanded ? 'all accounts' : 'internal testers only'}</strong>. Change it and see which findings move.</p></div>
-              <button className="primary-button guide-action" type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!import.meta.env.DEV || !demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Checking the change…' : rolloutExpanded ? 'Restore tester-only access' : 'Open access to all accounts'}</button>
+              <button className="primary-button guide-action" type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Checking the change…' : rolloutExpanded ? 'Restore tester-only access' : 'Open access to all accounts'}</button>
             </article>
             <article className="reviewer-guide-step">
               <span className="guide-step-number">04</span>
@@ -713,7 +711,7 @@ export function App() {
                 <div className="detail-claim linked-promise"><span className="micro-label">LINKED PROMISE BEING CHECKED</span><p className="claim-text">{selected.promiseText ?? (selected.status === 'Not checked' ? 'No promise is linked to this draft.' : 'No readable promise text is available for this linked path.')}</p>{selected.promiseText && <p className="claim-context">Checked for {selected.audienceName || 'an unspecified audience'}{selected.featureName ? ' · ' + selected.featureName : ''}</p>}</div>
                 <p className="detail-reason">{selected.reason}</p>
                 {selected.draftState === 'paused' && <p className="proposal-help">Paused inside official. A reviewer can resume this draft after a fresh check supports its promise.</p>}
-                {selected.status === 'Contradicted' && selected.draftState !== 'paused' && import.meta.env.DEV && demoRolloutAvailable && <div className="proposal-compose">
+                {selected.status === 'Contradicted' && selected.draftState !== 'paused' && demoRolloutAvailable && <div className="proposal-compose">
                   <div className="proposal-compose-actions">
                     <button className="secondary-button" onClick={() => void createProposal('pause', selected)} disabled={loading || simulating || proposalState !== 'ready' || Boolean(proposalBusy) || selectedHasPendingProposal}>{proposalBusy === selected.draftId ? 'Saving…' : 'Propose pause'}</button>
                     <button className="text-button" onClick={() => { setEditingProposalFor(selected.draftId); setProposalCopy(''); setProposalAudience('audience-internal-testers'); }} disabled={loading || simulating || proposalState !== 'ready' || Boolean(proposalBusy) || selectedHasPendingProposal}>Suggest revised wording</button>
@@ -731,7 +729,7 @@ export function App() {
                   </div>}
                   <p className="proposal-help">Creating a proposal does not change the draft. Approval applies the internal edit only after a fresh check.</p>
                 </div>}
-                {selected.draftState === 'paused' && selected.status === 'Supported' && import.meta.env.DEV && demoRolloutAvailable && <button className="secondary-button full-width resume-button" onClick={() => void resumeDraft(selected)} disabled={Boolean(proposalBusy) || loading || simulating}>{proposalBusy === selected.draftId ? 'Checking…' : 'Resume draft after fresh check'}</button>}
+                {selected.draftState === 'paused' && selected.status === 'Supported' && demoRolloutAvailable && <button className="secondary-button full-width resume-button" onClick={() => void resumeDraft(selected)} disabled={Boolean(proposalBusy) || loading || simulating}>{proposalBusy === selected.draftId ? 'Checking…' : 'Resume draft after fresh check'}</button>}
                 <div className="trail-heading"><span>Evidence trail</span><span className="live-label"><i /> FROM FALKORDB</span></div>
                 <div className="evidence-list">
                   {selected.evidence.length ? selected.evidence.map((item, index) => <div className="evidence-item" key={`${item.id}-${index}`}><div className={`evidence-icon evidence-${item.kind}`}>{item.kind === 'deployment' ? '↗' : item.kind === 'rollout' ? '◉' : '✓'}</div><div><strong>{item.label}</strong><p>{item.detail}</p><p className="evidence-meta">{formatObservedAt(item.observedAt)} · Reviewed by {item.reviewedBy || 'not recorded'}</p></div></div>) : <div className="no-evidence">{selected.status === 'Not checked' ? 'No evidence trail is expected because this draft has no linked CSV export promise.' : 'No reviewed source records were returned for this promise.'}</div>}
