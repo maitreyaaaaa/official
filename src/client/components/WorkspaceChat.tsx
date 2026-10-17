@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowUp, MessageCircle, PanelRightClose, Sparkles } from 'lucide-react';
+import { ArrowUp, PanelRightClose } from 'lucide-react';
 import type { WorkspaceChatResponse, WorkspaceSnapshot } from '../../shared/contracts.js';
 
 interface WorkspaceChatProps {
@@ -47,10 +47,10 @@ export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace
 
   const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void ask(question); };
   return <aside className={`workspace-chat ${open ? 'open' : 'closed'}`} aria-label="Workspace agent" aria-hidden={!open}>
-    <div className="chat-head"><div className="chat-agent-mark"><Sparkles size={18} aria-hidden="true" /></div><div><strong>Workspace agent</strong><small>Connected to live graph records</small></div><button type="button" aria-label="Close chat" title="Close chat" onClick={onClose}><PanelRightClose size={18} /></button></div>
+    <div className="chat-head"><div className="chat-agent-mark"><img src="/brand/official-mascot.png" alt="" /></div><div><strong>Workspace agent</strong><small>Connected to live graph records</small></div><button type="button" aria-label="Close chat" title="Close chat" onClick={onClose}><PanelRightClose size={18} /></button></div>
     <div className="chat-status"><span className={workspace ? 'chat-status-dot ready' : 'chat-status-dot'} />{workspace ? `${workspace.company.shortName} / ${workspace.project.name}` : 'Waiting for graph data'}</div>
     <div className="chat-scroll" aria-live="polite">
-      {items.length === 0 && <div className="chat-welcome"><div className="chat-welcome-icon"><MessageCircle size={24} /></div><h2>Ask what is happening.</h2><p>I can read the launch drafts, agent handoff, company notes, and ownership records. My answers cite the connected notes I used.</p><div className="chat-suggestions">{prompts.map((prompt) => <button key={prompt} type="button" disabled={!workspace || busy} onClick={() => void ask(prompt)}>{prompt}</button>)}</div></div>}
+      {items.length === 0 && <div className="chat-welcome"><div className="chat-welcome-icon"><img src="/brand/official-mascot.png" alt="" /></div><h2>Ask what is happening.</h2><p>I can read the launch drafts, agent handoff, company notes, and ownership records. My answers cite the connected notes I used.</p><div className="chat-suggestions">{prompts.map((prompt) => <button key={prompt} type="button" disabled={!workspace || busy} onClick={() => void ask(prompt)}>{prompt}</button>)}</div></div>}
       {items.map((item) => <div className={`chat-bubble ${item.role}`} key={item.id}><span>{item.role === 'agent' ? 'official agent' : 'You'}</span><p>{item.text}</p>{item.response && <><small>Checked {new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(item.response.checkedAt))}</small>{item.response.sources.length > 0 && <div className="chat-citations"><strong>Connected notes</strong>{item.response.sources.map((source) => <button key={source.id} type="button" onClick={() => onOpenNote(source.id)}>{source.label}</button>)}</div>}</>}</div>)}
       {busy && <div className="chat-thinking" role="status">Checking connected records…</div>}
       {error && <div className="chat-error" role="alert">{error}</div>}

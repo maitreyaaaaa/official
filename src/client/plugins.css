@@ -24,11 +24,8 @@
 .plugin-card { min-width: 0; padding: 18px; border: 1px solid #e0e7dd; border-radius: 16px; background: #fffefa; box-shadow: 0 4px 16px #29412e08; }
 .plugin-card.is-connected { border-color: #aacbae; background: #fcfffb; }
 .plugin-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.plugin-mark { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: #e9f2eb; color: #335a3d; font: 700 18px Georgia, serif; }
-.plugin-mark-1 { background: #eef0f7; color: #4b557b; }
-.plugin-mark-2 { background: #edf1f7; color: #405d78; }
-.plugin-mark-3 { background: #f7efe7; color: #835c3d; }
-.plugin-mark-4 { background: #eeedf6; color: #605378; }
+.plugin-mark { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border: 1px solid #e6e9e3; border-radius: 11px; background: #fff; }
+.plugin-mark img { display: block; width: 30px; height: 30px; object-fit: contain; }
 .plugin-state { padding: 5px 8px; border-radius: 30px; background: #f2f3f0; color: #677269; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .plugin-state.connected { background: #e6f2e7; color: #326a40; }
 .plugin-card h3 { margin: 16px 0 6px; color: #26392e; font-size: 16px; }

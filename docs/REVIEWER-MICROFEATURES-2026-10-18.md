@@ -1,0 +1,32 @@
+# Ten small additions to consider for official
+
+**Status:** Research and product proposals only. None of the ten ideas below is implemented by this document. Ranked for a short reviewer walkthrough on 18 October 2026, not for a general product roadmap.
+
+## What the reviewer already has
+
+The current demo has one Overview, a three-track guided path, linked claim evidence, versioned writer memory, a Company Brain graph and notes, ownership coverage, cited workspace chat, explicit internal approvals, and two isolated fictional companies. The [connected workspace](CONNECTED-WORKSPACE.md) records the current proof and limits. Adding another top-level section or another generic dashboard would make the story harder to follow.
+
+The organizer asks for FalkorDB to do central work, a public repository, data model and Cypher queries, a working video, and a deployment or full setup instructions. It permits entry in all three tracks. It does **not** publish a detailed judging rubric, so the ranking here is our product judgment, not a prediction of scores. [Graph Hacks rules](https://www.wemakedevs.org/hackathons/falkordb/rules), [track brief](https://www.wemakedevs.org/hackathons/falkordb).
+
+## Recommendation
+
+If there is time for only one, make the **before/after proof strip**. It should show a changed graph fact, the new result, and an unaffected control in the same glance. If there is time for three, add the **handoff diff** and **approval impact preview**. Each makes an existing proof easier to understand; none needs a new product area.
+
+| Rank | Microfeature | What the reviewer would see | Smallest credible version and acceptance check | Risk or boundary |
+| --- | --- | --- | --- | --- |
+| 1 | **Before/after proof strip** | After a rollout, tone, or backup change: previous result → graph change → new result, alongside one unchanged comparison. | Show only values captured from fresh graph reads. Replay one change in each track and confirm the relevant result changes while the control does not. | Do not imply causation from two unrelated snapshots. Keep it inside the existing result panel. |
+| 2 | **Old handoff → current brief diff** | The old writer handoff, the newly approved tone, and the opening rule that stayed current. | Compare stored version IDs and display the replacement path before starting a fresh writer. A pending tone must remain outside “current.” | This is a comparison of recorded context, not a claim to reveal an agent's private reasoning. |
+| 3 | **Approval impact preview** | Before an internal approval: records that may change, the reason, and the fact that no external publishing occurs. After: the actual saved outcome. | Reuse existing proposal/assignment data; recheck revisions during approval and show stale preview errors. | A preview is provisional. It must never promise execution before the guarded graph write succeeds. |
+| 4 | **Handover readiness checklist** | Separate checks for confirmed backup, current guide, current decision, and linked source. | Derive each check from existing Company Brain coverage and source records. Missing evidence yields “needs review,” not a green check. | Avoid a simple percentage that hides a blocking missing source. |
+| 5 | **Plain-language Unknown reason** | Exactly which evidence is missing, old, unreviewed, or conflicting, with a next review step when known. | Add a compact reason line to current claim findings and verify each reason against the checker output. | Do not invent a remedial action that the graph cannot support. |
+| 6 | **Source freshness stamp** | Reviewed date, fictional reviewer, and current or stale state beside the source in use. | Reuse saved timestamps and review metadata. Confirm the stamp changes when the source crosses the app's freshness rule. | Clearly label fictional people and data. A date alone does not establish truth. |
+| 7 | **“Why connected?” on a Brain node** | On node selection, name its stored relationship to a neighbor, such as “supports this decision” or “belongs to this process.” | Expose stored relationship types in the note response and render them in the existing detail pane. Remove an edge and confirm the explanation disappears. | Never infer an edge from proximity in the graph picture. |
+| 8 | **Return to the same finding** | Open a cited note from a claim or chat answer, then return to the same draft, finding, and scroll position. | Preserve selected company, source view, and focus target in local navigation state. Verify keyboard focus returns to the originating control. | Keep company scope intact; never reopen another company's note from a stale link. |
+| 9 | **Reviewer deep link** | A link from the README or video opens a named company, view, tab, and note or draft. | Encode only stable IDs in the URL and validate them against the selected company. An invalid link falls back to a clear safe view. | A URL is not a frozen snapshot of mutable demo state. Do not include private data. |
+| 10 | **Keyboard-centered graph node** | Tabbing to a node brings it into view and makes its focus ring visible. | Center the focused node at current zoom; keep the Notes list as an equivalent route. Test at minimum and maximum zoom. | Avoid moving the viewport while a person is dragging or typing. |
+
+## Why these ideas, and what they do not prove
+
+The first four expose a decision, changed context, or approval boundary already present in the product. They follow [progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/): the primary view stays short, while the graph path or comparison appears when the reviewer asks for it. [Google's People + AI guidance](https://pair.withgoogle.com/guidebook-v2/chapter/explainability-trust/) supports showing what data informs an answer and its limits. [WCAG focus visibility](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html) and [status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html) inform ideas 8 and 10 and any result updates. These sources support clarity and control; they do not guarantee reviewer preference, a prize, or production readiness.
+
+The best validation would be a short, observed walkthrough with someone who has not seen official: ask them to explain each track's graph change and human approval boundary without coaching. Count whether they can do so after the current UI and after a proposed microfeature. Keep an idea only if it reduces explanation time or prevents a mistaken conclusion without adding a new dependency or screen.
