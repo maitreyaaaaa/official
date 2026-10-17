@@ -383,7 +383,7 @@ SET old.status = 'approved', next.status = 'pending', next.approvedBy = '', next
     campaign.briefRevision = 1, campaign.demoResetAt = $now,
     process.revision = coalesce(process.revision, 1) + 1
 CREATE (event:WorkspaceEvent {id: $eventId, projectId: $projectId, kind: 'demo.reset',
-  title: 'Fictional demo reset', detail: 'Tone and launch backup returned to their baseline. Earlier records remain in graph history.', occurredAt: $now})
+  title: 'Fictional demo reset', detail: 'Drafts, rollout, test, tone, and launch backup returned to their baseline. Earlier records remain in graph history.', occurredAt: $now})
 RETURN campaign.id AS id`, { params: {
     campaignId, processId: company.processId, projectId: company.projectId, oldToneId: company.oldToneId,
     proposedToneId: company.proposedToneId, now, eventId: randomUUID(),

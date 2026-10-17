@@ -1,7 +1,27 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Graph } from 'falkordb';
-import { expandDemoRollout, isFixtureReady, restoreDemoRollout, seedFixture, seedFixtureIfMissing, setDemoTestAvailability } from './fixture.js';
+import { expandDemoRollout, isFixtureReady, resetDemoCampaignDrafts, restoreDemoRollout, seedFixture, seedFixtureIfMissing, setDemoTestAvailability } from './fixture.js';
+
+test('demo draft reset restores only the selected company and its canonical promise links', async () => {
+  const calls: Array<{ query: string; params: Record<string, unknown> }> = [];
+  const graph = {
+    async query(query: string, options?: { params?: Record<string, unknown> }) {
+      calls.push({ query, params: options?.params ?? {} });
+      if (query.includes('RETURN count(DISTINCT draft) AS count')) return { data: [[4]] };
+      return { data: [] };
+    },
+  } as unknown as Graph;
+  await resetDemoCampaignDrafts(graph, 'campaign-route-timeline');
+  assert.equal(calls.length, 6);
+  assert.ok(calls.every((call) => call.params.campaignId === 'campaign-route-timeline'));
+  assert.deepEqual(calls[0]?.params.draftIds, ['draft-northstar-web', 'draft-northstar-email', 'draft-northstar-pilot', 'draft-northstar-update']);
+  assert.match(calls[1]?.query ?? '', /DETACH DELETE promise/);
+  assert.match(calls[2]?.query ?? '', /DELETE link/);
+  assert.match(calls[3]?.query ?? '', /draft\.officialRevision = 0/);
+  assert.match(calls[4]?.query ?? '', /MERGE \(draft\)-\[:MAKES_PROMISE\]->\(target\)/);
+  assert.match(calls[5]?.query ?? '', /MERGE \(draft\)-\[:REUSES_DRAFT\]->\(target\)/);
+});
 import {
   acquireFixtureSeedLock,
   FIXTURE_SEED_LOCK_TTL_MS,

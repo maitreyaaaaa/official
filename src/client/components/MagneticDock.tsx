@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
-import type { LucideIcon } from 'lucide-react';
+import type { ElementType } from 'react';
 
 export type DockItem = {
   id: string;
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: ElementType;
   active: boolean;
 };
 

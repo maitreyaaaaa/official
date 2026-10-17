@@ -10,10 +10,11 @@ import { MagneticDock } from './components/MagneticDock.js';
 import { ConnectedWorkspace } from './components/ConnectedWorkspace.js';
 import { WorkspaceChat } from './components/WorkspaceChat.js';
 import { WorkspaceOverview } from './components/WorkspaceOverview.js';
+import { PluginsWorkspace } from './components/PluginsWorkspace.js';
 import { LocalTabs } from './components/LocalTabs.js';
 import { defaultDemoCompany, demoCompanies, demoCompanyByKey, type DemoCompany, type DemoCompanyKey } from '../shared/demo-companies.js';
 
-type NavigationSection = 'overview' | 'campaign' | 'memory' | 'brain';
+type NavigationSection = 'overview' | 'campaign' | 'memory' | 'brain' | 'plugins';
 type LaunchTab = 'drafts' | 'approvals' | 'history';
 type BrainTab = 'graph' | 'notes' | 'coverage' | 'history';
 type DataState = 'loading' | 'ready' | 'unavailable';
@@ -22,6 +23,7 @@ const dockItems = [
   { id: 'campaign', label: 'Launch review', href: '#campaign', icon: LayoutDashboard },
   { id: 'memory', label: 'Agent memory', href: '#memory', icon: Workflow },
   { id: 'brain', label: 'Company Brain', href: '#brain', icon: BookOpenText },
+  { id: 'plugins', label: 'Plugins', href: '#plugins', icon: PluginsIcon },
 ];
 
 function navigationSectionFromHash(): NavigationSection {
@@ -29,6 +31,7 @@ function navigationSectionFromHash(): NavigationSection {
   if (hash === 'campaign' || hash === 'drafts' || hash === 'approvals' || hash === 'review-queue' || hash === 'activity') return 'campaign';
   if (hash === 'memory') return 'memory';
   if (hash === 'brain' || hash === 'brain-notes' || hash === 'coverage' || hash === 'brain-history') return 'brain';
+  if (hash === 'plugins') return 'plugins';
   return 'overview';
 }
 
@@ -220,6 +223,13 @@ function SidebarIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
+// Four connected tiles on the same 24px Iconsax Linear grid as the sidebar control.
+function PluginsIcon({ size = 24, strokeWidth = 1.5 }: { size?: number; strokeWidth?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+    <path d="M4.5 3h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 8.5 10h-4A1.5 1.5 0 0 1 3 8.5v-4A1.5 1.5 0 0 1 4.5 3Zm11 0h4A1.5 1.5 0 0 1 21 4.5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 14 8.5v-4A1.5 1.5 0 0 1 15.5 3Zm-11 11h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 8.5 21h-4A1.5 1.5 0 0 1 3 19.5v-4A1.5 1.5 0 0 1 4.5 14Zm11 0h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>;
+}
+
 export function App() {
   const [companyKey, setCompanyKey] = useState<DemoCompanyKey>(() =>
     demoCompanyByKey(window.localStorage.getItem('official-demo-company'))?.key ?? defaultDemoCompany.key);
@@ -288,7 +298,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
   const rolloutExpanded = review?.findings.some((finding) => finding.evidence.some((item) => item.id === (company.key === 'alder-finch' ? 'source-s4' : `source-expanded-${company.key}`))) ?? false;
 
   useEffect(() => {
-    document.title = `${activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'} — official`;
+    document.title = `${activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'} — official`;
     document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, agent memory, and company knowledge in one connected official workspace.');
   }, [activeSection]);
 
@@ -534,7 +544,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
       setOwnerUnavailable(false);
       setChatEpoch((epoch) => epoch + 1);
       await Promise.all([refresh(false), refreshWorkspace(false)]);
-      setScenarioMessage('Fictional rollout, test, tone, and launch backup restored. Earlier graph activity remains in history.');
+      setScenarioMessage('Fictional drafts, rollout, test, tone, and launch backup restored. Earlier graph activity remains in history.');
     } catch (cause) {
       setScenarioError({ message: cause instanceof Error ? cause.message : 'Reset could not be confirmed.', actionUnavailable: false });
       await Promise.all([refresh(false), refreshWorkspace(ownerUnavailable)]);
@@ -797,6 +807,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         </section>
   );
 
+  const draftsNeedingDecision = review?.findings.filter((item) => item.needsReview).length ?? 0;
+
   return (
     <div className={`app-shell connected-shell company-${company.key} ${sidebarOpen ? '' : 'sidebar-closed'} ${chatOpen ? 'chat-open' : 'chat-closed'}`}>
       <aside className="sidebar" aria-label="Workspace sidebar">
@@ -810,16 +822,16 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           <a className={`nav-item ${activeSection === 'campaign' ? 'active' : ''}`} href="#campaign" onClick={handleSidebarNavigation} aria-current={activeSection === 'campaign' ? 'page' : undefined}><span className="nav-icon">◫</span> Launch review <span className="nav-count">{review?.findings.filter((item) => item.needsReview).length ?? '—'}</span></a>
           <a className={`nav-item ${activeSection === 'memory' ? 'active' : ''}`} href="#memory" onClick={handleSidebarNavigation} aria-current={activeSection === 'memory' ? 'location' : undefined}><span className="nav-icon"><Workflow size={17} /></span> Agent memory</a>
           <a className={`nav-item ${activeSection === 'brain' ? 'active' : ''}`} href="#brain" onClick={handleSidebarNavigation} aria-current={activeSection === 'brain' ? 'location' : undefined}><span className="nav-icon"><BookOpenText size={17} /></span> Company Brain <span className="nav-count">{workspace?.notes.length ?? '—'}</span></a>
+          <a className={`nav-item ${activeSection === 'plugins' ? 'active' : ''}`} href="#plugins" onClick={handleSidebarNavigation} aria-current={activeSection === 'plugins' ? 'page' : undefined}><span className="nav-icon"><PluginsIcon /></span> Plugins</a>
         </nav>
         <div className="sidebar-bottom">
           <div className="connection-card">
             <span className={`connection-dot ${error ? 'offline' : review ? 'online' : ''}`} />
             <div><strong>FalkorDB</strong><small>{error ? 'Connection needed' : review ? 'Connected' : scenarioError ? 'Check required' : 'Connecting'}</small></div>
-            <span className="connection-menu">···</span>
           </div>
           <div className="company-switcher">
             <button className="profile-row company-switcher-toggle" type="button" aria-expanded={companyMenuOpen} aria-controls="company-switcher-menu" onClick={() => setCompanyMenuOpen((open) => !open)}><div className="avatar">{company.monogram.slice(0, 1)}</div><div><strong>{company.shortName}</strong><small>Fictional company</small></div><ChevronDown size={17} aria-hidden="true" /></button>
-            {companyMenuOpen && <div className="company-switcher-menu" id="company-switcher-menu" role="group" aria-label="Choose company">{demoCompanies.map((item) => <button key={item.key} type="button" aria-current={item.key === company.key ? 'true' : undefined} onClick={() => { setCompanyMenuOpen(false); onSelectCompany(item.key); }}><span className="company-option-mark">{item.monogram}</span><span><strong>{item.shortName}</strong><small>{item.key === 'alder-finch' ? 'Spring reporting' : 'Delivery timeline'}</small></span>{item.key === company.key && <span aria-hidden="true">✓</span>}</button>)}</div>}
+            {companyMenuOpen && <div className="company-switcher-menu" id="company-switcher-menu" role="group" aria-label="Choose company">{demoCompanies.map((item) => <button key={item.key} type="button" aria-current={item.key === company.key ? 'true' : undefined} onClick={() => { setCompanyMenuOpen(false); if (item.key !== company.key) onSelectCompany(item.key); }}><span className="company-option-mark">{item.monogram}</span><span><strong>{item.shortName}</strong><small>{item.key === 'alder-finch' ? 'Spring reporting' : 'Delivery timeline'}</small></span>{item.key === company.key && <span aria-hidden="true">✓</span>}</button>)}</div>}
           </div>
         </div>
       </aside>
@@ -828,14 +840,14 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         <header className="topbar">
           {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={openSidebar}><SidebarIcon expanded={false} /></button>}
           <a className="brand" href="/" aria-label="official marketing site"><span className="brand-dot" aria-hidden="true" />official</a>
-          <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
-          <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask agent</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label="How campaign checks work" hidden={!showHelp}><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></section></div><div className="avatar small" aria-hidden="true">A</div></div>
+          <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
+          <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask agent</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Connecting a demo plugin saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview the source and its possible role. Disconnect at any time.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, agent memory, and Company Brain use the selected fictional company’s graph records.</p><p>Open an area from Overview to inspect its sources and review steps. The workspace agent can answer questions without changing those records.</p></>}</section></div><div className="avatar small" aria-hidden="true">{company.monogram.slice(0, 1)}</div></div>
         </header>
         <div className="app-dock">
           <MagneticDock items={dockItems.map((item) => ({ ...item, active: activeSection === item.id }))} />
         </div>
 
-        {activeSection === 'memory' || activeSection === 'brain' ? <ConnectedWorkspace key={brainEpoch}
+        {activeSection === 'plugins' ? <PluginsWorkspace company={company} /> : activeSection === 'memory' || activeSection === 'brain' ? <ConnectedWorkspace key={brainEpoch}
           company={company} view={activeSection} workspace={workspace} loading={workspaceLoading} error={workspaceError}
           brainTab={brainTab} onBrainTabChange={(tab) => { setBrainTab(tab); window.location.hash = tab === 'graph' ? '#brain' : tab === 'notes' ? '#brain-notes' : tab === 'coverage' ? '#coverage' : '#brain-history'; }}
           canWrite={demoRolloutAvailable} busy={workspaceBusy} message={workspaceMessage}
@@ -854,8 +866,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           resetBusy={resetBusy}
         /> : <>
         <section className="page-heading review-page-heading" id="campaign">
-          <div><div className="eyebrow">{workspace?.project.name ?? company.shortName} <span className="eyebrow-divider" aria-hidden="true">/</span> FICTIONAL DEMO</div><h1 tabIndex={-1}>Launch review</h1><p className="subheading">{review ? `${review.findings.filter((item) => item.needsReview).length} drafts need a decision. Choose one to inspect its evidence.` : 'Choose a draft to inspect its claim and current evidence.'}</p></div>
-          <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`}</button><button type="button" onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
+          <div><div className="eyebrow">{workspace?.project.name ?? company.shortName} <span className="eyebrow-divider" aria-hidden="true">/</span> FICTIONAL DEMO</div><h1 tabIndex={-1}>Launch review</h1><p className="subheading">{review ? draftsNeedingDecision ? `${draftsNeedingDecision} ${draftsNeedingDecision === 1 ? 'draft needs' : 'drafts need'} a decision. Choose one to inspect its evidence.` : 'No drafts need a decision. You can inspect any draft and its evidence.' : 'Choose a draft to inspect its claim and current evidence.'}</p></div>
+          <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" aria-label={rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`} onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`}</button><button type="button" aria-label={testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'} onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
         </section>
 
         {error && <section className="connection-alert" role="alert"><div className="alert-icon" aria-hidden="true">!</div><div><strong>{error.toLowerCase().includes('campaign not found') ? 'Campaign data unavailable' : 'Campaign check unavailable'}</strong><p>{error} Check that FalkorDB is reachable and the campaign data is loaded, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh(demoRolloutAvailable)}>Retry</button></section>}

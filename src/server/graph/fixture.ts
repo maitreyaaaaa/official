@@ -255,6 +255,56 @@ export async function isFixtureReady(graph: Graph): Promise<boolean> {
   return hasFixtureMarker(graph);
 }
 
+/** Restore only the selected fictional campaign's draft copy and promise links. */
+export async function resetDemoCampaignDrafts(graph: Graph, campaignId: string): Promise<void> {
+  const company = demoCompanyByCampaignId(campaignId);
+  if (!company) throw new Error('Unknown fictional campaign.');
+  const path = company.key === demoCompanies[0].key ? fixturePath : northstarFixturePath;
+  const fixture = JSON.parse(await readFile(path, 'utf8')) as FixtureData;
+  const records = fixture.nodes.Draft ?? [];
+  const draftIds = records.map((record) => String(record.id));
+  const count = await graph.query<unknown[]>(
+    'MATCH (draft:Draft)-[:IN_CAMPAIGN]->(:Campaign {id: $campaignId}) WHERE draft.id IN $draftIds RETURN count(DISTINCT draft) AS count',
+    { params: { campaignId, draftIds } },
+  );
+  const found = Array.isArray(count.data?.[0]) ? Number(count.data[0][0]) : Number((count.data?.[0] as Record<string, unknown> | undefined)?.count);
+  if (found !== records.length) throw new Error('The fictional campaign drafts are incomplete.');
+
+  await graph.query(`
+MATCH (draft:Draft)-[:IN_CAMPAIGN]->(:Campaign {id: $campaignId})
+MATCH (draft)-[link:MAKES_PROMISE]->(promise:Promise)
+WHERE draft.id IN $draftIds
+WITH promise, collect(link) AS links
+FOREACH (link IN links | DELETE link)
+WITH DISTINCT promise
+WHERE NOT promise.id IN $canonicalPromiseIds
+OPTIONAL MATCH (:Draft)-[owner:MAKES_PROMISE]->(promise)
+WITH promise, count(owner) AS owners
+WHERE owners = 0
+DETACH DELETE promise`, { params: {
+    campaignId, draftIds, canonicalPromiseIds: (fixture.nodes.Promise ?? []).map((record) => String(record.id)),
+  } });
+  await graph.query(
+    'MATCH (draft:Draft)-[:IN_CAMPAIGN]->(:Campaign {id: $campaignId}) MATCH (draft)-[link:REUSES_DRAFT]->() WHERE draft.id IN $draftIds DELETE link',
+    { params: { campaignId, draftIds } },
+  );
+  await graph.query(`
+UNWIND $records AS record
+MATCH (draft:Draft {id: record.id})-[:IN_CAMPAIGN]->(:Campaign {id: $campaignId})
+SET draft += record, draft.officialRevision = 0
+RETURN count(draft) AS count`, { params: { campaignId, records } });
+  for (const type of ['MAKES_PROMISE', 'REUSES_DRAFT'] as const) {
+    const edges = fixture.edges.filter((edge) => edge.type === type);
+    if (!edges.length) continue;
+    const target = type === 'MAKES_PROMISE' ? 'Promise' : 'Draft';
+    await graph.query(`
+UNWIND $edges AS edge
+MATCH (draft:Draft {id: edge.from})-[:IN_CAMPAIGN]->(:Campaign {id: $campaignId})
+MATCH (target:${target} {id: edge.to})
+MERGE (draft)-[:${type}]->(target)`, { params: { campaignId, edges: edges.map((edge) => ({ from: edge.from, to: edge.to })) } });
+  }
+}
+
 async function hasFixtureMarker(graph: Graph): Promise<boolean> {
   const result = await graph.query<unknown[]>(
     'MATCH (state:FixtureState {id: $id, version: $version}) RETURN state.id LIMIT 1',

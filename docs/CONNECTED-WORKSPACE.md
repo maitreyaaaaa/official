@@ -16,6 +16,8 @@ The Company Brain opens on a pannable, zoomable graph of note links. Selecting a
 
 The right chat checks graph records and the campaign checker on each question. It returns structured answers with clickable company-note citations. It does not call an LLM or take action. The optional Track 1 OpenAI assistant is in the collapsed Advanced campaign AI section of that same panel.
 
+The Plugins view lists 25 sources across messages, meetings, projects, customer work, and infrastructure. Search, category, and connected-only filters work per company. A demo connection is only a browser-local selection for that company; it neither signs in to a provider nor imports data into the graph. Each card's detail panel describes a possible future source and its use without presenting it as connected evidence.
+
 ## Local walkthrough
 
 1. Start the documented FalkorDB stack and `npm run dev`. Open `http://127.0.0.1:3001/app`. The app initializes fixture `connected-companies-v11` when seeding is enabled.
@@ -23,7 +25,7 @@ The right chat checks graph records and the campaign checker on each question. I
 3. Open Agent memory. Inspect handoff revision 1, approve the calm tone if pending, then start a fresh writer. Its draft uses the current approved tone, reviewed opening, and live evidence result. The text stays pending until a person approves it internally. If rollout or test facts change, approval of that old draft returns 409 and the UI labels it historical.
 4. Open Company Brain. Search and open a note, follow backlinks, and inspect dated source records. Simulate Maya unavailable. Without a confirmed backup, the process is Uncovered. Propose Zara: coverage stays Uncovered. Approve: coverage becomes Covered by backup; Release QA remains covered by Ines. The internal handover names the guide, decision, and source links. Expanding the rollout makes the old guide incomplete until reviewed against that change.
 5. Ask the right chat about drafts, the writer handoff, ownership, or notes. A note citation opens its reader. The optional campaign AI controls are under Advanced campaign AI in the same panel.
-6. Use Reset fictional demo to replay. It restores the tester-only rollout and production test, sets the calm instruction back to pending, removes the launch backup link, and starts a new visible run for writer drafts, proposals, and activity. Earlier records remain in FalkorDB history; old writer drafts and proposals cannot be approved in the new run. The reset requires the same local fictional-demo write guard as other mutations.
+6. Use Reset fictional demo to replay. It restores canonical draft copy and promise links, the limited rollout and production test, the proposed tone, and the unassigned launch backup. It starts a new visible run for writer drafts, proposals, and activity. Earlier records remain in FalkorDB history; old writer drafts and proposals cannot be approved in the new run. The reset requires the same fictional-demo write guard as other mutations.
 
 7. Use the company switcher at the bottom left to choose Northstar Parcel. Its delivery-timeline launch has a separate review, writer handoff, nine-note graph, and coverage roster. Reset acts on the selected company only.
 

@@ -53,7 +53,7 @@ export function AppleMailTabs({ tabs, value, onValueChange }: AppleMailTabsProps
               ref={(element) => { buttonRefs.current[index] = element; }}
               type="button"
               role="tab"
-              aria-label={`${tab.label}, ${tab.count} drafts`}
+              aria-label={`${tab.label}, ${tab.count} ${tab.count === 1 ? 'draft' : 'drafts'}`}
               aria-controls="draft-list"
               aria-selected={active}
               tabIndex={active ? 0 : -1}

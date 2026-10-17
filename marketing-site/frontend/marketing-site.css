@@ -261,14 +261,15 @@ html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100p
 .faq-list details[open] summary span { transform: rotate(45deg); }
 .faq-list details p { max-width: 610px; margin: -1px 35px 20px 0; color: var(--site-muted); font-size: 11px; line-height: 1.65; }
 
-.marketing-footer { border-top: 1px solid var(--site-line); background: var(--site-paper); }
-.footer-inner { display: flex; min-height: 91px; align-items: center; gap: 25px; }
+.marketing-footer { overflow: hidden; border-top: 1px solid var(--site-line); background: var(--site-paper); }
+.footer-inner { display: grid; gap: 27px; padding-block: 25px 17px; }
+.footer-topline { display: flex; min-height: 38px; align-items: center; gap: 22px; }
 .footer-inner .marketing-brand { font-size: 22px; }
 .footer-inner .marketing-brand > span { width: 10px; height: 10px; }
-.footer-inner > span { margin-left: auto; color: #78847b; font-size: 9px; }
-.footer-inner > span i { padding-inline: 4px; font-style: normal; }
-.footer-inner > a:last-child { color: var(--site-olive); font-size: 10px; font-weight: 600; }
-.footer-inner > a:last-child span { padding-left: 5px; }
+.footer-topline > a { margin-left: auto; color: var(--site-olive); font-size: 10px; font-weight: 600; }
+.footer-topline > a span { padding-left: 5px; }
+.footer-display-wordmark { position: relative; left: 50%; width: 100vw; margin: 0; transform: translateX(-50%); color: #9997d9; font-family: var(--site-display); font-size: 31vw; font-weight: 900; line-height: .76; letter-spacing: -.105em; text-align: center; white-space: nowrap; }
+.footer-caption { display: flex; justify-content: space-between; gap: 18px; padding-top: 5px; color: var(--site-muted); font-size: 9px; letter-spacing: .025em; }
 
 @media (max-width: 1080px) {
   .marketing-site .content-width { width: min(100% - 64px, 880px); }
@@ -381,8 +382,11 @@ html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100p
   .faq-section { grid-template-columns: 1fr; gap: 23px; padding: 48px 0; }
   .faq-heading h2 { font-size: 42px; }
   .faq-list summary { min-height: 56px; font-size: 16px; }
-  .footer-inner { min-height: 100px; flex-wrap: wrap; justify-content: space-between; gap: 8px 15px; padding-block: 16px; }
-  .footer-inner > span { order: 3; width: 100%; margin-left: 0; }
+  .footer-inner { gap: 20px; padding-block: 20px 15px; }
+  .footer-topline { flex-wrap: wrap; gap: 12px; }
+  .footer-topline > a { width: 100%; margin-left: 0; }
+  .footer-display-wordmark { font-size: 31vw; }
+  .footer-caption { flex-wrap: wrap; gap: 6px 15px; font-size: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -11,7 +11,7 @@ import {
   rejectCampaignProposal, resumeCampaignDraft, ReviewWorkflowError,
 } from './review/review.js';
 import { getGraph } from './graph/client.js';
-import { expandDemoRollout, isFixtureReady, restoreDemoRollout, seedFixtureIfMissing, setDemoTestAvailability } from './graph/fixture.js';
+import { expandDemoRollout, isFixtureReady, resetDemoCampaignDrafts, restoreDemoRollout, seedFixtureIfMissing, setDemoTestAvailability } from './graph/fixture.js';
 import { canInitializeFixture, canSeedFixture, canServeDemoApp, canWriteDemo, localDemoConfigFromEnvironment } from './config/guards.js';
 import { ApiRequestLimiter } from './config/api-rate-limit.js';
 import { AssistantServiceError, AssistantUnavailableError, runCampaignAssistant } from './agent/assistant.js';
@@ -540,6 +540,7 @@ app.post('/api/workspace/demo/reset', async (request, response) => {
     if (!await requireFixtureReady(graph, campaignId, response)) return;
     await restoreDemoRollout(graph, campaignId);
     await setDemoTestAvailability(graph, true, campaignId);
+    await resetDemoCampaignDrafts(graph, campaignId);
     await resetWorkspaceDemo(graph, campaignId);
     response.json(await loadWorkspace(graph, false, campaignId));
   } catch (error) {

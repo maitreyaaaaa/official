@@ -152,6 +152,7 @@ test('initial campaign findings match the canonical scenario, including D2 promi
   ]);
   assert.equal(review.findings[1].promiseText, 'CSV export is available now to all accounts.');
   assert.equal(review.findings[1].wordingSourceTitle, 'Landing page');
+  assert.equal(review.findings[3].reason, 'No reviewed product promise is linked to this draft.');
 });
 
 test('edit target audiences are checked against their own reviewed rollout evidence', async () => {

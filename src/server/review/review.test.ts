@@ -258,6 +258,9 @@ test('edit approval uses compatible FalkorDB draft matching and keeps all freshn
   assert.match(approvalQuery, /coalesce\(feature\.factsRevision, 0\) = proposal\.factRevision/);
   assert.match(approvalQuery, /draft\.text = proposal\.baselineText/);
   assert.match(approvalQuery, /proposal\.action = 'edit'/);
+  assert.match(approvalQuery, /OPTIONAL MATCH \(campaign\)<-\[:IN_CAMPAIGN\]-\(dependent:Draft\)-\[dependentLink:REUSES_DRAFT\]->\(draft\)/);
+  assert.match(approvalQuery, /MERGE \(dependent\)-\[:MAKES_PROMISE\]->\(previousPromise\)/);
+  assert.match(approvalQuery, /FOREACH \(link IN dependentLinks \| DELETE link\)/);
 });
 
 test('a revision race during pause approval moves the proposal to needs_recheck', async () => {

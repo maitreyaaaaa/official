@@ -305,7 +305,15 @@ function GuardrailsPage() {
 }
 
 function SiteFooter() {
-  return <footer className="marketing-footer"><div className="content-width footer-inner"><Brand /><span>Fictional Alder &amp; Finch release</span><a href="/app">Open review workspace <span aria-hidden="true">↗</span></a></div></footer>;
+  return <footer className="marketing-footer">
+    <div className="content-width footer-inner">
+      <div className="footer-topline">
+        <a href="/app">Open review workspace <span aria-hidden="true">↗</span></a>
+      </div>
+      <p className="footer-display-wordmark" aria-hidden="true">official</p>
+      <div className="footer-caption"><span>Fictional Alder &amp; Finch release</span><span>Evidence first. People decide.</span></div>
+    </div>
+  </footer>;
 }
 
 function NotFoundPage() {

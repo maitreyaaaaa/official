@@ -134,14 +134,26 @@ WITH proposal, draft, campaign
 MATCH (feature:Feature {id: proposal.featureId})
 MATCH (audience:Audience {id: proposal.targetAudienceId})
 MATCH (run:ReviewRun {id: $runId, campaignId: $campaignId})
+OPTIONAL MATCH (campaign)<-[:IN_CAMPAIGN]-(dependent:Draft)-[dependentLink:REUSES_DRAFT]->(draft)
+WITH proposal, draft, feature, audience, run,
+     collect(DISTINCT dependent) AS dependents, collect(DISTINCT dependentLink) AS dependentLinks
 OPTIONAL MATCH (draft)-[directLink:MAKES_PROMISE]->(:Promise)
-WITH proposal, draft, feature, audience, run, collect(directLink) AS directLinks
+WITH proposal, draft, feature, audience, run, dependents, dependentLinks,
+     collect(DISTINCT directLink) AS directLinks
+OPTIONAL MATCH (draft)-[:MAKES_PROMISE]->(previousPromise:Promise)
+WITH proposal, draft, feature, audience, run, dependents, dependentLinks, directLinks,
+     collect(DISTINCT previousPromise) AS previousPromises
 OPTIONAL MATCH (draft)-[reuseLink:REUSES_DRAFT]->(:Draft)
-WITH proposal, draft, feature, audience, run, directLinks, collect(reuseLink) AS reuseLinks
+WITH proposal, draft, feature, audience, run, dependents, dependentLinks, directLinks, previousPromises,
+     collect(DISTINCT reuseLink) AS reuseLinks
 WHERE coalesce(draft.officialRevision, 0) = proposal.draftRevision
   AND coalesce(feature.factsRevision, 0) = proposal.factRevision
   AND draft.text = proposal.baselineText
   AND proposal.action = 'edit'
+FOREACH (dependent IN dependents |
+  FOREACH (previousPromise IN previousPromises |
+    MERGE (dependent)-[:MAKES_PROMISE]->(previousPromise)))
+FOREACH (link IN dependentLinks | DELETE link)
 FOREACH (link IN directLinks | DELETE link)
 FOREACH (link IN reuseLinks | DELETE link)
 CREATE (promise:Promise {id: $promiseId, text: proposal.proposedText, reviewed: true})

@@ -486,7 +486,7 @@ async function runCampaignCheck(graph: Graph, campaignId: string, checkedAt: Dat
       return {
         draftId, title: asString(row[1]), kind: asString(row[2]), text: asString(row[3]),
         promiseText: null, wordingSourceTitle: null, featureName: null, audienceName: null, status: 'Not checked',
-        reason: 'No reviewed CSV export promise is linked to this draft.', evidence: [], needsReview: false,
+        reason: 'No reviewed product promise is linked to this draft.', evidence: [], needsReview: false,
       };
     }
 
