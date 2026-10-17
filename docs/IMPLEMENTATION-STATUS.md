@@ -6,7 +6,7 @@ This page separates verified repository work from behavior that still needs a li
 
 The official app now includes the existing Track 1 claim checker, a Track 2 versioned planner-to-writer handoff, and a Track 3 Company Brain with searchable notes, linked sources, ownership coverage, and an internal handover view. All use one fictional Alder & Finch graph. A right-side chat reads current graph records and cites notes. See [Connected workspace](CONNECTED-WORKSPACE.md) for the graph paths, walkthrough, verified behavior, and limits.
 
-The integrated TypeScript/Vite build passes and `npm test` passes **88/88** deterministic tests. Local FalkorDB acceptance verified fixture v9, tone and backup approvals, unchanged QA control, three evidence-driven writer outcomes, stale-draft rejection, guide freshness under rollout change, note navigation, chat citations, sidebar control, and fictional demo replay. This integration has **not** been deployed to the public Vercel alias. The Track 1 production acceptance below refers to the earlier deployed build.
+The integrated TypeScript/Vite build passes and `npm test` passed **88/88** deterministic tests on 2026-10-17. Local FalkorDB acceptance verified fixture v9, tone and backup approvals, unchanged QA control, three evidence-driven writer outcomes, stale-draft rejection, guide freshness under rollout change, note navigation, chat citations, sidebar control, and fictional demo replay. The integrated workspace reached the public Vercel alias on 2026-10-18; the production release check is recorded below. The earlier Track 1 production acceptance remains a separate historical check.
 
 ## Earlier Track 1 implementation record
 
@@ -67,6 +67,12 @@ The integrated TypeScript/Vite build passes and `npm test` passes **88/88** dete
 - Browser-verified production flows: changing access to all accounts changes the three CSV claims to Supported; restoring internal-tester access returns the two contradictions. A pause proposal was created, approved, and resumed after a fresh Supported check. Activity entries recorded the checks and human decisions.
 - Fixed deployment-specific issues found during this pass: the SPA fallback had intercepted API paths; the function runtime imported the local Vite server; deeper campaign routes were not registered as Vercel functions; and hosted write guards were not given the request host. Production UI actions now follow the server's hosted-demo capability flags.
 - `npm run build`, `npm test` (84/84), and `git diff --check` passed locally before deployment. The production UI is deployed from `9cfc191`; the documentation update at `17b81d0` also reached Ready.
+
+### Integrated workspace production release — 2026-10-18
+
+- Commit `a809d67` was pushed to `main`; GitHub's Vercel status reported the deployment completed successfully. The public alias [official-sand.vercel.app/app](https://official-sand.vercel.app/app) served the new compact Overview, Launch review, and Company Brain notes in a production browser session.
+- Production `/api/health` returned `200` with `falkorDb: connected`. The Overview loaded graph-backed counts, and Launch review showed four findings: two Contradicted, one Supported, and one Not checked. Company Brain showed eight notes. Chat was closed on first load.
+- `npm run build` and `git diff --cached --check` passed before the push. Approval, writer, and backup mutations were not replayed in production during this release check. No automated WCAG conformance scan was completed for the new layout.
 
 ## Still needs verification
 

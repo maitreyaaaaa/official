@@ -34,7 +34,7 @@ The right chat checks graph records and the campaign checker on each question. I
 
 ## Current boundaries
 
-- The integrated version has been exercised locally. The earlier public Vercel deployment documented in [Implementation status](IMPLEMENTATION-STATUS.md) still represents the previous Track 1 build until this version is deployed and retested there.
+- The integrated workspace and compact Overview reached the [public Vercel alias](https://official-sand.vercel.app/app) on 2026-10-18. Production read-only browser review confirmed the Overview, Launch review drafts, Company Brain notes, and connected FalkorDB health. The integrated approval and writer mutations were previously exercised locally; they were not replayed on this production release.
 - There is no authenticated reviewer identity, customer ingestion, automatic crawling, background scheduling, external publishing, or real customer data. Fixed demo approvals record the fictional reviewer name in graph records; they do not authenticate that person.
 - Writer copy and workspace chat are deterministic, bounded demo behavior. The handover is an internal brief; it is not sent to anyone.
 - The fixture is one fictional company and launch, not a general multi-company knowledge system.
