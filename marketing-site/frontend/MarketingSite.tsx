@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import Lenis from 'lenis';
+import { cancelFrame, frame, motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import 'lenis/dist/lenis.css';
 import './marketing-site.css';
 import type { MarketingPage } from './routes.js';
 import { ScrollRevealText } from './ScrollRevealText.js';
@@ -311,6 +313,23 @@ function NotFoundPage() {
 }
 
 export function MarketingSite({ page }: { page: MarketingPage }) {
+  useEffect(() => {
+    const lenis = new Lenis({
+      anchors: true,
+      stopInertiaOnNavigate: true,
+    });
+
+    function update({ timestamp }: { timestamp: number }) {
+      lenis.raf(timestamp);
+    }
+
+    frame.setup(update, true);
+    return () => {
+      cancelFrame(update);
+      lenis.destroy();
+    };
+  }, []);
+
   useEffect(() => {
     document.title = pageDetails[page].title;
     document.querySelector('meta[name="description"]')?.setAttribute('content', pageDetails[page].description);
