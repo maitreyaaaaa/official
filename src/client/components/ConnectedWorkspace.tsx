@@ -115,7 +115,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
     <div className="connected-masthead">
       <div className="connected-mark" aria-hidden="true"><CompanyLogo company={company} /></div>
       <div><span className="connected-overline">{workspace.company.name} <span aria-hidden="true">/</span> {workspace.project.name}</span>
-        <h1 tabIndex={-1}>{view === 'memory' ? 'Writing handoff' : 'Company Brain'}</h1>
+        <h1 tabIndex={-1}>{view === 'memory' ? 'Writing handoff' : 'Company records'}</h1>
         <p>{view === 'memory'
           ? 'Keep the next writer on the current approved brief, even when the original handoff is old.'
           : 'Browse the notes, decisions, people, and source paths behind this launch.'}</p></div>
@@ -143,7 +143,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
           {!canWrite && <p className="connected-help">Demo writes are unavailable in this workspace. You can still inspect the current memory.</p>}
         </section>
         <section className="connected-card memory-card">
-          <div className="connected-card-heading"><span className="connected-icon"><BookOpenText size={19} /></span><div><span className="connected-label">REVIEWED EPISODE</span><h2>What the next agent learned</h2></div></div>
+          <div className="connected-card-heading"><span className="connected-icon"><BookOpenText size={19} /></span><div><span className="connected-label">REVIEWED EPISODE</span><h2>Notes for the next writer</h2></div></div>
           <p className="connected-lede">{workspace.memory.episode.summary}</p>
           <p className="connected-help">Reviewed by {workspace.memory.episode.reviewedBy}. This is an episode for this campaign; it does not become a global rule.</p>
           <div className="writer-flow"><span>Task received</span><ArrowRight size={15} /><span>Memory refreshed</span><ArrowRight size={15} /><span>Draft prepared</span><ArrowRight size={15} /><span>Human review</span></div>
@@ -161,7 +161,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
         </section>
       </div>
     </> : <>
-      <LocalTabs label="Company Brain sections" idPrefix="brain" tabs={[
+      <LocalTabs label="Company record sections" idPrefix="brain" tabs={[
         { id: 'graph' as const, label: 'Graph', count: notes.length },
         { id: 'notes' as const, label: 'Notes', count: notes.length },
         { id: 'coverage' as const, label: 'Coverage', count: handoverReady ? 0 : 1 },

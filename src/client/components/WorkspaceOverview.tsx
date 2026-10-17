@@ -57,10 +57,10 @@ export function WorkspaceOverview({ review, workspace, loading, error, onRefresh
       </article>
       <article className="overview-action-card">
         <span className="overview-card-icon"><BookOpenText size={20} aria-hidden="true" /></span>
-        <span className="overview-card-kicker">03 / COMPANY BRAIN</span>
+        <span className="overview-card-kicker">03 / COMPANY RECORDS</span>
         <h2>{!brain ? 'Company records unavailable' : backupNeeded ? 'Backup is not confirmed' : guideNeedsReview ? 'Handover guide needs review' : 'Launch review is covered'}</h2>
         <p>{brain ? 'Find the guide and source records, then inspect ownership coverage.' : 'Company notes and coverage appear when graph records load.'}</p>
-        <button className="overview-card-link" type="button" onClick={backupNeeded || guideNeedsReview ? onOpenCoverage : onOpenBrain}>{backupNeeded || guideNeedsReview ? 'Review coverage' : 'Open Company Brain'} <ArrowRight size={17} aria-hidden="true" /></button>
+        <button className="overview-card-link" type="button" onClick={backupNeeded || guideNeedsReview ? onOpenCoverage : onOpenBrain}>{backupNeeded || guideNeedsReview ? 'Review coverage' : 'Open company records'} <ArrowRight size={17} aria-hidden="true" /></button>
       </article>
     </div>
 

@@ -66,7 +66,6 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
 .primary-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 12px #214b3220; }
 .primary-button:active:not(:disabled) { transform: translateY(0) scale(.985); }
 .primary-button:disabled { opacity: .7; cursor: wait; }
-.button-spark { font-size: 15px; }
 .connection-alert { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 17px; padding: 12px 14px; border: 1px solid #f0d4d0; border-radius: 9px; background: #fff8f6; }
 .scenario-alert { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border: 1px solid #d9e9dc; border-radius: 8px; background: #f4faf4; color: #557b5b; font-size: 9px; }
 .scenario-check { display: grid; width: 17px; height: 17px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #e1f0e3; color: #3d6d48; font-size: 10px; font-weight: 700; }

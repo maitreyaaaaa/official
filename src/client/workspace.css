@@ -152,7 +152,6 @@
 .app-shell .secondary-button { border-color: #dfe6de; background: #fff; color: #46574a; }
 .app-shell .secondary-button:hover:not(:disabled) { border-color: #c6d4c6; background: #f7faf7; }
 .app-shell .secondary-button:disabled { opacity: .55; cursor: not-allowed; }
-.app-shell .button-spark { font-size: 16px; }
 .app-shell .text-button { min-height: 40px; padding: 6px 10px; border: 0; background: transparent; color: #456b4e; font-size: 13px; font-weight: 650; cursor: pointer; }
 .app-shell .text-button:hover { color: #294d32; text-decoration: underline; text-underline-offset: 3px; }
 

@@ -239,8 +239,6 @@
 .workspace-chat { position: fixed; inset: 0 0 0 auto; z-index: 70; display: flex; width: 350px; height: 100dvh; flex-direction: column; border-left: 1px solid #dfe7dc; background: #fff; box-shadow: -10px 0 34px #29402c0b; transition: transform .22s ease, visibility .22s; }
 .workspace-chat.closed { transform: translateX(100%); visibility: hidden; pointer-events: none; }
 .chat-head { display: flex; align-items: center; gap: 10px; min-height: 76px; padding: 0 17px; border-bottom: 1px solid #e9eee7; }
-.chat-agent-mark { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; }
-.chat-agent-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .chat-head strong, .chat-head small { display: block; }
 .chat-head strong { color: #2a3d2e; font-size: 13px; }
 .chat-head small { color: #829083; font-size: 10px; }
@@ -251,8 +249,6 @@
 .chat-status-dot.ready { background: #5ca36a; }
 .chat-scroll { display: flex; flex: 1; flex-direction: column; gap: 14px; overflow-y: auto; padding: 20px 16px; }
 .chat-welcome { margin: auto 0; text-align: left; }
-.chat-welcome-icon { display: grid; width: 58px; height: 58px; place-items: center; margin-bottom: 15px; }
-.chat-welcome-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .chat-welcome h2 { margin: 0 0 7px; color: #304334; font: 500 24px Georgia,serif; }
 .chat-welcome p { color: #718174; font-size: 12px; line-height: 1.65; }
 .chat-suggestions { display: grid; gap: 7px; margin-top: 18px; }
