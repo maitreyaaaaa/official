@@ -166,6 +166,8 @@ export interface WorkspaceSnapshot {
     coverage: 'Covered by primary' | 'Covered by backup' | 'Uncovered in this scenario' | 'Needs backup confirmation' | 'Unknown';
     guideNoteId: string;
     guideCurrent: boolean;
+    decisionCurrent: boolean;
+    linkedSourceCount: number;
     decisionTitle: string;
     affectedProject: string;
     controlProcess: { name: string; coverage: string };

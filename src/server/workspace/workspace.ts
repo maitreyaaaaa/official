@@ -151,15 +151,17 @@ RETURN session.createdAt AS createdAt ORDER BY createdAt DESC LIMIT 1`,
   const processRows = rows(await graph.query<unknown[]>(`
 MATCH (project:Project {id: $projectId})-[:HAS_PROCESS]->(process:Process {id: $processId})
 MATCH (process)-[:PRIMARY_OWNER]->(primary:Person)
-MATCH (process)-[:USES_GUIDE]->(guide:KnowledgeNote)-[:CITES_DECISION]->(decision:Decision)
-MATCH (process)-[:FOLLOWS_DECISION]->(decision)
+OPTIONAL MATCH (process)-[:USES_GUIDE]->(guide:KnowledgeNote)
+OPTIONAL MATCH (process)-[:FOLLOWS_DECISION]->(decision:Decision)
+OPTIONAL MATCH (guide)-[:CITES_DECISION]->(guideDecision:Decision)
 OPTIONAL MATCH (process)-[:BACKUP_OWNER]->(backup:Person)
 RETURN process.id AS id, process.name AS name, process.summary AS summary,
        process.rosterReviewed AS rosterReviewed, primary.name AS primaryName,
        backup.name AS backupName, guide.id AS guideId, guide.reviewedAt AS guideReviewedAt,
+       decision.id AS decisionId, guideDecision.id AS guideDecisionId,
        decision.title AS decisionTitle, decision.reviewedAt AS decisionReviewedAt,
        project.name AS projectName`, { params: { projectId, processId } }),
-  ['id', 'name', 'summary', 'rosterReviewed', 'primaryName', 'backupName', 'guideId', 'guideReviewedAt', 'decisionTitle', 'decisionReviewedAt', 'projectName']);
+  ['id', 'name', 'summary', 'rosterReviewed', 'primaryName', 'backupName', 'guideId', 'guideReviewedAt', 'decisionId', 'guideDecisionId', 'decisionTitle', 'decisionReviewedAt', 'projectName']);
   const process = required(processRows[0], 'The company ownership graph is not ready.');
   const backupRows = rows(await graph.query<unknown[]>(`
 MATCH (proposal:BackupProposal {processId: $processId, status: 'pending'})
@@ -177,9 +179,13 @@ MATCH (feature:Feature {id: $featureId})-[:HAS_ROLLOUT]->(rollout:Rollout {curre
 RETURN rollout.id AS id, feature.factsRevision AS factRevision`, { params: { featureId } }), ['id', 'factRevision']);
   const backupName = value(process, 'backupName') || null;
   const rosterReviewed = process.rosterReviewed === true;
-  const guideCurrent = rolloutRows.length === 1 && value(rolloutRows[0], 'id') === baselineRolloutId
+  const decisionCurrent = Boolean(value(process, 'decisionId'))
+    && value(process, 'decisionId') === value(process, 'guideDecisionId')
+    && Number.isFinite(new Date(value(process, 'decisionReviewedAt')).getTime());
+  const guideCurrent = decisionCurrent && rolloutRows.length === 1 && value(rolloutRows[0], 'id') === baselineRolloutId
     && Boolean(value(process, 'guideReviewedAt'))
     && new Date(value(process, 'guideReviewedAt')).getTime() >= new Date(value(process, 'decisionReviewedAt')).getTime();
+  const linkedSourceCount = sourceRows.filter((row) => value(row, 'noteId') === value(process, 'guideId')).length;
   const coverage: WorkspaceSnapshot['companyBrain']['coverage'] = !rosterReviewed
     ? 'Unknown'
     : ownerUnavailable ? (backupName ? 'Covered by backup' : 'Uncovered in this scenario')
@@ -209,8 +215,8 @@ ORDER BY occurredAt DESC LIMIT 12`, { params: { projectId, campaignId } }),
       processId: value(process, 'id'), processName: value(process, 'name'), processSummary: value(process, 'summary'),
       primaryName: value(process, 'primaryName'), backupName,
       backupProposalStatus: backupRows.length ? 'pending' : null, rosterReviewed, coverage,
-      guideNoteId: value(process, 'guideId'), guideCurrent,
-      decisionTitle: value(process, 'decisionTitle'), affectedProject: value(process, 'projectName'),
+      guideNoteId: value(process, 'guideId'), guideCurrent, decisionCurrent, linkedSourceCount,
+      decisionTitle: value(process, 'decisionTitle') || 'No reviewed decision linked', affectedProject: value(process, 'projectName'),
       controlProcess: { name: value(control, 'name'), coverage: `Covered by ${value(control, 'backupName')} when its primary is unavailable` },
       ownerUnavailable,
     },
@@ -404,8 +410,11 @@ export function answerWorkspaceQuestion(message: string, snapshot: WorkspaceSnap
   if (/note|source|decision|document|file|knowledge/.test(question)) {
     const categories = [...new Set(snapshot.notes.map((note) => note.category))];
     const sourced = snapshot.notes.filter((note) => note.sources.length);
-    answer = `The Company Brain contains ${snapshot.notes.length} notes across ${categories.join(', ')}. ${sourced.length} have direct source or decision links: ${sourced.map((note) => note.title).join('; ')}. A dated rollout decision is historical; use the live campaign check for current access.`;
+    answer = `Company records contain ${snapshot.notes.length} notes across ${categories.join(', ')}. ${sourced.length} have direct source or decision links: ${sourced.map((note) => note.title).join('; ')}. A dated rollout decision is historical; use the live campaign check for current access.`;
     cite(notes.company); cite(notes.decision); cite(notes.guide);
+  } else if (/tell me about|describe|what (?:does|is) (?:this |the |the current |current )?(?:company|business|team|project|release|launch)|what company is this/.test(question)) {
+    answer = `${snapshot.company.name} is ${snapshot.company.description} The current project is ${snapshot.project.name}: ${snapshot.project.summary} The workspace includes ${snapshot.notes.length} company notes, ${review.findings.length} launch claims, and the current writing and ownership records.`;
+    cite(notes.company); cite(notes.campaign); cite(notes.decision);
   } else if (/draft|email|copy|post|claim|campaign/.test(question)) {
     const findings = review.findings.map((finding) => `${finding.title}: ${finding.status}${finding.draftState === 'paused' ? ' (paused)' : ''}`).join('; ');
     const pending = snapshot.memory.drafts.filter((draft) => draft.status === 'pending_approval').length;
@@ -425,7 +434,7 @@ export function answerWorkspaceQuestion(message: string, snapshot: WorkspaceSnap
     answer = `${needsReview} campaign finding${needsReview === 1 ? '' : 's'} need review. ${pending} fresh writer draft${pending === 1 ? '' : 's'} wait for a person. ${snapshot.companyBrain.backupProposalStatus ? 'The backup assignment is pending approval.' : snapshot.companyBrain.backupName ? 'The backup assignment is approved.' : 'No backup proposal is pending.'} The latest connected-workspace event is ${snapshot.events[0]?.title ?? 'not recorded yet'}.`;
     cite(notes.guide); cite(notes.handoff);
   } else {
-    answer = `I can check the connected records for ${snapshot.company.shortName}. Ask about campaign drafts, the current writer handoff, company notes, launch ownership, or work waiting for review. I will answer from the graph and show the notes used.`;
+    answer = `Connected records for ${snapshot.company.shortName} cover launch drafts, the current writing handoff, company notes, launch ownership, and work waiting for review. Ask about any of those topics to see the relevant records.`;
     cite(notes.company);
   }
   return { answer, sources, checkedAt: new Date().toISOString() };

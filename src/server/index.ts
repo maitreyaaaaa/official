@@ -121,7 +121,7 @@ app.post('/api/assistant', async (request, response) => {
   }
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
-    response.status(503).json({ error: 'The optional AI assistant is not configured. Deterministic campaign checks remain available.' });
+    response.status(503).json({ error: 'The optional campaign assistant is not configured. Evidence checks remain available.' });
     return;
   }
   const body: unknown = request.body;
@@ -496,7 +496,7 @@ app.post('/api/workspace/chat', async (request, response) => {
   } catch (error) {
     console.error(JSON.stringify({ event: 'workspace_chat_failed', ...safeErrorDetails(error) }));
     response.status(error instanceof WorkspaceError ? error.statusCode : 503)
-      .json({ error: error instanceof WorkspaceError ? error.message : 'The workspace agent could not check the current graph.' });
+      .json({ error: error instanceof WorkspaceError ? error.message : 'The workspace chat could not check company records.' });
   }
 });
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpenText, ChevronDown, LayoutDashboard, MessageCircle, Workflow } from 'lucide-react';
+import { BookOpenText, ChevronDown, ChevronLeft, FileWarning, LayoutDashboard, Menu, MessageCircle, Workflow } from 'lucide-react';
 import './workspace.css';
 import './connected.css';
 import './company-logos.css';
@@ -14,6 +14,8 @@ import { WorkspaceOverview } from './components/WorkspaceOverview.js';
 import { PluginsWorkspace } from './components/PluginsWorkspace.js';
 import { LocalTabs } from './components/LocalTabs.js';
 import { CompanyLogo } from './components/CompanyLogo.js';
+import { ProofStrip } from './components/ProofStrip.js';
+import { backupProof, rolloutProof, toneProof, unknownReviewStep, type ProofComparison } from '../shared/reviewer-proof.js';
 import { defaultDemoCompany, demoCompanies, demoCompanyByKey, type DemoCompany, type DemoCompanyKey } from '../shared/demo-companies.js';
 
 type NavigationSection = 'overview' | 'campaign' | 'memory' | 'brain' | 'plugins';
@@ -23,7 +25,7 @@ type DataState = 'loading' | 'ready' | 'unavailable';
 const dockItems = [
   { id: 'overview', label: 'Overview', href: '#overview', icon: LayoutDashboard },
   { id: 'campaign', label: 'Launch review', href: '#campaign', icon: LayoutDashboard },
-  { id: 'memory', label: 'Agent memory', href: '#memory', icon: Workflow },
+  { id: 'memory', label: 'Writing handoff', href: '#memory', icon: Workflow },
   { id: 'brain', label: 'Company Brain', href: '#brain', icon: BookOpenText },
   { id: 'plugins', label: 'Plugins', href: '#plugins', icon: PluginsIcon },
 ];
@@ -102,6 +104,12 @@ async function loadCampaignProposals(campaignId: string): Promise<ActionProposal
 async function responseError(response: Response, fallback: string): Promise<string> {
   const payload: unknown = await response.json().catch(() => null);
   return typeof payload === 'object' && payload !== null && 'error' in payload ? String(payload.error) : fallback;
+}
+
+async function loadWorkspaceSnapshot(campaignId: string, ownerUnavailable: boolean): Promise<WorkspaceSnapshot> {
+  const response = await fetch(`/api/workspace?campaignId=${encodeURIComponent(campaignId)}&ownerUnavailable=${ownerUnavailable}`, { cache: 'no-store' });
+  if (!response.ok) throw new Error(await responseError(response, 'The connected workspace could not be loaded.'));
+  return await response.json() as WorkspaceSnapshot;
 }
 
 function audienceLabel(id: string): string {
@@ -214,17 +222,6 @@ function formatActivityAt(value: string): string {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
-// Iconsax Linear sidebar-left, with the chevron reversed for the closed state.
-function SidebarIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M21.97 15V9C21.97 4 19.97 2 14.97 2H8.96997C3.96997 2 1.96997 4 1.96997 9V15C1.96997 20 3.96997 22 8.96997 22H14.97C19.97 22 21.97 20 21.97 15Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M7.96997 2V22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={expanded ? 'M14.97 9.43994L12.41 11.9999L14.97 14.5599' : 'M12.41 9.43994L14.97 11.9999L12.41 14.5599'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 // Four connected tiles on the same 24px Iconsax Linear grid as the sidebar control.
 function PluginsIcon({ size = 24, strokeWidth = 1.5 }: { size?: number; strokeWidth?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
@@ -267,6 +264,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
   const [showPath, setShowPath] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [scenarioMessage, setScenarioMessage] = useState<string | null>(null);
+  const [launchProof, setLaunchProof] = useState<ProofComparison | null>(null);
+  const [workspaceProof, setWorkspaceProof] = useState<ProofComparison | null>(null);
   const [scenarioError, setScenarioError] = useState<{ message: string; actionUnavailable: boolean } | null>(null);
   const [activeSection, setActiveSection] = useState<NavigationSection>(navigationSectionFromHash);
   const [launchTab, setLaunchTab] = useState<LaunchTab>(launchTabFromHash);
@@ -300,8 +299,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
   const rolloutExpanded = review?.findings.some((finding) => finding.evidence.some((item) => item.id === (company.key === 'alder-finch' ? 'source-s4' : `source-expanded-${company.key}`))) ?? false;
 
   useEffect(() => {
-    document.title = `${activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'} — official`;
-    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, agent memory, and company knowledge in one connected official workspace.');
+    document.title = `${activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Writing handoff' : activeSection === 'campaign' ? 'Launch review' : 'Overview'} — official`;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, writing handoffs, and company records in one connected official workspace.');
   }, [activeSection]);
 
   useEffect(() => { window.localStorage.setItem('official-sidebar-open', String(sidebarOpen)); }, [sidebarOpen]);
@@ -341,9 +340,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setWorkspaceLoading(true);
     setWorkspaceError(null);
     try {
-      const response = await fetch(`/api/workspace?campaignId=${encodeURIComponent(campaignId)}&ownerUnavailable=${unavailable}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(await responseError(response, 'The connected workspace could not be loaded.'));
-      setWorkspace(await response.json() as WorkspaceSnapshot);
+      setWorkspace(await loadWorkspaceSnapshot(campaignId, unavailable));
     } catch (cause) {
       setWorkspaceError(cause instanceof Error ? cause.message : 'The connected workspace could not be loaded.');
     } finally {
@@ -367,8 +364,14 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
       'approve-backup': '/api/workspace/company/approve-backup',
     };
     try {
+      const before = action === 'approve-tone' ? await loadWorkspaceSnapshot(campaignId, ownerUnavailable)
+        : action === 'approve-backup' ? await loadWorkspaceSnapshot(campaignId, true) : null;
       const response = await fetch(routes[action], { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId }) });
       if (!response.ok) throw new Error(await responseError(response, 'The action could not be confirmed.'));
+      if (before) {
+        const after = await loadWorkspaceSnapshot(campaignId, action === 'approve-backup' ? true : ownerUnavailable);
+        setWorkspaceProof(action === 'approve-tone' ? toneProof(before, after) : backupProof(before, after));
+      } else setWorkspaceProof(null);
       await refreshWorkspace(ownerUnavailable);
       setWorkspaceMessage({
         'approve-tone': 'The proposed tone is approved. A new writer session will refresh the old handoff.',
@@ -377,6 +380,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         'approve-backup': `${company.backupName} is now the reviewed backup. Coverage was checked again.`,
       }[action]);
     } catch (cause) {
+      setWorkspaceProof(null);
       setWorkspaceError(cause instanceof Error ? cause.message : 'The action could not be confirmed.');
     } finally {
       setWorkspaceBusy(null);
@@ -479,18 +483,22 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setSimulating(true);
     setError(null);
     setScenarioMessage(null);
+    setLaunchProof(null);
     setScenarioError(null);
     setReview(null);
     setSelectedId(null);
     setShowPath(false);
     try {
+      const before = await loadCampaign(campaignId, false);
       const result = await simulateRolloutExpansion(campaignId, expanded);
+      setLaunchProof(rolloutProof(before, result, company.broadAudienceId, company.limitedAudienceId));
       setReview(result);
       await refreshSupportingData();
       setSelectedId(result.findings.find((item) => item.needsReview)?.draftId ?? result.findings[0]?.draftId ?? null);
       const statusFor = (draftId: string) => result.findings.find((item) => item.draftId === draftId)?.status ?? 'not available';
       setScenarioMessage(`${expanded ? `Access now includes ${audienceLabel(company.broadAudienceId).toLowerCase()}.` : `Access is back to ${audienceLabel(company.limitedAudienceId).toLowerCase()} only.`} ${result.findings.map((finding) => `${finding.title}: ${statusFor(finding.draftId)}`).join('. ')}. Draft text was not changed.`);
     } catch (cause) {
+      setLaunchProof(null);
       const message = cause instanceof Error ? cause.message : 'The demo rollout result could not be confirmed.';
       const actionUnavailable = cause instanceof DemoActionUnavailableError;
       await refresh();
@@ -511,6 +519,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setSimulating(true);
     setError(null);
     setScenarioMessage(null);
+    setLaunchProof(null);
     setScenarioError(null);
     setReview(null);
     setSelectedId(null);
@@ -538,6 +547,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setResetBusy(true);
     setScenarioError(null);
     setScenarioMessage(null);
+    setLaunchProof(null);
+    setWorkspaceProof(null);
     setWorkspaceMessage(null);
     try {
       const response = await fetch('/api/workspace/demo/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId }) });
@@ -792,15 +803,15 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
 
   const advancedAssistant = (
         <section className="assistant-card" aria-labelledby="assistant-heading">
-          <div className="assistant-heading"><div><div className="eyebrow">EVIDENCE ASSISTANT</div><h2 id="assistant-heading">Ask about this campaign</h2></div><span className="assistant-badge">Optional AI</span></div>
+          <div className="assistant-heading"><div><div className="eyebrow">CAMPAIGN REVIEW</div><h2 id="assistant-heading">Ask about this launch</h2></div></div>
           <p id="assistant-disclosure" className="assistant-disclosure">When enabled, your prompt and synthetic campaign evidence are sent to OpenAI. Assistant checks can also add a local status-only history entry. Do not enter sensitive information. A proposal preview is saved only after you select Create pending proposal; applying it still requires a separate human approval.</p>
           <form className="assistant-form" onSubmit={(event) => void submitAssistantQuestion(event)}>
             <label htmlFor="assistant-prompt">Question</label>
             <textarea id="assistant-prompt" aria-describedby="assistant-disclosure" value={assistantPrompt} onChange={(event) => setAssistantPrompt(event.target.value)} maxLength={2000} placeholder="Why is the launch email contradicted?" disabled={!assistantAvailable || !review || assistantBusy} />
             <label className="assistant-proposal-toggle"><input type="checkbox" checked={assistantProposalAllowed} onChange={(event) => setAssistantProposalAllowed(event.target.checked)} disabled={!assistantAvailable || !review || assistantBusy} /> Allow proposal previews; I must choose Create pending proposal to save one</label>
             <div className="assistant-form-footer">
-              <span>{assistantAvailable ? (review ? 'Uses named campaign tools and reviewed evidence.' : 'Check the campaign before asking a question.') : 'Configure OPENAI_API_KEY and local demo writes to enable the assistant.'}</span>
-              <button className="primary-button" type="submit" disabled={!assistantAvailable || !review || !assistantPrompt.trim() || assistantBusy}>{assistantBusy ? 'Thinking…' : 'Ask assistant'}</button>
+              <span>{assistantAvailable ? (review ? 'Uses named campaign tools and reviewed evidence.' : 'Check the campaign before asking a question.') : 'Available in local demos when campaign access is configured.'}</span>
+              <button className="primary-button" type="submit" disabled={!assistantAvailable || !review || !assistantPrompt.trim() || assistantBusy}>{assistantBusy ? 'Checking…' : 'Ask about the launch'}</button>
             </div>
           </form>
           {assistantBusy && <p className="assistant-feedback" role="status" aria-live="polite">Checking campaign evidence…</p>}
@@ -816,13 +827,13 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
       <aside className="sidebar" aria-label="Workspace sidebar">
         <div className="sidebar-top"><a className="brand" href="/" aria-label="official marketing site">
           <span className="brand-dot" aria-hidden="true" />official
-        </a><button ref={sidebarCloseButtonRef} className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={closeSidebar}><SidebarIcon expanded /></button></div>
+        </a><button ref={sidebarCloseButtonRef} className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={closeSidebar}><ChevronLeft size={18} aria-hidden="true" /></button></div>
         <div className="workspace-identity"><div className="workspace-monogram" aria-hidden="true"><CompanyLogo company={company} /></div><div><strong>{workspace?.company.shortName ?? company.shortName}</strong><small>{workspace?.project.name ?? 'Loading project'}</small></div></div>
         <div className="workspace-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
           <a className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`} href="#overview" onClick={handleSidebarNavigation} aria-current={activeSection === 'overview' ? 'page' : undefined}><span className="nav-icon"><LayoutDashboard size={17} /></span> Overview</a>
           <a className={`nav-item ${activeSection === 'campaign' ? 'active' : ''}`} href="#campaign" onClick={handleSidebarNavigation} aria-current={activeSection === 'campaign' ? 'page' : undefined}><span className="nav-icon">◫</span> Launch review <span className="nav-count">{review?.findings.filter((item) => item.needsReview).length ?? '—'}</span></a>
-          <a className={`nav-item ${activeSection === 'memory' ? 'active' : ''}`} href="#memory" onClick={handleSidebarNavigation} aria-current={activeSection === 'memory' ? 'location' : undefined}><span className="nav-icon"><Workflow size={17} /></span> Agent memory</a>
+          <a className={`nav-item ${activeSection === 'memory' ? 'active' : ''}`} href="#memory" onClick={handleSidebarNavigation} aria-current={activeSection === 'memory' ? 'location' : undefined}><span className="nav-icon"><Workflow size={17} /></span> Writing handoff</a>
           <a className={`nav-item ${activeSection === 'brain' ? 'active' : ''}`} href="#brain" onClick={handleSidebarNavigation} aria-current={activeSection === 'brain' ? 'location' : undefined}><span className="nav-icon"><BookOpenText size={17} /></span> Company Brain <span className="nav-count">{workspace?.notes.length ?? '—'}</span></a>
           <a className={`nav-item ${activeSection === 'plugins' ? 'active' : ''}`} href="#plugins" onClick={handleSidebarNavigation} aria-current={activeSection === 'plugins' ? 'page' : undefined}><span className="nav-icon"><PluginsIcon /></span> Plugins</a>
         </nav>
@@ -840,10 +851,10 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
 
       <main className="main-content">
         <header className="topbar">
-          {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={openSidebar}><SidebarIcon expanded={false} /></button>}
+          {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={openSidebar}><Menu size={18} aria-hidden="true" /></button>}
           <a className="brand" href="/" aria-label="official marketing site"><span className="brand-dot" aria-hidden="true" />official</a>
-          <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
-          <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask agent</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Connecting a demo plugin saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview the source and its possible role. Disconnect at any time.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, agent memory, and Company Brain use the selected fictional company’s graph records.</p><p>Open an area from Overview to inspect its sources and review steps. The workspace agent can answer questions without changing those records.</p></>}</section></div><div className="avatar small company-avatar" aria-hidden="true"><CompanyLogo company={company} /></div></div>
+          <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Writing handoff' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
+          <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask workspace</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Connecting a demo plugin saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview the source and its possible role. Disconnect at any time.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, writing handoff, and company records use the selected fictional company’s graph.</p><p>Ask workspace questions to check connected records. Answers cite the notes used, and chat does not change them.</p></>}</section></div><div className="avatar small company-avatar" aria-hidden="true"><CompanyLogo company={company} /></div></div>
         </header>
         <div className="app-dock">
           <MagneticDock items={dockItems.map((item) => ({ ...item, active: activeSection === item.id }))} />
@@ -852,7 +863,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         {activeSection === 'plugins' ? <PluginsWorkspace company={company} /> : activeSection === 'memory' || activeSection === 'brain' ? <ConnectedWorkspace key={brainEpoch}
           company={company} view={activeSection} workspace={workspace} loading={workspaceLoading} error={workspaceError}
           brainTab={brainTab} onBrainTabChange={(tab) => { setBrainTab(tab); window.location.hash = tab === 'graph' ? '#brain' : tab === 'notes' ? '#brain-notes' : tab === 'coverage' ? '#coverage' : '#brain-history'; }}
-          canWrite={demoRolloutAvailable} busy={workspaceBusy} message={workspaceMessage}
+          canWrite={demoRolloutAvailable} busy={workspaceBusy} message={workspaceMessage} proof={workspaceProof}
           ownerUnavailable={ownerUnavailable} selectedNoteId={selectedNoteId}
           onSelectNote={setSelectedNoteId} onOwnerUnavailable={setOwnerUnavailable}
           onAction={(action) => void workspaceAction(action)}
@@ -874,6 +885,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
 
         {error && <section className="connection-alert" role="alert"><div className="alert-icon" aria-hidden="true">!</div><div><strong>{error.toLowerCase().includes('campaign not found') ? 'Campaign data unavailable' : 'Campaign check unavailable'}</strong><p>{error} Check that FalkorDB is reachable and the campaign data is loaded, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh(demoRolloutAvailable)}>Retry</button></section>}
         {scenarioMessage && <section className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{scenarioMessage}</section>}
+        {launchProof && <ProofStrip proof={launchProof} />}
         {scenarioError && <section className="scenario-alert scenario-alert-error" role="alert"><strong>{scenarioError.actionUnavailable ? 'Demo action unavailable.' : 'Scenario result unconfirmed.'}</strong> {scenarioError.message} {scenarioError.actionUnavailable ? 'The server rejected the request before any graph write. Current findings were reloaded.' : 'Current findings were reloaded. Run an explicit campaign check before relying on the scenario result.'}</section>}
         {proposalMessage && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{proposalMessage}</section>}
         {proposalError && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert scenario-alert-error" role="alert"><strong>Review action unavailable.</strong> {proposalError}</section>}
@@ -910,6 +922,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
                 <div className="detail-claim"><span className="micro-label">DRAFT COPY</span><p className="claim-text">{selected.text || 'No draft copy was recorded.'}</p>{selected.wordingSourceTitle && <p className="wording-source">Reuses wording from {selected.wordingSourceTitle}</p>}</div>
                 <div className="detail-claim linked-promise"><span className="micro-label">LINKED PROMISE BEING CHECKED</span><p className="claim-text">{selected.promiseText ?? (selected.status === 'Not checked' ? 'No promise is linked to this draft.' : 'No readable promise text is available for this linked path.')}</p>{selected.promiseText && <p className="claim-context">Checked for {selected.audienceName || 'an unspecified audience'}{selected.featureName ? ' · ' + selected.featureName : ''}</p>}</div>
                 <p className="detail-reason">{selected.reason}</p>
+                {selected.status === 'Unknown' && <div className="unknown-next-step"><strong>Review next</strong><p>{unknownReviewStep(selected.reason)}</p></div>}
                 {selected.draftState === 'paused' && <p className="proposal-help">Paused inside official. A reviewer can resume this draft after a fresh check supports its promise.</p>}
                 {selected.status === 'Contradicted' && selected.draftState !== 'paused' && demoRolloutAvailable && <div className="proposal-compose">
                   <div className="proposal-compose-actions">
@@ -942,7 +955,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         </div>}
         {launchTab === 'approvals' && <div className="approval-layout" role="tabpanel" id="launch-panel-approvals" aria-labelledby="launch-tab-approvals">
             <section className="proactive-card">
-              <div className="proactive-head"><div className="proactive-orb">✳</div><div><div className="eyebrow">NEEDS ATTENTION</div><h2>Drafts to review</h2></div></div>
+              <div className="proactive-head"><div className="proactive-icon" aria-hidden="true"><FileWarning size={16} /></div><div><div className="eyebrow">NEEDS ATTENTION</div><h2>Drafts to review</h2></div></div>
               {review?.proactiveItems.length ? <div className="proactive-list">{review.proactiveItems.map((item) => <button className="proactive-item" key={item.id} onClick={() => { showLaunchTab('drafts'); setSelectedId(item.id); scrollTo('draft-details'); }}><span className={`proactive-status ${item.status.toLowerCase()}`} aria-hidden="true" /><span><strong>{item.title}</strong><small><span className="status-label">{item.status}</span> · {item.detail}</small></span><span className="row-chevron" aria-hidden="true">›</span></button>)}</div> : <p className="proactive-empty" role="status" aria-live="polite" aria-atomic="true">{review ? 'No promises currently need a review.' : 'Review suggestions will appear when campaign evidence is available.'}</p>}
             </section>
 
@@ -967,7 +980,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         <footer className="page-footer"><span>Built around evidence, not assumptions.</span><span>Fictional product data <span className="footer-separator">·</span> No external actions</span><a href="/">Marketing site <span aria-hidden="true">↗</span></a></footer>
         </>}
       </main>
-      <WorkspaceChat key={chatEpoch} open={chatOpen} onClose={() => setChatOpen(false)} workspace={workspace} ownerUnavailable={ownerUnavailable}
+      <WorkspaceChat key={`${company.key}-${chatEpoch}`} open={chatOpen} onClose={() => setChatOpen(false)} workspace={workspace} ownerUnavailable={ownerUnavailable}
         advancedAssistant={company.key === 'alder-finch' ? advancedAssistant : null}
         campaignId={campaignId} onOpenNote={(id) => { setSelectedNoteId(id); setBrainEpoch((epoch) => epoch + 1); window.location.hash = '#brain-notes'; }} />
     </div>

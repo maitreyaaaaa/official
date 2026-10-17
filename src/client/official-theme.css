@@ -6,65 +6,88 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Open Sauce Sans';
-  src: url('/fonts/OpenSauceSans-Black.ttf') format('truetype');
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-}
-
 .app-shell.connected-shell {
-  --ink: #201e3c;
-  --muted: #716d82;
-  --line: #e9e4d6;
-  --green: #6a70fb;
-  --green-dark: #4d45ad;
-  --mint: #eeedff;
-  --panel: #fffefa;
-  --official-paper: #fff9e5;
-  --official-lavender: #efedff;
-  --official-purple: #6a70fb;
-  --official-purple-dark: #4d45ad;
+  --ink: #252d27;
+  --muted: #68736a;
+  --line: #e1e4dc;
+  --green: #5b735d;
+  --green-dark: #3d5741;
+  --mint: #edf2eb;
+  --panel: #fff;
+  --official-paper: #f7f7f3;
+  --official-active: #eaf0e9;
+  --official-accent: #58715b;
+  --official-accent-dark: #3d5842;
   min-height: 100vh;
   background: var(--official-paper);
   color: var(--ink);
 }
 
 .app-shell.connected-shell .sidebar {
-  background: #fffdf5;
-  border-color: #e9e4d6;
+  background: #fff;
+  border-color: var(--line);
+  box-shadow: none;
 }
 
-.app-shell.connected-shell .sidebar .brand-mark,
-.app-shell.connected-shell .brand-mark {
-  background: var(--official-purple);
+.app-shell.connected-shell .brand-mark,
+.app-shell.connected-shell .brand-dot {
+  background: var(--official-accent);
 }
 
 .app-shell.connected-shell .workspace-identity {
-  border-color: #e4e0fa;
-  background: linear-gradient(135deg, #fffdf5, #f1efff);
+  border-color: var(--line);
+  border-radius: 8px;
+  background: #f8f9f6;
+}
+
+.app-shell.connected-shell .sidebar-close,
+.app-shell.connected-shell .sidebar-open {
+  min-width: 30px;
+  min-height: 30px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #647067;
+}
+
+.app-shell.connected-shell .sidebar-close:hover,
+.app-shell.connected-shell .sidebar-open:hover {
+  background: transparent;
+  color: var(--official-accent-dark);
+}
+
+.app-shell.connected-shell .nav-item {
+  border-radius: 5px;
 }
 
 .app-shell.connected-shell .nav-item.active {
-  background: var(--official-lavender);
-  color: var(--official-purple-dark);
+  background: var(--official-active);
+  color: var(--official-accent-dark);
 }
 
-.app-shell.connected-shell .nav-item.active .nav-icon,
+.app-shell.connected-shell .nav-item.active .nav-icon {
+  color: var(--official-accent-dark);
+}
+
 .app-shell.connected-shell .nav-count {
-  color: var(--official-purple-dark);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
-.app-shell.connected-shell .nav-count,
 .app-shell.connected-shell .campaign-symbol,
-.app-shell.connected-shell .connected-icon,
 .app-shell.connected-shell .guide-step-number {
-  background: var(--official-lavender);
+  border-color: var(--line);
+  background: var(--official-active);
+  color: var(--official-accent-dark);
 }
 
-.app-shell.connected-shell .nav-count {
-  border: 1px solid #e3dfff;
+.app-shell.connected-shell .connected-icon {
+  background: transparent;
+  color: var(--official-accent);
 }
 
 .app-shell.connected-shell .main-content {
@@ -72,37 +95,97 @@
 }
 
 .app-shell.connected-shell .topbar {
-  border-color: #e9e4d6;
+  border-color: var(--line);
+}
+
+.app-shell.connected-shell .demo-badge {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-shell.connected-shell .chat-toggle {
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--official-accent-dark);
+}
+
+.app-shell.connected-shell .chat-toggle:hover {
+  background: transparent;
+  color: #26392b;
+}
+
+.app-shell.connected-shell .campaign-banner,
+.app-shell.connected-shell .proactive-card {
+  background: #fff;
+  box-shadow: none;
+}
+
+.app-shell.connected-shell .reviewer-guide {
+  border-color: var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.app-shell.connected-shell .reviewer-guide-step {
+  border-color: var(--line);
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+.app-shell.connected-shell .magnetic-dock {
+  border-color: var(--line);
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app-shell.connected-shell .dock-link {
+  border-color: var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.app-shell.connected-shell .overview-card-icon {
+  border-radius: 0;
+  background: transparent;
+  color: var(--official-accent);
 }
 
 .app-shell.connected-shell .primary-button {
-  background: var(--official-purple-dark);
-  box-shadow: 0 3px 8px #4d45ad24;
+  background: var(--official-accent-dark);
+  box-shadow: none;
 }
 
 .app-shell.connected-shell .primary-button:hover:not(:disabled) {
-  background: #393184;
-  box-shadow: 0 6px 15px #4d45ad30;
+  background: #314735;
+  box-shadow: none;
 }
 
 .app-shell.connected-shell .secondary-button:hover:not(:disabled),
 .app-shell.connected-shell .filter-button:hover,
 .app-shell.connected-shell .arrow-button:hover {
-  border-color: #d3cef8;
-  background: #f7f5ff;
+  border-color: #cbd5ca;
+  background: #f0f3ef;
 }
 
 .app-shell.connected-shell .selected,
 .app-shell.connected-shell .note-row:hover,
 .app-shell.connected-shell .note-row.selected,
 .app-shell.connected-shell .draft-row.selected {
-  background: #f4f2ff;
+  background: var(--official-active);
 }
 
 .app-shell.connected-shell .guide-link,
 .app-shell.connected-shell .text-button,
 .app-shell.connected-shell .knowledge-link {
-  color: var(--official-purple-dark);
+  color: var(--official-accent-dark);
 }
 
 .app-shell.connected-shell button:focus-visible,
@@ -110,20 +193,26 @@
 .app-shell.connected-shell summary:focus-visible,
 .app-shell.connected-shell textarea:focus-visible,
 .app-shell.connected-shell select:focus-visible {
-  outline-color: var(--official-purple);
+  outline-color: var(--official-accent);
 }
 
 .app-shell.connected-shell .main-content h1,
 .app-shell.connected-shell .main-content h2,
 .app-shell.connected-shell .main-content h2 em {
-  font-family: 'Open Sauce Sans', 'DM Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Open Sauce Sans', Inter, ui-sans-serif, system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: -.045em;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.app-shell.connected-shell .main-content h1 {
+  font-size: clamp(30px, 3.2vw, 42px);
+  line-height: 1.16;
 }
 
 .app-shell.connected-shell .connected-masthead h1,
 .app-shell.connected-shell .note-reader h2 {
-  color: #211e48;
+  color: var(--ink);
 }
 
 .app-shell.connected-shell .connected-card-heading h2,
@@ -131,8 +220,81 @@
 .app-shell.connected-shell .section-heading h2,
 .app-shell.connected-shell .detail-card-heading h2,
 .app-shell.connected-shell .proactive-head h2,
-.app-shell.connected-shell .activity-heading h2 {
-  color: #29264b;
+.app-shell.connected-shell .activity-heading h2,
+.app-shell.connected-shell .connected-summary strong,
+.app-shell.connected-shell .chat-welcome h2 {
+  color: var(--ink);
+  font-family: 'Open Sauce Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.app-shell.connected-shell .connected-summary,
+.app-shell.connected-shell .connected-card,
+.app-shell.connected-shell .connected-events,
+.app-shell.connected-shell .notes-browser,
+.app-shell.connected-shell .note-reader,
+.app-shell.connected-shell .overview-action-card,
+.app-shell.connected-shell .overview-walkthrough,
+.app-shell.connected-shell .assistant-card {
+  border-color: var(--line);
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.app-shell.connected-shell .workspace-chat {
+  border-color: var(--line);
+  box-shadow: -8px 0 22px #26352c0d;
+}
+
+.app-shell.connected-shell .chat-head,
+.app-shell.connected-shell .chat-status,
+.app-shell.connected-shell .chat-compose {
+  border-color: var(--line);
+}
+
+.app-shell.connected-shell .chat-head strong,
+.app-shell.connected-shell .chat-welcome h2 {
+  color: var(--ink);
+}
+
+.app-shell.connected-shell .chat-suggestions button,
+.app-shell.connected-shell .chat-citations button {
+  border-color: var(--line);
+  border-radius: 5px;
+  background: #fff;
+  color: #465d4b;
+}
+
+.app-shell.connected-shell .chat-suggestions button:hover,
+.app-shell.connected-shell .chat-citations button:hover {
+  background: #f2f5f1;
+}
+
+.app-shell.connected-shell .chat-bubble {
+  border-radius: 7px;
+  background: #f2f4f0;
+}
+
+.app-shell.connected-shell .chat-bubble.user {
+  background: #e8eee7;
+  color: var(--ink);
+}
+
+.app-shell.connected-shell .chat-bubble.user > span,
+.app-shell.connected-shell .chat-bubble.user p {
+  color: var(--ink);
+}
+
+.app-shell.connected-shell .chat-compose textarea {
+  border-color: #d5dbd3;
+  border-radius: 7px;
+  color: var(--ink);
+}
+
+.app-shell.connected-shell .chat-compose form button {
+  border-radius: 6px;
+  background: var(--official-accent-dark);
 }
 
 @media (max-width: 680px) {

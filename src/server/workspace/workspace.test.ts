@@ -5,9 +5,11 @@ import type { CampaignReview, WorkspaceSnapshot } from '../../shared/contracts.j
 import { answerWorkspaceQuestion, resetWorkspaceDemo, reviewWriterDraft, WorkspaceError } from './workspace.js';
 
 const snapshot = {
-  company: { shortName: 'Alder & Finch' },
+  company: { id: 'company-alder-finch', name: 'Alder & Finch Commerce', shortName: 'Alder & Finch', description: 'a fictional multi-brand retailer preparing its spring reporting release' },
+  project: { name: 'Spring reporting release', summary: 'Release CSV export to a controlled audience and prepare accurate customer communications.' },
   notes: [
     { id: 'note-company', title: 'Company overview', summary: 'Team map', category: 'Company', sources: [] },
+    { id: 'note-campaign-brief', title: 'Campaign brief', summary: 'Spring reporting launch goals', category: 'Campaigns', sources: [] },
     { id: 'note-release-decision', title: 'Dated rollout decision', summary: 'Tester-only on October 16', category: 'Decisions', sources: [{ id: 'source-s2' }] },
     { id: 'note-launch-checklist', title: 'Launch checklist', summary: 'Evidence review steps', category: 'Playbooks', sources: [{ id: 'source-s1' }] },
   ],
@@ -33,6 +35,23 @@ test('workspace chat separates pending backup from real coverage', () => {
   const response = answerWorkspaceQuestion('Who covers launch evidence?', snapshot, review);
   assert.match(response.answer, /proposal is pending and does not count as coverage/);
   assert.match(response.answer, /Uncovered in this scenario/);
+});
+
+test('company questions use the selected company and project context', () => {
+  const response = answerWorkspaceQuestion('Tell me about this company', snapshot, review);
+  assert.match(response.answer, /Alder & Finch Commerce/);
+  assert.match(response.answer, /Spring reporting release/);
+  assert.deepEqual(response.sources.map((source) => source.id), ['note-company', 'note-campaign-brief', 'note-release-decision']);
+
+  const northstar = {
+    ...snapshot,
+    company: { id: 'company-northstar-parcel', name: 'Northstar Parcel Logistics', shortName: 'Northstar Parcel', description: 'a fictional regional delivery operator' },
+    project: { name: 'Delivery timeline release', summary: 'Give dispatch teams a current view of parcel delivery progress.' },
+  } as unknown as WorkspaceSnapshot;
+  const selected = answerWorkspaceQuestion('What is the current project?', northstar, review);
+  assert.match(selected.answer, /Northstar Parcel Logistics/);
+  assert.match(selected.answer, /Delivery timeline release/);
+  assert.doesNotMatch(selected.answer, /Alder & Finch/);
 });
 
 test('draft approval checks both brief and evidence revisions before writing', async () => {

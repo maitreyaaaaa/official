@@ -50,10 +50,10 @@ export function WorkspaceOverview({ review, workspace, loading, error, onRefresh
       </article>
       <article className="overview-action-card">
         <span className="overview-card-icon"><Workflow size={20} aria-hidden="true" /></span>
-        <span className="overview-card-kicker">02 / WRITER MEMORY</span>
+        <span className="overview-card-kicker">02 / WRITING HANDOFF</span>
         <h2>{!workspace ? 'Writer handoff unavailable' : pendingTone ? 'Tone approval is waiting' : pendingWriterDrafts > 0 ? `${pendingWriterDrafts} ${pendingWriterDrafts === 1 ? 'draft awaits' : 'drafts await'} review` : staleHandoff ? 'Handoff needs a refresh' : 'Writer handoff is current'}</h2>
         <p>{workspace ? 'Check the approved brief before a fresh writing session or internal draft decision.' : 'The writer state appears when company records load.'}</p>
-        <button className="overview-card-link" type="button" onClick={onOpenMemory}>Open Agent memory <ArrowRight size={17} aria-hidden="true" /></button>
+        <button className="overview-card-link" type="button" onClick={onOpenMemory}>Open writing handoff <ArrowRight size={17} aria-hidden="true" /></button>
       </article>
       <article className="overview-action-card">
         <span className="overview-card-icon"><BookOpenText size={20} aria-hidden="true" /></span>
@@ -69,7 +69,7 @@ export function WorkspaceOverview({ review, workspace, loading, error, onRefresh
       <div className="overview-walkthrough-body">
         <ol>
           <li><strong>Check the claim.</strong> Compare the landing page draft with its reviewed rollout. <button type="button" onClick={onOpenFinding} disabled={!review}>Open claim</button> <button type="button" onClick={onOpenSources} disabled={!review}>See evidence</button></li>
-          <li><strong>Refresh the writer.</strong> Review the proposed tone, start a fresh session, then inspect the internal draft. <button type="button" onClick={onOpenMemory}>Open Agent memory</button></li>
+          <li><strong>Refresh the writer.</strong> Review the proposed tone, start a fresh session, then inspect the internal draft. <button type="button" onClick={onOpenMemory}>Open writing handoff</button></li>
           <li><strong>Cover the owner.</strong> Follow the guide, propose a backup, and confirm the assignment. <button type="button" onClick={onOpenCoverage}>Review coverage</button></li>
         </ol>
         <div className="overview-reset"><p>{workspace?.company.name ?? 'This company'} and all records are fictional. Reset restores this launch scenario for another walkthrough; earlier graph history remains.</p><button type="button" className="text-button" onClick={onReset} disabled={!canReset}>{resetBusy ? 'Resetting…' : 'Reset fictional demo'}</button></div>

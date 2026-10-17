@@ -10,14 +10,14 @@ const AGENT_INSTRUCTIONS = `You are the review assistant inside official, a fict
 
 export class AssistantUnavailableError extends Error {
   constructor() {
-    super('The AI assistant is not configured. Campaign checks and evidence remain available without it.');
+    super('The campaign assistant is not configured. Evidence checks remain available.');
     this.name = 'AssistantUnavailableError';
   }
 }
 
 export class AssistantServiceError extends Error {
   constructor() {
-    super('The AI assistant could not complete this request. The campaign evidence remains available.');
+    super('The campaign assistant could not complete this request. Campaign evidence remains available.');
     this.name = 'AssistantServiceError';
   }
 }

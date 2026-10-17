@@ -296,3 +296,22 @@
 @media (max-width: 920px) { .connected-shell .main-content, .connected-shell.sidebar-closed .main-content { margin-left: 0; } .connected-shell .sidebar { box-shadow: 14px 0 50px #18322535; } .connected-shell .topbar > .brand { display: inline-flex; } }
 @media (max-width: 680px) { .connected-shell .main-content { padding-inline: 17px; } .connected-shell .topbar { min-height: 64px; } .connected-shell .topbar-actions .connection-inline, .connected-shell .topbar-actions .avatar, .connected-shell .topbar-actions .help-wrap { display: none; } .connected-shell .chat-toggle span { display: none; } .connected-shell .app-dock { display: flex; } .connected-shell .magnetic-dock { max-width: calc(100vw - 18px); gap: 2px; padding: 5px; } .connected-shell .dock-link { width: clamp(52px,18vw,68px); height: 50px; gap: 1px; padding: 3px; } .connected-shell .dock-label { font-size: 8px; white-space: normal; text-align: center; } .connected-shell .connected-page { padding-top: 25px; } .connected-shell .connected-masthead { gap: 12px; } .connected-shell .connected-mark { width: 48px; height: 48px; font-size: 19px; } .connected-shell .connected-summary-grid { grid-template-columns: 1fr; gap: 8px; } .connected-shell .connected-summary { min-height: 86px; } .connected-shell .coverage-main { grid-template-columns: 1fr; } .connected-shell .note-relations { grid-template-columns: 1fr; gap: 10px; } .connected-shell .connected-card { padding: 19px; } .workspace-chat { width: min(100vw,390px); } }
 @media (prefers-reduced-motion: reduce) { .connected-shell .sidebar, .connected-shell .main-content, .workspace-chat { transition: none; } }
+
+.proof-strip { margin: 0 0 18px; padding: 16px 18px; border: 1px solid #dce8da; border-radius: 13px; background: #f8fbf6; color: #344e39; }
+.proof-strip > strong { display: block; margin-bottom: 12px; font-size: 13px; }
+.proof-steps { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.proof-steps > div { min-width: 0; padding: 11px 12px; border: 1px solid #e1e9dd; border-radius: 9px; background: #fff; }
+.proof-steps span, .handoff-diff span { color: #687d6b; font-size: 11px; font-weight: 700; }
+.proof-steps p, .handoff-diff p { margin: 5px 0 0; color: #405746; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.handoff-diff { display: grid; gap: 10px; margin: 16px 0; padding: 15px; border: 1px solid #e5ebe1; border-radius: 11px; background: #fafcf9; }
+.handoff-diff h3 { margin: 0; color: #38503e; font-size: 13px; }
+.handoff-diff > div { padding-top: 9px; border-top: 1px solid #e7ede4; }
+.handoff-diff small { color: #78693e; font-size: 11px; }
+.readiness-list { display: grid; gap: 6px; margin: 13px 0 0; padding: 0; list-style: none; }
+.readiness-list li { display: flex; gap: 6px; color: #4d654f; font-size: 11px; }
+.readiness-list li strong { display: inline; margin: 0; color: inherit; font: inherit; font-weight: 700; }
+.unknown-next-step { margin: -8px 0 17px; padding: 0 15px 13px; border: 1px solid #eceee7; border-top: 0; border-radius: 0 0 12px 12px; background: #f8f8f4; color: #4c614f; }
+.unknown-next-step strong { font-size: 11px; }
+.unknown-next-step p { margin: 4px 0 0; font-size: 12px; line-height: 1.5; }
+@media (max-width: 1050px) { .proof-steps { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 600px) { .proof-steps { grid-template-columns: 1fr; } }

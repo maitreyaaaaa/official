@@ -1,6 +1,8 @@
 # Ten small additions to consider for official
 
-**Status:** Research and product proposals only. None of the ten ideas below is implemented by this document. Ranked for a short reviewer walkthrough on 18 October 2026, not for a general product roadmap.
+**Status:** Ideas 1, 2, 4, and 5 were implemented on 18 October 2026. Ideas 3 and 6–10 remain proposals. Ranked for a short reviewer walkthrough, not for a general product roadmap.
+
+The implemented views use fresh graph responses for the rollout and approval comparisons, the saved handoff instruction IDs for the brief diff, distinct guide source and decision links for handover readiness, and the campaign checker's own reason for Unknown guidance. See the live acceptance notes in [Reviewer microfeature implementation](REVIEWER-MICROFEATURE-IMPLEMENTATION.md).
 
 ## What the reviewer already has
 
