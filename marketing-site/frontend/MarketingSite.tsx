@@ -6,24 +6,24 @@ import { ScrollRevealText } from './ScrollRevealText.js';
 
 const pageDetails: Record<MarketingPage, { title: string; description: string }> = {
   home: {
-    title: 'official — Know what your launch can safely say',
-    description: 'official traces campaign claims to reviewed product, rollout, test, and audience evidence.',
+    title: 'official: Know what your launch can safely say',
+    description: 'Check a campaign promise against reviewed product, rollout, test, and audience records. Follow each finding to its source.',
   },
   review: {
-    title: 'Campaign review — official',
-    description: 'See how official checks a launch promise against the product and rollout evidence behind it.',
+    title: 'Campaign review | official',
+    description: 'See how official compares a campaign promise with reviewed product and rollout records.',
   },
   method: {
-    title: 'How it works — official',
-    description: 'Follow a campaign promise from draft copy through connected product evidence to a clear finding.',
+    title: 'How it works | official',
+    description: 'Follow a campaign promise to its product, rollout, and test records.',
   },
   guardrails: {
-    title: 'Human control — official',
-    description: 'See how official keeps evidence clear and people in control of decisions.',
+    title: 'Human control | official',
+    description: 'See what official checks, what it leaves to a reviewer, and what the demo cannot change.',
   },
   notFound: {
-    title: 'Page not found — official',
-    description: 'This page is not available. Return to official or open the reviewer app.',
+    title: 'Page not found | official',
+    description: 'This page is not available. Return to official or open the review workspace.',
   },
 };
 
@@ -46,9 +46,9 @@ function Navigation({ page, open, onClose }: { page: MarketingPage; open: boolea
             {item.label}
           </a>
         ))}
-        <a className="mobile-demo-link" href="/app" onClick={onClose}>Open reviewer app <span aria-hidden="true">↗</span></a>
+        <a className="mobile-demo-link" href="/app" onClick={onClose}>Open review workspace <span aria-hidden="true">↗</span></a>
       </nav>
-      <a className="nav-demo" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a>
+      <a className="nav-demo" href="/app">Open review workspace <span aria-hidden="true">↗</span></a>
     </>
   );
 }
@@ -112,21 +112,21 @@ function HeroArtwork() {
 }
 
 const workflow = [
-  { number: '01', title: 'Choose the promise', text: 'Start with one sentence from a campaign and name the audience it speaks to.' },
-  { number: '02', title: 'Follow its evidence', text: 'official traces linked product, rollout, test, and audience records in FalkorDB.' },
-  { number: '03', title: 'Review the finding', text: 'See the source and the reason. A person decides whether to revise or pause the internal draft.' },
+  { number: '01', title: 'Choose the promise', text: 'Start with a campaign sentence and name the audience it addresses.' },
+  { number: '02', title: 'Follow its evidence', text: 'Read the reviewed product, rollout, and test records linked to that promise. FalkorDB keeps those records connected.' },
+  { number: '03', title: 'Review the finding', text: 'See the source behind the result. If a change is needed, a reviewer can prepare an internal proposal.' },
 ];
 
 const workspaceAreas = [
   { number: '01', title: 'Campaign review', text: 'Check a launch promise against the current release, rollout, test, and intended audience.' },
   { number: '02', title: 'Agent memory', text: 'Carry approved instructions and reviewer feedback into the next writing session.' },
-  { number: '03', title: 'Company Brain', text: 'Connect people, operating guides, decisions, and source notes for a safer handover.' },
+  { number: '03', title: 'Company Brain', text: 'Keep people, operating guides, decisions, and source notes together for a clearer handover.' },
 ];
 
 const reviewStates = [
-  { name: 'Supported', color: 'supported', text: 'The checked promise matches current reviewed evidence.' },
+  { name: 'Supported', color: 'supported', text: 'Reviewed evidence matches the promise for this audience.' },
   { name: 'Contradicted', color: 'contradicted', text: 'A current source conflicts with the promise.' },
-  { name: 'Unknown', color: 'unknown', text: 'Evidence is missing, stale, or does not agree.' },
+  { name: 'Unknown', color: 'unknown', text: 'Sources are missing, stale, or disagree.' },
   { name: 'Not checked', color: 'not-checked', text: 'No connected promise was found for this draft.' },
 ];
 
@@ -137,12 +137,12 @@ function HomePage() {
         <div className="hero-copy">
           <p className="eyebrow"><span className="eyebrow-dot" /> TRACK 1 <i>·</i> LAUNCH ASSURANCE</p>
           <h1>Know what your launch can <em>safely say.</em></h1>
-          <p className="hero-intro">official checks campaign promises against reviewed product, rollout, test, and audience evidence—then explains what the evidence supports.</p>
+          <p className="hero-intro">Check a campaign promise against reviewed product, rollout, test, and audience records. official shows the source behind each finding so a reviewer can decide what to change.</p>
           <div className="hero-actions">
-            <a className="button button-dark" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a>
-            <a className="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
+            <a className="button button-dark" href="/app">Open review workspace <span aria-hidden="true">↗</span></a>
+            <a className="text-link" href="#how-it-works">See the review steps <span aria-hidden="true">↓</span></a>
           </div>
-          <p className="hero-note"><span aria-hidden="true">✳</span> Working demo · Fictional Alder &amp; Finch data · No external actions</p>
+          <p className="hero-note"><span aria-hidden="true">✳</span> Working demo · Fictional Alder &amp; Finch records · No external campaign actions</p>
         </div>
         <HeroArtwork />
       </section>
@@ -167,7 +167,7 @@ function HomePage() {
         <Reveal className="section-heading">
           <p className="eyebrow">HOW OFFICIAL WORKS</p>
           <h2>From a sentence<br />to its <em>source.</em></h2>
-          <p>Every result stays tied to the exact promise and audience that were checked.</p>
+          <p>Each check covers one promise and the audience it names.</p>
         </Reveal>
         <div className="workflow-grid">
           {workflow.map((step, index) => (
@@ -183,9 +183,9 @@ function HomePage() {
       <section className="example-section">
         <div className="content-width example-layout">
           <Reveal className="example-copy">
-            <p className="eyebrow">A REALISTIC EXAMPLE FROM THE FICTIONAL DEMO</p>
+            <p className="eyebrow">FICTIONAL CAMPAIGN · ALDER &amp; FINCH</p>
             <h2>“Every account”<br />meets <em>testers only.</em></h2>
-            <p>Alder &amp; Finch’s campaign says CSV export is available to everyone. The reviewed rollout record says internal testers only. official marks the mismatch and shows the linked source.</p>
+            <p>Alder &amp; Finch promises CSV export to every account. The reviewed rollout covers internal testers only. official links both records and marks the audience mismatch as Contradicted.</p>
             <a className="light-link" href="/review">Read the example <span aria-hidden="true">↗</span></a>
           </Reveal>
           <Reveal className="evidence-chain" delay={0.12}>
@@ -206,8 +206,8 @@ function HomePage() {
       <section className="workspace-section content-width">
         <Reveal className="section-heading section-heading-wide">
           <p className="eyebrow">ONE CONNECTED WORKSPACE</p>
-          <h2>Keep the launch,<br />the memory, and the team <em>in sync.</em></h2>
-          <p>Track 1 connects three views of the same fictional release.</p>
+          <h2>Give each team<br />the same release <em>context.</em></h2>
+          <p>Campaign review, agent memory, and Company Brain use the same fictional Alder &amp; Finch release.</p>
         </Reveal>
         <div className="workspace-grid">
           {workspaceAreas.map((area, index) => (
@@ -223,8 +223,8 @@ function HomePage() {
       <section className="status-section content-width">
         <Reveal className="status-intro">
           <p className="eyebrow">CLEAR RESULTS</p>
-          <h2>Evidence first.<br /><em>Guesswork out.</em></h2>
-          <p>Missing or conflicting information stays visible. It never turns into approval by accident.</p>
+          <h2>See what the sources<br /><em>can support.</em></h2>
+          <p>Missing, stale, or conflicting evidence stays visible. A claim cannot be marked Supported without reviewed evidence.</p>
         </Reveal>
         <div className="status-list">
           {reviewStates.map((state) => (
@@ -244,17 +244,17 @@ function HomePage() {
             <h2>official shows the evidence.<br /><em>Your reviewer decides.</em></h2>
           </Reveal>
           <Reveal className="control-points" delay={0.1}>
-            <p><span>01</span> No reviewed source, no Supported result.</p>
-            <p><span>02</span> A finding covers one promise and its named audience.</p>
-            <p><span>03</span> Proposed changes wait for explicit human approval.</p>
+            <p><span>01</span> No reviewed source means no Supported result.</p>
+            <p><span>02</span> Every finding names one promise and its audience.</p>
+            <p><span>03</span> A reviewer must approve each proposed change.</p>
             <p className="control-boundary">The demo does not publish campaigns or change live product settings.</p>
           </Reveal>
         </div>
       </section>
 
       <section className="closing-cta content-width">
-        <div><p className="eyebrow">SEE THE CONNECTED DEMO</p><h2>Follow one launch<br />all the way <em>through.</em></h2><p>Explore the claim, trace its evidence, then see how approved memory and team coverage connect.</p></div>
-        <a className="button button-dark" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a>
+        <div><p className="eyebrow">ALDER &amp; FINCH · FICTIONAL RELEASE</p><h2>Follow a claim<br />to its <em>source.</em></h2><p>Open the campaign, inspect the linked records, and see where a reviewer must approve a change.</p></div>
+        <a className="button button-dark" href="/app">Open review workspace <span aria-hidden="true">↗</span></a>
       </section>
     </main>
   );
@@ -263,13 +263,13 @@ function HomePage() {
 function ReviewPage() {
   return (
     <main className="inner-page content-width">
-      <div className="page-lead"><p className="eyebrow">WHAT OFFICIAL DOES</p><h1>Check the promise<br />against <em>the release.</em></h1><p>official helps a team catch the gap between what campaign copy says and what the product is ready to deliver.</p></div>
+      <div className="page-lead"><p className="eyebrow">WHAT OFFICIAL DOES</p><h1>Check the promise<br />against <em>the release.</em></h1><p>official compares campaign copy with reviewed product and rollout records, then shows why a promise is Supported, Contradicted, or still Unknown.</p></div>
       <section className="review-layout" aria-label="Example launch claim review">
         <article className="claim-sheet"><div className="sheet-top"><span>ALDER &amp; FINCH / SPRING REPORTING RELEASE</span><span>LANDING PAGE</span></div><p className="claim-label">THE CLAIM</p><blockquote>“CSV export is available to every account.”</blockquote><div className="claim-footer"><span>Named audience<strong>All customer accounts</strong></span><span>Feature<strong>CSV export</strong></span></div></article>
         <article className="finding-card"><div className="finding-top"><span className="status status-contradicted"><i /> CONTRADICTED</span><span className="review-id">REVIEW / AF-2026-04</span></div><h2>The rollout doesn’t reach<br />the promised audience.</h2><div className="fact-row"><span className="fact-index">01</span><div><small>PRODUCTION · REVISION R17</small><strong>CSV export is included</strong></div><span className="fact-ok">REVIEWED</span></div><div className="fact-row"><span className="fact-index">02</span><div><small>CURRENT ROLLOUT</small><strong>Internal testers only</strong></div><span className="fact-ok">REVIEWED</span></div><div className="finding-reason"><span>WHY IT CONFLICTS</span><p>The product runs. Access is limited to internal testers, not every customer.</p></div></article>
       </section>
-      <section className="action-strip"><div><span className="eyebrow">A SUGGESTION IS NOT A DECISION</span><h2>Pause or revise the internal draft?</h2><p>The proposal waits in official until a reviewer chooses what to do.</p></div><a className="button button-dark" href="/app">Explore this review <span aria-hidden="true">↗</span></a></section>
-      <p className="page-footnote">Alder &amp; Finch and its records are fictional. This page explains the example; open the app for the working graph-backed review.</p>
+      <section className="action-strip"><div><span className="eyebrow">A REVIEWER CONTROLS THE NEXT STEP</span><h2>Pause or revise the internal draft?</h2><p>The proposal stays pending until a reviewer approves or rejects it.</p></div><a className="button button-dark" href="/app">Open this review <span aria-hidden="true">↗</span></a></section>
+      <p className="page-footnote">Alder &amp; Finch is fictional. The app runs the review against a connected demo graph.</p>
     </main>
   );
 }
@@ -277,37 +277,37 @@ function ReviewPage() {
 function MethodPage() {
   return (
     <main className="inner-page content-width method-page">
-      <div className="page-lead"><p className="eyebrow">HOW IT WORKS</p><h1>Follow a claim<br />to the <em>facts.</em></h1><p>Each review keeps the original sentence, intended audience, connected records, and result together.</p></div>
+      <div className="page-lead"><p className="eyebrow">HOW IT WORKS</p><h1>Follow a claim<br />to the <em>facts.</em></h1><p>official links one campaign sentence to product, rollout, and test records, then reports what those records support.</p></div>
       <section className="method-board" aria-label="Connected evidence chain"><div className="method-board-head"><span>FROM CAMPAIGN COPY TO EVIDENCE</span><span>FICTIONAL SPRING RELEASE</span></div><div className="trace-chain"><div className="trace-item"><span className="trace-index">01</span><small>CAMPAIGN</small><strong>Landing page</strong><span className="trace-detail">“Every account”</span></div><span className="trace-arrow">→</span><div className="trace-item"><span className="trace-index">02</span><small>PRODUCT</small><strong>CSV export</strong><span className="trace-detail">Production · R17</span></div><span className="trace-arrow">→</span><div className="trace-item"><span className="trace-index">03</span><small>ROLLOUT</small><strong>Testers only</strong><span className="trace-detail">Reviewed setting</span></div><span className="trace-arrow">→</span><div className="trace-item trace-emphasis"><span className="trace-index">04</span><small>FINDING</small><strong>Contradicted</strong><span className="trace-detail">Audience mismatch</span></div></div></section>
       <section className="steps-grid">{workflow.map((step) => <article key={step.number}><span>{step.number} <i>·</i> STEP</span><h2>{step.title}</h2><p>{step.text}</p></article>)}</section>
-      <section className="closing-cta"><div><p className="eyebrow">TRY THE WORKING DEMO</p><h2>Inspect the full<br /><em>evidence path.</em></h2><p>Open a campaign finding and follow its linked sources in the reviewer app.</p></div><a className="button button-dark" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a></section>
+      <section className="closing-cta"><div><p className="eyebrow">TRY THE WORKING DEMO</p><h2>Inspect the full<br /><em>evidence path.</em></h2><p>Open a campaign finding and follow its linked sources in the review workspace.</p></div><a className="button button-dark" href="/app">Open review workspace <span aria-hidden="true">↗</span></a></section>
     </main>
   );
 }
 
 const questions = [
   { question: 'Does Supported approve a whole campaign?', answer: 'No. It describes only the promise and audience that were checked. A person reviews the campaign and decides what to do.' },
-  { question: 'Can official publish campaign copy?', answer: 'No. It can prepare an internal proposal. A reviewer must approve it, and the demo has no external publishing action.' },
+  { question: 'Can official publish campaign copy?', answer: 'No. official can prepare a change to an internal draft. A reviewer must approve the proposal. The demo has no publishing action.' },
   { question: 'What happens when evidence is missing or conflicts?', answer: 'The finding stays Unknown until a person resolves the gap. Unreviewed or stale information cannot become proof.' },
 ];
 
 function GuardrailsPage() {
   return (
     <main className="inner-page content-width guardrails-page">
-      <div className="page-lead"><p className="eyebrow">HUMAN CONTROL</p><h1>Good evidence.<br /><em>Clear boundaries.</em></h1><p>official is a review workspace. It explains evidence and prepares internal next steps; a person remains responsible for the decision.</p></div>
-      <section className="principles" aria-label="Product guardrails"><article><span>01</span><h2>No source,<br /><em>no Supported.</em></h2><p>Missing and stale evidence stays Unknown.</p></article><article><span>02</span><h2>One finding.<br /><em>One promise.</em></h2><p>A result never stands in for an entire campaign.</p></article><article><span>03</span><h2>Every action<br /><em>waits for review.</em></h2><p>A person decides whether to approve an internal proposal.</p></article></section>
-      <section className="faq-section"><div className="faq-heading"><p className="eyebrow">PLAIN ANSWERS</p><h2>What official<br /><em>does—and doesn’t.</em></h2></div><div className="faq-list">{questions.map((item) => <details key={item.question}><summary>{item.question}<span aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}</div></section>
-      <section className="closing-cta"><div><p className="eyebrow">TRACK 1 · FICTIONAL DEMO DATA</p><h2>See the review<br />for <em>yourself.</em></h2><p>Walk through a launch, its evidence, and the human review points.</p></div><a className="button button-dark" href="/app">Open reviewer app <span aria-hidden="true">↗</span></a></section>
+      <div className="page-lead"><p className="eyebrow">HUMAN CONTROL</p><h1>A reviewer<br /><em>stays in control.</em></h1><p>official shows where evidence comes from and what it supports. It does not publish campaigns or change live product settings.</p></div>
+      <section className="principles" aria-label="Product guardrails"><article><span>01</span><h2>Reviewed sources<br /><em>support each result.</em></h2><p>A finding needs reviewed evidence to be Supported.</p></article><article><span>02</span><h2>Each result<br /><em>covers one promise.</em></h2><p>A result describes its named audience, not a whole campaign.</p></article><article><span>03</span><h2>A reviewer<br /><em>approves each change.</em></h2><p>A proposal stays pending until a person acts.</p></article></section>
+      <section className="faq-section"><div className="faq-heading"><p className="eyebrow">PLAIN ANSWERS</p><h2>What happens<br />after a <em>finding?</em></h2></div><div className="faq-list">{questions.map((item) => <details key={item.question}><summary>{item.question}<span aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}</div></section>
+      <section className="closing-cta"><div><p className="eyebrow">TRACK 1 · FICTIONAL RELEASE</p><h2>See the review<br />for <em>yourself.</em></h2><p>Follow one claim from campaign copy to reviewed evidence.</p></div><a className="button button-dark" href="/app">Open review workspace <span aria-hidden="true">↗</span></a></section>
     </main>
   );
 }
 
 function SiteFooter() {
-  return <footer className="marketing-footer"><div className="content-width footer-inner"><Brand /><span>Track 1 concept <i>·</i> Fictional demo data</span><a href="/app">Open reviewer app <span aria-hidden="true">↗</span></a></div></footer>;
+  return <footer className="marketing-footer"><div className="content-width footer-inner"><Brand /><span>Fictional Alder &amp; Finch release</span><a href="/app">Open review workspace <span aria-hidden="true">↗</span></a></div></footer>;
 }
 
 function NotFoundPage() {
-  return <main className="not-found-page content-width" aria-labelledby="not-found-title"><p className="eyebrow">OFF THE MAP · 404</p><h1 id="not-found-title">This page isn’t<br /><em>in the graph.</em></h1><p>The address may have changed, or this page may not be part of official.</p><div className="hero-actions"><a className="button button-dark" href="/">Back to official <span aria-hidden="true">↗</span></a><a className="text-link" href="/app">Open reviewer app <span aria-hidden="true">→</span></a></div></main>;
+  return <main className="not-found-page content-width" aria-labelledby="not-found-title"><p className="eyebrow">OFF THE MAP · 404</p><h1 id="not-found-title">This page isn’t<br /><em>in the graph.</em></h1><p>The address may have changed, or this page may not be part of official.</p><div className="hero-actions"><a className="button button-dark" href="/">Back to official <span aria-hidden="true">↗</span></a><a className="text-link" href="/app">Open review workspace <span aria-hidden="true">→</span></a></div></main>;
 }
 
 export function MarketingSite({ page }: { page: MarketingPage }) {

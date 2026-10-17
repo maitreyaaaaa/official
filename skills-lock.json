@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "Writing Hookify Rules": {
+      "source": "anthropics/claude-code",
+      "sourceType": "github",
+      "skillPath": "plugins/hookify/skills/writing-rules/SKILL.md",
+      "computedHash": "429463a57a711ee42d1373a726e66ccc2189118022f0c281dbb48b28796d417f"
+    },
+    "human-copywrite": {
+      "source": "forint573/human-copywrite",
+      "sourceType": "github",
+      "skillPath": "human-copywrite/SKILL.md",
+      "computedHash": "15095af47d530c5cad0561be4f53d9f9ca47586126c49dbcc24a6f6b7a7ac358"
+    }
+  }
+}
