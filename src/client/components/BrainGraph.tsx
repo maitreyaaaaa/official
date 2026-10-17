@@ -31,8 +31,8 @@ function positions(notes: KnowledgeNote[]): Map<string, { x: number; y: number }
 export function BrainGraph({ notes, selectedId, onSelect }: BrainGraphProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
-  const [scale, setScale] = useState(.72);
-  const [offset, setOffset] = useState({ x: -70, y: -80 });
+  const [scale, setScale] = useState(.8);
+  const [offset, setOffset] = useState({ x: -180, y: -80 });
   const layout = useMemo(() => positions(notes), [notes]);
   const selected = notes.find((note) => note.id === selectedId);
   const related = new Set([...(selected?.links ?? []), ...(selected?.backlinks ?? [])]);
@@ -77,7 +77,7 @@ export function BrainGraph({ notes, selectedId, onSelect }: BrainGraphProps) {
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const next = Math.min(.82, (viewport.clientWidth - 36) / width, (viewport.clientHeight - 36) / height);
+    const next = Math.min(.9, Math.max(.72, viewport.clientWidth / 900));
     setScale(next);
     setOffset({ x: (viewport.clientWidth - width * next) / 2, y: (viewport.clientHeight - height * next) / 2 });
   }, [notes.length]);
