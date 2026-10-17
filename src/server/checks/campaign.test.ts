@@ -510,7 +510,7 @@ test('blank source IDs and source content cannot support a promise', async () =>
 
 test('fixture seed refreshes source timestamps and clears the prior S4 rollout', async () => {
   const sourceTimes: string[] = [];
-  let resetRolloutId = '';
+  const resetRolloutIds: string[] = [];
   let markerVersion = '';
   let markerWritten = false;
   let factsRevisionIncremented = false;
@@ -526,7 +526,7 @@ test('fixture seed refreshes source timestamps and clears the prior S4 rollout',
       if (query.startsWith('MATCH (lock:FixtureSeedLock') && query.includes('WITH lock')) fencedSeedQueries.push(query);
       if (query.includes('MATCH (state:FixtureState')) return { data: markerWritten ? [['official-csv-launch']] : [] };
       if (query.includes('MATCH (rollout:Rollout')) {
-        resetRolloutId = String(options?.params?.rolloutId ?? '');
+        resetRolloutIds.push(String(options?.params?.rolloutId ?? ''));
         return { data: [] };
       }
       if (query.includes('UNWIND $records AS record MERGE (node:Source')) {
@@ -552,15 +552,15 @@ test('fixture seed refreshes source timestamps and clears the prior S4 rollout',
   await seedFixtureIfMissing(graph);
 
   const afterSeed = Date.now();
-  assert.equal(resetRolloutId, 'rollout-all-accounts');
-  assert.equal(markerVersion, 'csv-launch-v9');
+  assert.deepEqual(resetRolloutIds, ['rollout-all-accounts', 'rollout-all-merchants']);
+  assert.equal(markerVersion, 'connected-companies-v11');
   assert.equal(seededFeatureRevision, undefined);
   assert.equal(factsRevisionIncremented, true);
   assert.equal(revisionAndMarkerAreAtomic, true);
   assert.ok(fencedSeedQueries.length > 0);
   assert.ok(fencedSeedQueries.every((query) => query.includes('WHERE lock.leaseUntil > timestamp()')
     && query.includes('$seedLockFence')));
-  assert.equal(sourceTimes.length, 3);
+  assert.equal(sourceTimes.length, 6);
   assert.ok(sourceTimes.every((value) => {
     const timestamp = Date.parse(value);
     return timestamp >= beforeSeed && timestamp <= afterSeed;

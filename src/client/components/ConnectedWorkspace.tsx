@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, BookOpenText, Check, ChevronRight, CircleHelp, FileText, GitBranch, Search, ShieldCheck, Users } from 'lucide-react';
 import type { KnowledgeNote, WorkspaceSnapshot, WriterDraft } from '../../shared/contracts.js';
+import type { DemoCompany } from '../../shared/demo-companies.js';
 import { LocalTabs } from './LocalTabs.js';
+import { BrainGraph } from './BrainGraph.js';
 
 type View = 'memory' | 'brain';
-type BrainTab = 'notes' | 'coverage' | 'history';
+type BrainTab = 'graph' | 'notes' | 'coverage' | 'history';
 type NoteGroup = 'Launch' | 'Operations' | 'Company';
 
 function noteGroup(note: KnowledgeNote): NoteGroup {
@@ -14,6 +16,7 @@ function noteGroup(note: KnowledgeNote): NoteGroup {
 }
 
 interface ConnectedWorkspaceProps {
+  company: DemoCompany;
   view: View;
   brainTab: BrainTab;
   onBrainTabChange: (tab: BrainTab) => void;
@@ -45,7 +48,7 @@ function NoteLink({ note, onSelect }: { note: KnowledgeNote; onSelect: (id: stri
   </button>;
 }
 
-export function ConnectedWorkspace({ view, brainTab, onBrainTabChange, workspace, loading, error, canWrite, busy, message, ownerUnavailable,
+export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, workspace, loading, error, canWrite, busy, message, ownerUnavailable,
   selectedNoteId, onSelectNote, onOwnerUnavailable, onAction, onReviewDraft, onRefresh }: ConnectedWorkspaceProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All notes');
@@ -63,7 +66,9 @@ export function ConnectedWorkspace({ view, brainTab, onBrainTabChange, workspace
     && `${note.title} ${note.summary} ${note.body}`.toLowerCase().includes(search.toLowerCase().trim()))
     .sort((a, b) => noteGroup(a).localeCompare(noteGroup(b)) || a.title.localeCompare(b.title)),
   [category, notes, search]);
-  const selectedNote = visibleNotes.find((note) => note.id === selectedNoteId) ?? visibleNotes[0] ?? null;
+  const selectedNote = brainTab === 'graph'
+    ? notes.find((note) => note.id === selectedNoteId) ?? notes[0] ?? null
+    : visibleNotes.find((note) => note.id === selectedNoteId) ?? visibleNotes[0] ?? null;
   const noteById = new Map(notes.map((note) => [note.id, note]));
   const selectNote = (id: string) => {
     if (!visibleNotes.some((note) => note.id === id)) {
@@ -84,9 +89,18 @@ export function ConnectedWorkspace({ view, brainTab, onBrainTabChange, workspace
   const handoverReady = brain.rosterReviewed && Boolean(brain.backupName) && brain.guideCurrent && Boolean(guide?.sources.length);
   const historyPanel = <section className="connected-events"><div><span className="connected-label">GRAPH ACTIVITY</span><h2>What changed</h2></div>{workspace.events.length ? workspace.events.map((event) => <div className="connected-event" key={event.id}><span>{dateLabel(event.occurredAt)}</span><strong>{event.title}</strong><p>{event.detail}</p></div>) : <p className="connected-empty">No memory or ownership change has been recorded yet.</p>}</section>;
 
+  const noteReader = <article className="note-reader">{selectedNote ? <>
+          <div className="note-breadcrumb">{workspace.company.shortName} <ChevronRight size={14} /> {selectedNote.category}</div>
+          <span className="connected-label">REVIEWED COMPANY NOTE</span><h2 ref={noteHeadingRef} tabIndex={-1}>{selectedNote.title}</h2><p className="note-summary">{selectedNote.summary}</p>
+          <div className="note-meta"><span>Reviewed by {selectedNote.reviewedBy}</span><span>{dateLabel(selectedNote.reviewedAt)}</span></div>
+          <div className="note-body">{selectedNote.body.split('\n').map((line, index) => <p key={`${selectedNote.id}-${index}`}>{line}</p>)}</div>
+          <div className="note-relations"><section><h3><GitBranch size={16} /> Linked notes</h3>{selectedNote.links.length ? selectedNote.links.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No outgoing note links.</p>}</section><section><h3><ArrowRight size={16} /> Backlinks</h3>{selectedNote.backlinks.length ? selectedNote.backlinks.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No incoming note links.</p>}</section></div>
+          <section className="note-sources"><h3><CircleHelp size={16} /> Sources and decisions</h3>{selectedNote.sources.length ? selectedNote.sources.map((source) => <div className="note-source" key={source.id}><strong>{source.label}</strong><p>{source.detail}</p><small>{source.id}</small></div>) : <p>This reviewed note has no linked source record. Read it as a workspace note, not independent product proof.</p>}</section>
+        </> : <p className="connected-empty">{notes.length ? 'Clear the filters to choose a note.' : 'No company notes are available yet.'}</p>}</article>;
+
   return <div className="connected-page" id={view}>
     <div className="connected-masthead">
-      <div className="connected-mark" aria-hidden="true">A<span>&amp;</span>F</div>
+      <div className="connected-mark" aria-hidden="true">{company.monogram}</div>
       <div><span className="connected-overline">{workspace.company.name} <span aria-hidden="true">/</span> {workspace.project.name}</span>
         <h1 tabIndex={-1}>{view === 'memory' ? 'Agent memory & handoffs' : 'Company Brain'}</h1>
         <p>{view === 'memory'
@@ -97,7 +111,7 @@ export function ConnectedWorkspace({ view, brainTab, onBrainTabChange, workspace
 
     {view === 'memory' ? <>
       <div className="connected-quick-status"><strong>{handoffStale ? 'Handoff needs a refresh' : 'Handoff current'}</strong><span>Saved brief revision {workspace.memory.handoff.revision} · Current revision {workspace.memory.briefRevision}</span><span>{workspace.memory.drafts.filter((draft) => draft.status === 'pending_approval').length} internal drafts awaiting review</span></div>
-      {proposedTone && <div className="memory-next-action"><div><span className="connected-label">NEXT REVIEW</span><strong>Calm tone needs approval</strong><p>The next writer will use the current approved tone until this change is reviewed.</p></div><button className="primary-button" type="button" onClick={() => onAction('approve-tone')} disabled={!canWrite || Boolean(busy)}>{busy === 'approve-tone' ? 'Approving…' : 'Approve calm tone'}</button></div>}
+      {proposedTone && <div className="memory-next-action"><div><span className="connected-label">NEXT REVIEW</span><strong>Proposed tone needs approval</strong><p>{proposedTone.text} The next writer will use the current approved tone until this change is reviewed.</p></div><button className="primary-button" type="button" onClick={() => onAction('approve-tone')} disabled={!canWrite || Boolean(busy)}>{busy === 'approve-tone' ? 'Approving…' : 'Approve tone'}</button></div>}
       <div className="connected-two-column">
         <section className="connected-card memory-card">
           <div className="connected-card-heading"><span className="connected-icon"><GitBranch size={19} /></span><div><span className="connected-label">PLANNER → WRITER</span><h2>Handoff and current memory</h2></div></div>
@@ -117,7 +131,7 @@ export function ConnectedWorkspace({ view, brainTab, onBrainTabChange, workspace
           <h3 className="connected-subtitle">Recent writer sessions</h3>
           {workspace.memory.drafts.length ? <div className="writer-drafts">{workspace.memory.drafts.map((draft) => <article className="writer-draft" key={draft.id}>
             <div><strong>{draft.title}</strong><span className={`instruction-state ${draft.status}`}>{draft.status.replace('_', ' ')}</span></div>
-            <small>{dateLabel(draft.createdAt)} · Brief revision {draft.briefRevision} · Evidence revision {draft.factRevision || 'earlier'} · {draft.tone.includes('calm') ? 'Calm' : 'Playful'} tone</small>
+            <small>{dateLabel(draft.createdAt)} · Brief revision {draft.briefRevision} · Evidence revision {draft.factRevision || 'earlier'} · {draft.tone}</small>
             <p>{draft.text}</p><small>Memory used: {draft.memoryIds.join(', ')}</small>
             {draft.availabilityBasis && <small>{draft.availabilityBasis}</small>}
             {(draft.briefRevision !== workspace.memory.briefRevision || draft.factRevision !== workspace.memory.currentFactRevision) && <small className="connected-help">Historical draft: the brief or rollout evidence changed after it was prepared. Start a fresh session before relying on its wording.</small>}
@@ -127,15 +141,17 @@ export function ConnectedWorkspace({ view, brainTab, onBrainTabChange, workspace
       </div>
     </> : <>
       <LocalTabs label="Company Brain sections" idPrefix="brain" tabs={[
+        { id: 'graph' as const, label: 'Graph', count: notes.length },
         { id: 'notes' as const, label: 'Notes', count: notes.length },
         { id: 'coverage' as const, label: 'Coverage', count: !brain.backupName || !brain.guideCurrent ? 1 : 0 },
         { id: 'history' as const, label: 'History' },
       ]} value={brainTab} onChange={onBrainTabChange} />
+      {brainTab === 'graph' && <div className="brain-graph-layout" id="brain-panel-graph" role="tabpanel" aria-labelledby="brain-tab-graph"><BrainGraph notes={notes} selectedId={selectedNote?.id ?? null} onSelect={selectNote} />{noteReader}</div>}
       {brainTab === 'coverage' && <div id="brain-panel-coverage" role="tabpanel" aria-labelledby="brain-tab-coverage">
       <section className="connected-card coverage-card">
         <div className="connected-card-heading"><span className="connected-icon"><ShieldCheck size={19} /></span><div><span className="connected-label">COMPANY CONTINUITY</span><h2>Who can carry the launch review?</h2></div></div>
         <div className="coverage-main"><div><p>{brain.processSummary}</p><div className="coverage-people"><span><Users size={15} /> Primary: <strong>{brain.primaryName}</strong></span><span><Users size={15} /> Backup: <strong>{brain.backupName ?? 'Not confirmed'}</strong></span></div><p className="connected-help">{brain.affectedProject} depends on this process. The current guide cites {brain.decisionTitle}.</p></div><div className="coverage-status"><span className="connected-label">{ownerUnavailable ? 'SCENARIO RESULT' : 'CURRENT COVERAGE'}</span><strong>{brain.coverage}</strong><small>{brain.backupProposalStatus ? 'A backup proposal is pending; it does not count yet.' : brain.rosterReviewed ? 'Based on the reviewed roster and approved links.' : 'Roster review is missing.'}</small></div></div>
-        <div className="coverage-actions"><label className="scenario-switch"><input type="checkbox" checked={ownerUnavailable} onChange={(event) => onOwnerUnavailable(event.target.checked)} /> Simulate {brain.primaryName} unavailable</label>{!brain.backupName && !brain.backupProposalStatus && <button className="secondary-button" type="button" disabled={!canWrite || Boolean(busy)} onClick={() => onAction('propose-backup')}>{busy === 'propose-backup' ? 'Preparing…' : 'Propose Zara as backup'}</button>}{brain.backupProposalStatus && <button className="primary-button" type="button" disabled={!canWrite || Boolean(busy)} onClick={() => onAction('approve-backup')}>{busy === 'approve-backup' ? 'Approving…' : 'Approve backup assignment'}</button>}</div>
+        <div className="coverage-actions"><label className="scenario-switch"><input type="checkbox" checked={ownerUnavailable} onChange={(event) => onOwnerUnavailable(event.target.checked)} /> Simulate {brain.primaryName} unavailable</label>{!brain.backupName && !brain.backupProposalStatus && <button className="secondary-button" type="button" disabled={!canWrite || Boolean(busy)} onClick={() => onAction('propose-backup')}>{busy === 'propose-backup' ? 'Preparing…' : `Propose ${company.backupName} as backup`}</button>}{brain.backupProposalStatus && <button className="primary-button" type="button" disabled={!canWrite || Boolean(busy)} onClick={() => onAction('approve-backup')}>{busy === 'approve-backup' ? 'Approving…' : 'Approve backup assignment'}</button>}</div>
         <div className={`handover-brief ${handoverReady ? 'ready' : 'incomplete'}`}>
           <div><span className="connected-label">INTERNAL HANDOVER</span><strong>{handoverReady ? 'Ready for an approved backup' : 'Handover incomplete'}</strong><p>{handoverReady ? `${brain.backupName} can use the reviewed guide and linked sources for ${brain.affectedProject}.` : 'A confirmed backup and a guide current with the rollout are required before a handover is ready.'}</p></div>
           <div><small>Guide: {guide?.title ?? 'Missing from the company graph'}</small><small>Decision: {brain.decisionTitle}</small><small>Direct source links: {guide?.sources.length ?? 0}</small>{guide && <button className="knowledge-link" type="button" onClick={() => { focusOpenedGuide.current = true; selectNote(guide.id); onBrainTabChange('notes'); }}>Open guide and sources <ChevronRight size={15} /></button>}</div>
@@ -150,14 +166,7 @@ export function ConnectedWorkspace({ view, brainTab, onBrainTabChange, workspace
           <div className="notes-categories" aria-label="Note categories">{categories.map((item) => <button type="button" key={item} className={category === item ? 'selected' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
           <div className="notes-list">{visibleNotes.map((note) => <button type="button" className={`note-row ${selectedNote?.id === note.id ? 'selected' : ''}`} onClick={() => selectNote(note.id)} key={note.id}><FileText size={16} aria-hidden="true" /><span><strong>{note.title}</strong><small>{note.category} · {note.summary}</small></span></button>)}{visibleNotes.length === 0 && <div className="notes-empty"><p className="connected-empty">{notes.length ? 'No notes match these filters.' : 'No company notes are available yet.'}</p>{notes.length > 0 && <button className="text-button" type="button" onClick={() => { setSearch(''); setCategory('All notes'); }}>Clear filters</button>}</div>}</div>
         </aside>
-        <article className="note-reader">{selectedNote ? <>
-          <div className="note-breadcrumb">{workspace.company.shortName} <ChevronRight size={14} /> {selectedNote.category}</div>
-          <span className="connected-label">REVIEWED COMPANY NOTE</span><h2 ref={noteHeadingRef} tabIndex={-1}>{selectedNote.title}</h2><p className="note-summary">{selectedNote.summary}</p>
-          <div className="note-meta"><span>Reviewed by {selectedNote.reviewedBy}</span><span>{dateLabel(selectedNote.reviewedAt)}</span></div>
-          <div className="note-body">{selectedNote.body.split('\n').map((line, index) => <p key={`${selectedNote.id}-${index}`}>{line}</p>)}</div>
-          <div className="note-relations"><section><h3><GitBranch size={16} /> Linked notes</h3>{selectedNote.links.length ? selectedNote.links.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No outgoing note links.</p>}</section><section><h3><ArrowRight size={16} /> Backlinks</h3>{selectedNote.backlinks.length ? selectedNote.backlinks.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No incoming note links.</p>}</section></div>
-          <section className="note-sources"><h3><CircleHelp size={16} /> Sources and decisions</h3>{selectedNote.sources.length ? selectedNote.sources.map((source) => <div className="note-source" key={source.id}><strong>{source.label}</strong><p>{source.detail}</p><small>{source.id}</small></div>) : <p>This reviewed note has no linked source record. Read it as a workspace note, not independent product proof.</p>}</section>
-        </> : <p className="connected-empty">{notes.length ? 'Clear the filters to choose a note.' : 'No company notes are available yet.'}</p>}</article>
+        {noteReader}
       </div>}
       {brainTab === 'history' && <div id="brain-panel-history" role="tabpanel" aria-labelledby="brain-tab-history">{historyPanel}</div>}
     </>}

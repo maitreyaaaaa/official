@@ -1,0 +1,55 @@
+{
+  "nodes": {
+    "Campaign": [
+      { "id": "campaign-route-timeline", "name": "Delivery timeline release", "companyName": "Northstar Parcel", "industry": "Parcel operations", "region": "North America", "ownerTeam": "Merchant operations", "releaseWindow": "Autumn 2026", "environment": "production", "audience": "Merchant accounts", "briefRevision": 1, "updatedAt": "2026-10-17T09:00:00.000Z" }
+    ],
+    "Draft": [
+      { "id": "draft-northstar-web", "title": "Merchant landing page", "kind": "Landing page", "text": "Every merchant can share a live delivery timeline today.", "position": 1, "status": "draft" },
+      { "id": "draft-northstar-email", "title": "Launch email", "kind": "Email", "text": "Give every customer a live view of their delivery from dispatch to doorstep.", "position": 2, "status": "draft" },
+      { "id": "draft-northstar-pilot", "title": "Pilot announcement", "kind": "Social post", "text": "Pilot merchants can share live delivery timelines today.", "position": 3, "status": "draft" },
+      { "id": "draft-northstar-update", "title": "Operations update", "kind": "Email", "text": "See your carrier scans and exceptions in one place.", "position": 4, "status": "draft" }
+    ],
+    "Promise": [
+      { "id": "promise-northstar-all", "text": "Live delivery timelines are available now to all merchants.", "reviewed": true },
+      { "id": "promise-northstar-pilot", "text": "Live delivery timelines are available now to pilot merchants.", "reviewed": true }
+    ],
+    "Feature": [{ "id": "feature-live-timeline", "name": "Live delivery timeline" }],
+    "Audience": [
+      { "id": "audience-all-merchants", "name": "All merchants" },
+      { "id": "audience-pilot-merchants", "name": "Pilot merchants" }
+    ],
+    "Deployment": [{ "id": "deployment-n24", "revision": "N24", "environment": "production", "includesFeature": true, "reviewed": true, "current": true, "observedAt": "2026-10-17T08:00:00.000Z" }],
+    "Rollout": [
+      { "id": "rollout-pilot-merchants", "name": "Pilot merchant rollout", "environment": "production", "reviewed": true, "current": true, "observedAt": "2026-10-17T08:15:00.000Z" },
+      { "id": "rollout-all-merchants", "name": "All-merchant scenario rollout", "environment": "production", "reviewed": false, "current": false, "observedAt": "2026-10-17T08:15:00.000Z" }
+    ],
+    "Test": [{ "id": "test-timeline-n24", "name": "Timeline event smoke test", "revision": "N24", "environment": "production", "passed": true, "reviewed": true, "current": true, "observedAt": "2026-10-17T08:25:00.000Z" }],
+    "Source": [
+      { "id": "source-northstar-deploy", "label": "N1 · Running version", "text": "Production runs revision N24 with the live timeline service enabled.", "reviewedBy": "Theo Grant", "observedAt": "2026-10-17T08:00:00.000Z" },
+      { "id": "source-northstar-rollout", "label": "N2 · Merchant rollout", "text": "N24 timeline sharing is enabled for the pilot merchant cohort. Other merchants remain excluded.", "reviewedBy": "Iris Malik", "observedAt": "2026-10-17T08:15:00.000Z" },
+      { "id": "source-northstar-test", "label": "N3 · Event test", "text": "A production smoke test passed for carrier scan and ETA updates on N24.", "reviewedBy": "Theo Grant", "observedAt": "2026-10-17T08:25:00.000Z" }
+    ]
+  },
+  "edges": [
+    { "type": "IN_CAMPAIGN", "from": "draft-northstar-web", "to": "campaign-route-timeline" },
+    { "type": "IN_CAMPAIGN", "from": "draft-northstar-email", "to": "campaign-route-timeline" },
+    { "type": "IN_CAMPAIGN", "from": "draft-northstar-pilot", "to": "campaign-route-timeline" },
+    { "type": "IN_CAMPAIGN", "from": "draft-northstar-update", "to": "campaign-route-timeline" },
+    { "type": "MAKES_PROMISE", "from": "draft-northstar-web", "to": "promise-northstar-all" },
+    { "type": "MAKES_PROMISE", "from": "draft-northstar-pilot", "to": "promise-northstar-pilot" },
+    { "type": "REUSES_DRAFT", "from": "draft-northstar-email", "to": "draft-northstar-web" },
+    { "type": "ABOUT", "from": "promise-northstar-all", "to": "feature-live-timeline" },
+    { "type": "ABOUT", "from": "promise-northstar-pilot", "to": "feature-live-timeline" },
+    { "type": "TARGETS", "from": "promise-northstar-all", "to": "audience-all-merchants" },
+    { "type": "TARGETS", "from": "promise-northstar-pilot", "to": "audience-pilot-merchants" },
+    { "type": "RUNNING_AS", "from": "feature-live-timeline", "to": "deployment-n24" },
+    { "type": "HAS_ROLLOUT", "from": "feature-live-timeline", "to": "rollout-pilot-merchants" },
+    { "type": "HAS_ROLLOUT", "from": "feature-live-timeline", "to": "rollout-all-merchants" },
+    { "type": "HAS_TEST", "from": "feature-live-timeline", "to": "test-timeline-n24" },
+    { "type": "INCLUDES", "from": "rollout-pilot-merchants", "to": "audience-pilot-merchants" },
+    { "type": "EXCLUDES", "from": "rollout-pilot-merchants", "to": "audience-all-merchants" },
+    { "type": "HAS_SOURCE", "from": "deployment-n24", "to": "source-northstar-deploy" },
+    { "type": "HAS_SOURCE", "from": "rollout-pilot-merchants", "to": "source-northstar-rollout" },
+    { "type": "HAS_SOURCE", "from": "test-timeline-n24", "to": "source-northstar-test" }
+  ]
+}

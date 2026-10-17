@@ -1,15 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import type { Graph } from 'falkordb';
 import { checkCampaign } from '../checks/campaign.js';
+import { defaultDemoCompany, demoCompanies, demoCompanyByCampaignId } from '../../shared/demo-companies.js';
 import type {
   CampaignReview, KnowledgeNote, KnowledgeSource, MemoryInstruction, WorkspaceChatResponse,
   WorkspaceSnapshot, WriterDraft,
 } from '../../shared/contracts.js';
 
-const campaignId = 'campaign-csv-launch';
-const companyId = 'company-alder-finch';
-const projectId = 'project-spring-reporting';
-const launchProcessId = 'process-launch-evidence';
+function companyFor(campaignId: string) {
+  const company = demoCompanyByCampaignId(campaignId);
+  if (!company) throw new WorkspaceError(404, 'This demo company is not available.');
+  return company;
+}
 
 type Row = Record<string, unknown>;
 
@@ -41,7 +43,9 @@ function required<T>(item: T | undefined, message: string): T {
   return item;
 }
 
-export async function loadWorkspace(graph: Graph, ownerUnavailable = false): Promise<WorkspaceSnapshot> {
+export async function loadWorkspace(graph: Graph, ownerUnavailable = false, campaignId: string = defaultDemoCompany.campaignId): Promise<WorkspaceSnapshot> {
+  const companyConfig = companyFor(campaignId);
+  const { companyId, projectId, processId, controlProcessId, handoffId, featureId, baselineRolloutId } = companyConfig;
   const companyRows = rows(await graph.query<unknown[]>(`
 MATCH (company:Company {id: $companyId})-[:HAS_PROJECT]->(project:Project {id: $projectId})
 RETURN company.id AS companyId, company.name AS companyName, company.shortName AS shortName,
@@ -110,12 +114,12 @@ ORDER BY topic, revision`, { params: { campaignId } }),
 MATCH (handoff:Handoff {id: $handoffId})-[:FOR_TASK]->(:Task)-[:FOR_CAMPAIGN]->(:Campaign {id: $campaignId})
 RETURN handoff.id AS id, handoff.summary AS summary, handoff.revision AS revision,
        handoff.fromRole AS fromRole, handoff.toRole AS toRole`,
-  { params: { handoffId: 'handoff-launch-v1', campaignId } }),
+  { params: { handoffId, campaignId } }),
   ['id', 'summary', 'revision', 'fromRole', 'toRole']);
   const handoff = required(handoffRows[0], 'The planner handoff is not ready.');
   const includedRows = rows(await graph.query<unknown[]>(`
 MATCH (:Handoff {id: $handoffId})-[:INCLUDES_INSTRUCTION]->(instruction:InstructionVersion)
-RETURN instruction.id AS id`, { params: { handoffId: 'handoff-launch-v1' } }), ['id']);
+RETURN instruction.id AS id`, { params: { handoffId } }), ['id']);
   const episodeRows = rows(await graph.query<unknown[]>(`
 MATCH (:Campaign {id: $campaignId})-[:RECORDED_EPISODE]->(episode:ReviewEpisode)
 RETURN episode.id AS id, episode.summary AS summary, episode.reviewedBy AS reviewedBy`,
@@ -154,26 +158,26 @@ RETURN process.id AS id, process.name AS name, process.summary AS summary,
        process.rosterReviewed AS rosterReviewed, primary.name AS primaryName,
        backup.name AS backupName, guide.id AS guideId, guide.reviewedAt AS guideReviewedAt,
        decision.title AS decisionTitle, decision.reviewedAt AS decisionReviewedAt,
-       project.name AS projectName`, { params: { projectId, processId: launchProcessId } }),
+       project.name AS projectName`, { params: { projectId, processId } }),
   ['id', 'name', 'summary', 'rosterReviewed', 'primaryName', 'backupName', 'guideId', 'guideReviewedAt', 'decisionTitle', 'decisionReviewedAt', 'projectName']);
   const process = required(processRows[0], 'The company ownership graph is not ready.');
   const backupRows = rows(await graph.query<unknown[]>(`
 MATCH (proposal:BackupProposal {processId: $processId, status: 'pending'})
 MATCH (campaign:Campaign {id: $campaignId})
 WHERE proposal.createdAt >= coalesce(campaign.demoResetAt, '')
-RETURN proposal.id AS id LIMIT 1`, { params: { processId: launchProcessId, campaignId } }), ['id']);
+RETURN proposal.id AS id LIMIT 1`, { params: { processId, campaignId } }), ['id']);
   const controlRows = rows(await graph.query<unknown[]>(`
 MATCH (process:Process {id: $processId})-[:PRIMARY_OWNER]->(primary:Person)
 MATCH (process)-[:BACKUP_OWNER]->(backup:Person)
 RETURN process.name AS name, backup.name AS backupName LIMIT 1`,
-  { params: { processId: 'process-release-qa' } }), ['name', 'backupName']);
+  { params: { processId: controlProcessId } }), ['name', 'backupName']);
   const control = required(controlRows[0], 'The unaffected process is not ready.');
   const rolloutRows = rows(await graph.query<unknown[]>(`
-MATCH (feature:Feature {id: 'feature-csv-export'})-[:HAS_ROLLOUT]->(rollout:Rollout {current: true})
-RETURN rollout.id AS id, feature.factsRevision AS factRevision`, { params: {} }), ['id', 'factRevision']);
+MATCH (feature:Feature {id: $featureId})-[:HAS_ROLLOUT]->(rollout:Rollout {current: true})
+RETURN rollout.id AS id, feature.factsRevision AS factRevision`, { params: { featureId } }), ['id', 'factRevision']);
   const backupName = value(process, 'backupName') || null;
   const rosterReviewed = process.rosterReviewed === true;
-  const guideCurrent = rolloutRows.length === 1 && value(rolloutRows[0], 'id') === 'rollout-testers-only'
+  const guideCurrent = rolloutRows.length === 1 && value(rolloutRows[0], 'id') === baselineRolloutId
     && Boolean(value(process, 'guideReviewedAt'))
     && new Date(value(process, 'guideReviewedAt')).getTime() >= new Date(value(process, 'decisionReviewedAt')).getTime();
   const coverage: WorkspaceSnapshot['companyBrain']['coverage'] = !rosterReviewed
@@ -219,23 +223,27 @@ function changed(result: { data?: unknown[] }, message: string): void {
   if (!result.data?.length) throw new WorkspaceError(409, message);
 }
 
-export async function approveTone(graph: Graph): Promise<void> {
+export async function approveTone(graph: Graph, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = companyFor(campaignId);
   const now = new Date().toISOString();
   changed(await graph.query<unknown[]>(`
-MATCH (campaign:Campaign {id: $campaignId})-[:HAS_INSTRUCTION]->(old:InstructionVersion {id: 'instruction-playful', status: 'approved'})
-MATCH (campaign)-[:HAS_INSTRUCTION]->(next:InstructionVersion {id: 'instruction-calm', status: 'pending'})
+MATCH (campaign:Campaign {id: $campaignId})-[:HAS_INSTRUCTION]->(old:InstructionVersion {id: $oldToneId, status: 'approved'})
+MATCH (campaign)-[:HAS_INSTRUCTION]->(next:InstructionVersion {id: $proposedToneId, status: 'pending'})
 WHERE campaign.briefRevision = 1
-SET old.status = 'superseded', next.status = 'approved', next.approvedBy = 'Maya Chen', next.approvedAt = $now,
+SET old.status = 'superseded', next.status = 'approved', next.approvedBy = $reviewerName, next.approvedAt = $now,
     campaign.briefRevision = 2
 MERGE (next)-[:SUPERSEDES]->(old)
 CREATE (event:WorkspaceEvent {id: $eventId, projectId: $projectId, kind: 'instruction.approved',
-  title: 'Campaign tone approved', detail: 'Calm replaced playful for the spring reporting campaign.', occurredAt: $now})
-RETURN next.id AS id`, { params: { campaignId, projectId, now, eventId: randomUUID() } }),
+  title: 'Campaign tone approved', detail: $detail, occurredAt: $now})
+RETURN next.id AS id`, { params: { campaignId, projectId: company.projectId, oldToneId: company.oldToneId,
+    proposedToneId: company.proposedToneId, reviewerName: company.reviewerName, now, eventId: randomUUID(),
+    detail: `The proposed tone replaced the earlier instruction for ${company.shortName}.` } }),
   'The tone change was already applied or the brief changed. Refresh the workspace.');
 }
 
-export async function runWriterSession(graph: Graph): Promise<void> {
-  const [snapshot, review] = await Promise.all([loadWorkspace(graph), checkCampaign(graph, campaignId)]);
+export async function runWriterSession(graph: Graph, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = companyFor(campaignId);
+  const [snapshot, review] = await Promise.all([loadWorkspace(graph, false, campaignId), checkCampaign(graph, campaignId)]);
   const active = snapshot.memory.instructions.filter((instruction) => instruction.status === 'approved');
   const tones = active.filter((instruction) => instruction.topic === 'tone');
   const openings = active.filter((instruction) => instruction.topic === 'opening');
@@ -244,28 +252,28 @@ export async function runWriterSession(graph: Graph): Promise<void> {
   }
   const tone = tones[0];
   const opening = openings[0];
-  const calm = tone.id === 'instruction-calm';
-  const allAccountFindings = review.findings.filter((finding) => finding.audienceId === 'audience-all-accounts');
-  const testerFinding = review.findings.find((finding) => finding.audienceId === 'audience-internal-testers');
+  const calm = tone.id === company.proposedToneId;
+  const allAccountFindings = review.findings.filter((finding) => finding.audienceId === company.broadAudienceId);
+  const testerFinding = review.findings.find((finding) => finding.audienceId === company.limitedAudienceId);
   const factRevision = review.findings.find((finding) => finding.factRevision)?.factRevision ?? 0;
   if (!factRevision || !allAccountFindings.length) throw new WorkspaceError(409, 'Current campaign evidence is not ready for a new draft.');
   const allAccountsSupported = allAccountFindings.every((finding) => finding.status === 'Supported');
   const testerSupported = testerFinding?.status === 'Supported';
-  const availabilityBasis = allAccountsSupported ? 'All-account access is supported by the current campaign check.'
-    : testerSupported ? 'Only internal tester access is supported by the current campaign check.'
+  const availabilityBasis = allAccountsSupported ? 'Broad access is supported by the current campaign check.'
+    : testerSupported ? 'Limited access is supported by the current campaign check.'
       : 'The current campaign check does not support an availability claim.';
   const availabilityLine = allAccountsSupported
-    ? 'CSV export is available to every account.'
+    ? company.broadAvailability
     : testerSupported
-      ? 'Internal testers can use CSV export today; we will share broader access when it is reviewed.'
-      : 'We are reviewing CSV export availability and will share access details after the evidence is confirmed.';
-  const text = `${calm ? 'See your weekly work in one clear view.' : 'A clearer view of your week is here.'} The spring reporting update brings your key activity together. ${availabilityLine}`;
+      ? company.limitedAvailability
+      : company.unknownAvailability;
+  const text = `${calm ? company.writerOpening : company.writerBridge} ${calm ? company.writerBridge : ''} ${availabilityLine}`.replace(/\s+/g, ' ').trim();
   const now = new Date().toISOString();
   const draftId = randomUUID();
   changed(await graph.query<unknown[]>(`
 MATCH (campaign:Campaign {id: $campaignId})-[:HAS_INSTRUCTION]->(tone:InstructionVersion {id: $toneId, status: 'approved'})
 MATCH (campaign)-[:HAS_INSTRUCTION]->(opening:InstructionVersion {id: $openingId, status: 'approved'})
-MATCH (feature:Feature {id: 'feature-csv-export'})
+MATCH (feature:Feature {id: $featureId})
 MATCH (handoff:Handoff {id: $handoffId})-[:FOR_TASK]->(task:Task)-[:FOR_CAMPAIGN]->(campaign)
 MATCH (campaign)-[:RECORDED_EPISODE]->(episode:ReviewEpisode {id: $episodeId})
 WHERE campaign.briefRevision = $briefRevision AND feature.factsRevision = $factRevision
@@ -283,7 +291,7 @@ CREATE (session)-[:PRODUCED]->(draft)
 CREATE (event:WorkspaceEvent {id: $eventId, projectId: $projectId, kind: 'writer.drafted',
   title: 'Fresh writer session prepared a draft', detail: $eventDetail, occurredAt: $now})
 RETURN draft.id AS id`, { params: {
-    campaignId, projectId, toneId: tone.id, openingId: opening.id, handoffId: snapshot.memory.handoff.id,
+    campaignId, projectId: company.projectId, featureId: company.featureId, toneId: tone.id, openingId: opening.id, handoffId: snapshot.memory.handoff.id,
     episodeId: snapshot.memory.episode.id, briefRevision: snapshot.memory.briefRevision, factRevision,
     sessionId: randomUUID(), draftId, text, toneText: tone.text, availabilityBasis,
     memoryIds: [tone.id, opening.id, snapshot.memory.episode.id], now,
@@ -291,7 +299,8 @@ RETURN draft.id AS id`, { params: {
   } }), 'The brief or rollout evidence changed while the writer was preparing. Refresh and start a new session.');
 }
 
-export async function reviewWriterDraft(graph: Graph, draftId: string, decision: 'approve' | 'reject'): Promise<void> {
+export async function reviewWriterDraft(graph: Graph, draftId: string, decision: 'approve' | 'reject', campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = companyFor(campaignId);
   if (!/^[a-f0-9-]{36}$/i.test(draftId)) throw new WorkspaceError(400, 'Choose a valid writer draft.');
   const now = new Date().toISOString();
   const status = decision === 'approve' ? 'approved_internal' : 'rejected';
@@ -299,20 +308,22 @@ export async function reviewWriterDraft(graph: Graph, draftId: string, decision:
   changed(await graph.query<unknown[]>(`
 MATCH (draft:WriterDraft {id: $draftId, campaignId: $campaignId, status: 'pending_approval'})
 MATCH (campaign:Campaign {id: $campaignId})
-MATCH (feature:Feature {id: 'feature-csv-export'})
+MATCH (feature:Feature {id: $featureId})
 WHERE draft.createdAt >= coalesce(campaign.demoResetAt, '')
   AND ($reject = true OR (campaign.briefRevision = draft.briefRevision AND feature.factsRevision = draft.factRevision))
-SET draft.status = $status, draft.reviewedAt = $now, draft.reviewedBy = 'Maya Chen'
+SET draft.status = $status, draft.reviewedAt = $now, draft.reviewedBy = $reviewerName
 CREATE (event:WorkspaceEvent {id: $eventId, projectId: $projectId, kind: $kind,
   title: $title, detail: $detail, occurredAt: $now})
 RETURN draft.id AS id`, { params: {
-    draftId, campaignId, projectId, status, now, eventId: randomUUID(), reject: decision === 'reject',
+    draftId, campaignId, projectId: company.projectId, featureId: company.featureId, reviewerName: company.reviewerName,
+    status, now, eventId: randomUUID(), reject: decision === 'reject',
     kind: decision === 'approve' ? 'writer.approved' : 'writer.rejected', title,
     detail: decision === 'approve' ? 'Approved for internal use only. Nothing was sent or published.' : 'The draft remains in history for review.',
   } }), 'The draft was already reviewed or its brief or rollout evidence changed. Refresh before deciding.');
 }
 
-export async function proposeBackup(graph: Graph): Promise<void> {
+export async function proposeBackup(graph: Graph, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = companyFor(campaignId);
   const now = new Date().toISOString();
   changed(await graph.query<unknown[]>(`
 MATCH (process:Process {id: $processId})
@@ -323,15 +334,18 @@ WHERE pending.createdAt >= coalesce(campaign.demoResetAt, '')
 WITH process, count(DISTINCT backup) AS backupCount, count(DISTINCT pending) AS pendingCount
 WHERE backupCount = 0 AND pendingCount = 0 AND process.rosterReviewed = true
 CREATE (proposal:BackupProposal {id: $proposalId, processId: $processId, personId: $personId,
-  status: 'pending', basedOnRevision: process.revision, reason: 'Zara has reviewed the launch checklist and can cover the evidence review in this demo.', createdAt: $now})
+  status: 'pending', basedOnRevision: process.revision, reason: $reason, createdAt: $now})
 CREATE (event:WorkspaceEvent {id: $eventId, projectId: $projectId, kind: 'backup.proposed',
-  title: 'Backup assignment proposed', detail: 'Zara Patel is proposed for launch evidence review; coverage is unchanged.', occurredAt: $now})
+  title: 'Backup assignment proposed', detail: $detail, occurredAt: $now})
 RETURN proposal.id AS id`, { params: {
-    processId: launchProcessId, personId: 'person-zara', proposalId: randomUUID(), projectId, campaignId, now, eventId: randomUUID(),
+    processId: company.processId, personId: company.backupId, proposalId: randomUUID(), projectId: company.projectId,
+    campaignId, now, eventId: randomUUID(), reason: `${company.backupName} can cover ${company.shortName}'s evidence review in this demo.`,
+    detail: `${company.backupName} is proposed as backup; coverage is unchanged.`,
   } }), 'A backup is already confirmed or a proposal is waiting for review.');
 }
 
-export async function approveBackup(graph: Graph): Promise<void> {
+export async function approveBackup(graph: Graph, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = companyFor(campaignId);
   const now = new Date().toISOString();
   changed(await graph.query<unknown[]>(`
 MATCH (process:Process {id: $processId})
@@ -340,21 +354,24 @@ MATCH (campaign:Campaign {id: $campaignId})
 MATCH (person:Person {id: $personId})
 WHERE proposal.createdAt >= coalesce(campaign.demoResetAt, '')
   AND process.revision = proposal.basedOnRevision AND NOT (process)-[:BACKUP_OWNER]->()
-SET proposal.status = 'approved', proposal.approvedAt = $now, proposal.approvedBy = 'Maya Chen',
+SET proposal.status = 'approved', proposal.approvedAt = $now, proposal.approvedBy = $reviewerName,
     process.revision = process.revision + 1
 MERGE (process)-[:BACKUP_OWNER]->(person)
 CREATE (event:WorkspaceEvent {id: $eventId, projectId: $projectId, kind: 'backup.approved',
-  title: 'Backup assignment approved', detail: 'Zara Patel is now the reviewed backup for launch evidence review.', occurredAt: $now})
+  title: 'Backup assignment approved', detail: $detail, occurredAt: $now})
 RETURN person.id AS id`, { params: {
-    processId: launchProcessId, personId: 'person-zara', projectId, campaignId, now, eventId: randomUUID(),
+    processId: company.processId, personId: company.backupId, projectId: company.projectId,
+    campaignId, now, eventId: randomUUID(), reviewerName: company.reviewerName,
+    detail: `${company.backupName} is now the reviewed backup for ${company.shortName}'s evidence review.`,
   } }), 'The backup proposal is missing or the process changed. Refresh before approving.');
 }
 
-export async function resetWorkspaceDemo(graph: Graph): Promise<void> {
+export async function resetWorkspaceDemo(graph: Graph, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = companyFor(campaignId);
   const now = new Date().toISOString();
   changed(await graph.query<unknown[]>(`
-MATCH (campaign:Campaign {id: $campaignId})-[:HAS_INSTRUCTION]->(old:InstructionVersion {id: 'instruction-playful'})
-MATCH (campaign)-[:HAS_INSTRUCTION]->(next:InstructionVersion {id: 'instruction-calm'})
+MATCH (campaign:Campaign {id: $campaignId})-[:HAS_INSTRUCTION]->(old:InstructionVersion {id: $oldToneId})
+MATCH (campaign)-[:HAS_INSTRUCTION]->(next:InstructionVersion {id: $proposedToneId})
 MATCH (process:Process {id: $processId})
 OPTIONAL MATCH (process)-[backup:BACKUP_OWNER]->(:Person)
 WITH campaign, old, next, process, collect(backup) AS backupLinks
@@ -368,11 +385,15 @@ SET old.status = 'approved', next.status = 'pending', next.approvedBy = '', next
 CREATE (event:WorkspaceEvent {id: $eventId, projectId: $projectId, kind: 'demo.reset',
   title: 'Fictional demo reset', detail: 'Tone and launch backup returned to their baseline. Earlier records remain in graph history.', occurredAt: $now})
 RETURN campaign.id AS id`, { params: {
-    campaignId, processId: launchProcessId, projectId, now, eventId: randomUUID(),
+    campaignId, processId: company.processId, projectId: company.projectId, oldToneId: company.oldToneId,
+    proposedToneId: company.proposedToneId, now, eventId: randomUUID(),
   } }), 'The fictional demo baseline could not be restored. Refresh the workspace.');
 }
 
 export function answerWorkspaceQuestion(message: string, snapshot: WorkspaceSnapshot, review: CampaignReview): WorkspaceChatResponse {
+  const company = demoCompanies.find((item) => item.companyId === snapshot.company.id || item.shortName === snapshot.company.shortName)
+    ?? demoCompanyByCampaignId(review.campaign?.id) ?? defaultDemoCompany;
+  const notes = company.noteIds;
   const question = message.toLowerCase();
   const sources: KnowledgeSource[] = [];
   const cite = (noteId: string) => {
@@ -383,29 +404,29 @@ export function answerWorkspaceQuestion(message: string, snapshot: WorkspaceSnap
   if (/note|source|decision|document|file|knowledge/.test(question)) {
     const categories = [...new Set(snapshot.notes.map((note) => note.category))];
     const sourced = snapshot.notes.filter((note) => note.sources.length);
-    answer = `The Company Brain contains ${snapshot.notes.length} dated notes across ${categories.join(', ')}. ${sourced.length} have direct source or decision links: ${sourced.map((note) => note.title).join('; ')}. The October 16 audience decision is historical; use the live campaign check for current access.`;
-    cite('note-company'); cite('note-release-decision'); cite('note-launch-checklist');
+    answer = `The Company Brain contains ${snapshot.notes.length} notes across ${categories.join(', ')}. ${sourced.length} have direct source or decision links: ${sourced.map((note) => note.title).join('; ')}. A dated rollout decision is historical; use the live campaign check for current access.`;
+    cite(notes.company); cite(notes.decision); cite(notes.guide);
   } else if (/draft|email|copy|post|claim|campaign/.test(question)) {
     const findings = review.findings.map((finding) => `${finding.title}: ${finding.status}${finding.draftState === 'paused' ? ' (paused)' : ''}`).join('; ');
     const pending = snapshot.memory.drafts.filter((draft) => draft.status === 'pending_approval').length;
     answer = `The campaign has ${review.findings.length} linked drafts. ${findings}. The fresh-session writer has prepared ${snapshot.memory.drafts.length} internal draft${snapshot.memory.drafts.length === 1 ? '' : 's'}; ${pending} wait for human review. No draft has been sent or published.`;
-    cite('note-campaign-brief'); cite('note-release-decision');
+    cite(notes.campaign); cite(notes.decision);
   } else if (/memory|handoff|writer|tone|brief|agent/.test(question)) {
     const active = snapshot.memory.instructions.filter((item) => item.status === 'approved');
     answer = `The planner handoff saved brief revision ${snapshot.memory.handoff.revision}; the current approved brief is revision ${snapshot.memory.briefRevision}. Active instructions: ${active.map((item) => `${item.topic}: ${item.text}`).join(' ')} The reviewed opening feedback says: ${snapshot.memory.episode.summary} A fresh writer session checks these records before drafting.`;
-    cite('note-handoff'); cite('note-editorial-review');
+    cite(notes.handoff); cite(notes.review);
   } else if (/owner|backup|coverage|handover|process|company|team|who/.test(question)) {
     const brain = snapshot.companyBrain;
     answer = `${brain.processName} is owned by ${brain.primaryName}. ${brain.backupName ? `${brain.backupName} is the reviewed backup.` : brain.backupProposalStatus ? 'A backup proposal is pending and does not count as coverage.' : 'No backup is confirmed in the reviewed roster.'} ${brain.ownerUnavailable ? `With the owner unavailable in this scenario, coverage is ${brain.coverage}.` : `Current coverage is ${brain.coverage}.`} The current guide is linked to ${brain.decisionTitle}; ${brain.affectedProject} depends on this process.`;
-    cite('note-roster'); cite('note-launch-checklist'); cite('note-release-decision');
+    cite(notes.roster); cite(notes.guide); cite(notes.decision);
   } else if (/workflow|status|done|pending|review|activity|happen/.test(question)) {
     const needsReview = review.findings.filter((finding) => finding.needsReview).length;
     const pending = snapshot.memory.drafts.filter((draft) => draft.status === 'pending_approval').length;
     answer = `${needsReview} campaign finding${needsReview === 1 ? '' : 's'} need review. ${pending} fresh writer draft${pending === 1 ? '' : 's'} wait for a person. ${snapshot.companyBrain.backupProposalStatus ? 'The backup assignment is pending approval.' : snapshot.companyBrain.backupName ? 'The backup assignment is approved.' : 'No backup proposal is pending.'} The latest connected-workspace event is ${snapshot.events[0]?.title ?? 'not recorded yet'}.`;
-    cite('note-launch-checklist'); cite('note-handoff');
+    cite(notes.guide); cite(notes.handoff);
   } else {
     answer = `I can check the connected records for ${snapshot.company.shortName}. Ask about campaign drafts, the current writer handoff, company notes, launch ownership, or work waiting for review. I will answer from the graph and show the notes used.`;
-    cite('note-company');
+    cite(notes.company);
   }
   return { answer, sources, checkedAt: new Date().toISOString() };
 }

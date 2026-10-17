@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpenText, LayoutDashboard, MessageCircle, Workflow } from 'lucide-react';
+import { BookOpenText, ChevronDown, LayoutDashboard, MessageCircle, Workflow } from 'lucide-react';
 import './workspace.css';
 import './connected.css';
 import type { ActionProposal, ActivityEntry, CampaignAssistantResponse, CampaignProposalPreview, CampaignReview, DraftFinding, FindingStatus, ProposalAction, WorkspaceSnapshot, WriterDraft } from '../shared/contracts.js';
@@ -11,11 +11,11 @@ import { ConnectedWorkspace } from './components/ConnectedWorkspace.js';
 import { WorkspaceChat } from './components/WorkspaceChat.js';
 import { WorkspaceOverview } from './components/WorkspaceOverview.js';
 import { LocalTabs } from './components/LocalTabs.js';
+import { defaultDemoCompany, demoCompanies, demoCompanyByKey, type DemoCompany, type DemoCompanyKey } from '../shared/demo-companies.js';
 
-const campaignId = 'campaign-csv-launch';
 type NavigationSection = 'overview' | 'campaign' | 'memory' | 'brain';
 type LaunchTab = 'drafts' | 'approvals' | 'history';
-type BrainTab = 'notes' | 'coverage' | 'history';
+type BrainTab = 'graph' | 'notes' | 'coverage' | 'history';
 type DataState = 'loading' | 'ready' | 'unavailable';
 const dockItems = [
   { id: 'overview', label: 'Overview', href: '#overview', icon: LayoutDashboard },
@@ -28,7 +28,7 @@ function navigationSectionFromHash(): NavigationSection {
   const hash = window.location.hash.slice(1);
   if (hash === 'campaign' || hash === 'drafts' || hash === 'approvals' || hash === 'review-queue' || hash === 'activity') return 'campaign';
   if (hash === 'memory') return 'memory';
-  if (hash === 'brain' || hash === 'coverage' || hash === 'brain-history') return 'brain';
+  if (hash === 'brain' || hash === 'brain-notes' || hash === 'coverage' || hash === 'brain-history') return 'brain';
   return 'overview';
 }
 
@@ -43,10 +43,11 @@ function brainTabFromHash(): BrainTab {
   const hash = window.location.hash.slice(1);
   if (hash === 'coverage') return 'coverage';
   if (hash === 'brain-history') return 'history';
-  return 'notes';
+  if (hash === 'brain-notes') return 'notes';
+  return 'graph';
 }
 
-async function initializeFixture(): Promise<void> {
+async function initializeFixture(campaignId: string): Promise<void> {
   const response = await fetch(`/api/campaigns/${campaignId}/fixture`, { method: 'POST' });
   if (response.status === 404) return;
   if (!response.ok) {
@@ -58,8 +59,8 @@ async function initializeFixture(): Promise<void> {
   }
 }
 
-async function loadCampaign(recordCheck = false): Promise<CampaignReview> {
-  await initializeFixture();
+async function loadCampaign(campaignId: string, recordCheck = false): Promise<CampaignReview> {
+  await initializeFixture(campaignId);
   const response = await fetch(`/api/campaigns/${campaignId}/${recordCheck ? 'check' : 'review'}`, {
     method: recordCheck ? 'POST' : 'GET',
     ...(recordCheck ? {} : { cache: 'no-store' as RequestCache }),
@@ -77,7 +78,7 @@ async function loadCampaign(recordCheck = false): Promise<CampaignReview> {
   return payload as CampaignReview;
 }
 
-async function loadCampaignActivity(): Promise<ActivityEntry[]> {
+async function loadCampaignActivity(campaignId: string): Promise<ActivityEntry[]> {
   const response = await fetch(`/api/campaigns/${campaignId}/activity`, { cache: 'no-store' });
   if (!response.ok) throw new Error('Campaign activity history is unavailable.');
   const payload: unknown = await response.json();
@@ -85,7 +86,7 @@ async function loadCampaignActivity(): Promise<ActivityEntry[]> {
   return payload as ActivityEntry[];
 }
 
-async function loadCampaignProposals(): Promise<ActionProposal[]> {
+async function loadCampaignProposals(campaignId: string): Promise<ActionProposal[]> {
   const response = await fetch(`/api/campaigns/${campaignId}/proposals`, { cache: 'no-store' });
   if (!response.ok) throw new Error('Campaign proposals are unavailable.');
   const payload: unknown = await response.json();
@@ -101,12 +102,14 @@ async function responseError(response: Response, fallback: string): Promise<stri
 function audienceLabel(id: string): string {
   if (id === 'audience-internal-testers') return 'Internal testers';
   if (id === 'audience-all-accounts') return 'All customer accounts';
+  if (id === 'audience-pilot-merchants') return 'Pilot merchants';
+  if (id === 'audience-all-merchants') return 'All merchants';
   return id;
 }
 
 class DemoActionUnavailableError extends Error {}
 
-async function simulateRolloutExpansion(expanded: boolean): Promise<CampaignReview> {
+async function simulateRolloutExpansion(campaignId: string, expanded: boolean): Promise<CampaignReview> {
   const response = await fetch(`/api/campaigns/${campaignId}/demo-rollout`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -123,7 +126,7 @@ async function simulateRolloutExpansion(expanded: boolean): Promise<CampaignRevi
   return payload as CampaignReview;
 }
 
-async function simulateTestAvailability(available: boolean): Promise<CampaignReview> {
+async function simulateTestAvailability(campaignId: string, available: boolean): Promise<CampaignReview> {
   const response = await fetch(`/api/campaigns/${campaignId}/demo-test-state`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -218,6 +221,20 @@ function SidebarIcon({ expanded }: { expanded: boolean }) {
 }
 
 export function App() {
+  const [companyKey, setCompanyKey] = useState<DemoCompanyKey>(() =>
+    demoCompanyByKey(window.localStorage.getItem('official-demo-company'))?.key ?? defaultDemoCompany.key);
+  const company = demoCompanyByKey(companyKey) ?? defaultDemoCompany;
+  const selectCompany = (key: DemoCompanyKey) => {
+    window.localStorage.setItem('official-demo-company', key);
+    window.location.hash = '#overview';
+    setCompanyKey(key);
+  };
+  return <CompanyApp key={company.key} company={company} onSelectCompany={selectCompany} />;
+}
+
+function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSelectCompany: (key: DemoCompanyKey) => void }) {
+  const campaignId = company.campaignId;
+  const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
   const [review, setReview] = useState<CampaignReview | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [proposals, setProposals] = useState<ActionProposal[]>([]);
@@ -257,7 +274,7 @@ export function App() {
   const reduceMotion = useReducedMotion();
   const [editingProposalFor, setEditingProposalFor] = useState<string | null>(null);
   const [proposalCopy, setProposalCopy] = useState('');
-  const [proposalAudience, setProposalAudience] = useState('audience-internal-testers');
+  const [proposalAudience, setProposalAudience] = useState<string>(company.limitedAudienceId);
   const [proposalBusy, setProposalBusy] = useState<string | null>(null);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
   const [proposalError, setProposalError] = useState<string | null>(null);
@@ -268,7 +285,7 @@ export function App() {
   const focusViewHeading = useRef(false);
   const assistantRequestVersion = useRef(0);
   const supportingDataRequestVersion = useRef(0);
-  const rolloutExpanded = review?.findings.some((finding) => finding.evidence.some((item) => item.id === 'source-s4')) ?? false;
+  const rolloutExpanded = review?.findings.some((finding) => finding.evidence.some((item) => item.id === (company.key === 'alder-finch' ? 'source-s4' : `source-expanded-${company.key}`))) ?? false;
 
   useEffect(() => {
     document.title = `${activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'} — official`;
@@ -312,7 +329,7 @@ export function App() {
     setWorkspaceLoading(true);
     setWorkspaceError(null);
     try {
-      const response = await fetch(`/api/workspace?ownerUnavailable=${unavailable}`, { cache: 'no-store' });
+      const response = await fetch(`/api/workspace?campaignId=${encodeURIComponent(campaignId)}&ownerUnavailable=${unavailable}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await responseError(response, 'The connected workspace could not be loaded.'));
       setWorkspace(await response.json() as WorkspaceSnapshot);
     } catch (cause) {
@@ -320,7 +337,7 @@ export function App() {
     } finally {
       setWorkspaceLoading(false);
     }
-  }, []);
+  }, [campaignId]);
 
   useEffect(() => {
     if (review) void refreshWorkspace(ownerUnavailable);
@@ -338,14 +355,14 @@ export function App() {
       'approve-backup': '/api/workspace/company/approve-backup',
     };
     try {
-      const response = await fetch(routes[action], { method: 'POST' });
+      const response = await fetch(routes[action], { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId }) });
       if (!response.ok) throw new Error(await responseError(response, 'The action could not be confirmed.'));
       await refreshWorkspace(ownerUnavailable);
       setWorkspaceMessage({
-        'approve-tone': 'The calm tone is approved. A new writer session will refresh the old handoff.',
+        'approve-tone': 'The proposed tone is approved. A new writer session will refresh the old handoff.',
         'run-writer': 'The writer checked current memory and prepared an internal draft for review.',
-        'propose-backup': 'Zara is proposed as backup. Coverage has not changed.',
-        'approve-backup': 'Zara is now the reviewed backup. Coverage was checked again.',
+        'propose-backup': `${company.backupName} is proposed as backup. Coverage has not changed.`,
+        'approve-backup': `${company.backupName} is now the reviewed backup. Coverage was checked again.`,
       }[action]);
     } catch (cause) {
       setWorkspaceError(cause instanceof Error ? cause.message : 'The action could not be confirmed.');
@@ -360,7 +377,7 @@ export function App() {
     setWorkspaceMessage(null);
     setWorkspaceError(null);
     try {
-      const response = await fetch(`/api/workspace/memory/drafts/${encodeURIComponent(draft.id)}/${decision}`, { method: 'POST' });
+      const response = await fetch(`/api/workspace/memory/drafts/${encodeURIComponent(draft.id)}/${decision}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId }) });
       if (!response.ok) throw new Error(await responseError(response, 'The writer draft could not be reviewed.'));
       await refreshWorkspace(ownerUnavailable);
       setWorkspaceMessage(decision === 'approve' ? 'Draft approved for internal use. Nothing was sent or published.' : 'Draft rejected and kept in review history.');
@@ -387,7 +404,7 @@ export function App() {
     const requestVersion = ++supportingDataRequestVersion.current;
     setActivityState('loading');
     setProposalState('loading');
-    const [history, pending] = await Promise.allSettled([loadCampaignActivity(), loadCampaignProposals()]);
+    const [history, pending] = await Promise.allSettled([loadCampaignActivity(campaignId), loadCampaignProposals(campaignId)]);
     if (requestVersion !== supportingDataRequestVersion.current) return;
     if (history.status === 'fulfilled') {
       setActivity(history.value);
@@ -403,7 +420,7 @@ export function App() {
       setProposals([]);
       setProposalState('unavailable');
     }
-  }, []);
+  }, [campaignId]);
 
   const refresh = useCallback(async (recordCheck = false) => {
     supportingDataRequestVersion.current += 1;
@@ -424,10 +441,10 @@ export function App() {
     try {
       let campaignResult: PromiseSettledResult<CampaignReview>;
       if (recordCheck) {
-        [campaignResult] = await Promise.allSettled([loadCampaign(true)]);
+        [campaignResult] = await Promise.allSettled([loadCampaign(campaignId, true)]);
         await refreshSupportingData();
       } else {
-        [campaignResult] = await Promise.allSettled([loadCampaign(false), refreshSupportingData()]);
+        [campaignResult] = await Promise.allSettled([loadCampaign(campaignId, false), refreshSupportingData()]);
       }
       if (campaignResult.status === 'rejected') throw campaignResult.reason;
       const result = campaignResult.value;
@@ -441,7 +458,7 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, [clearAssistantResponse, refreshSupportingData]);
+  }, [campaignId, clearAssistantResponse, refreshSupportingData]);
 
   const runRolloutScenario = async (expanded: boolean) => {
     if (loading || simulating || proposalBusy) return;
@@ -455,12 +472,12 @@ export function App() {
     setSelectedId(null);
     setShowPath(false);
     try {
-      const result = await simulateRolloutExpansion(expanded);
+      const result = await simulateRolloutExpansion(campaignId, expanded);
       setReview(result);
       await refreshSupportingData();
       setSelectedId(result.findings.find((item) => item.needsReview)?.draftId ?? result.findings[0]?.draftId ?? null);
       const statusFor = (draftId: string) => result.findings.find((item) => item.draftId === draftId)?.status ?? 'not available';
-      setScenarioMessage(`${expanded ? 'Access now includes all accounts.' : 'Access is back to internal testers only.'} Landing page: ${statusFor('draft-landing')}. Launch email: ${statusFor('draft-email')}. Tester post: ${statusFor('draft-social')}. Dashboard: ${statusFor('draft-dashboard')}. Draft text was not changed.`);
+      setScenarioMessage(`${expanded ? `Access now includes ${audienceLabel(company.broadAudienceId).toLowerCase()}.` : `Access is back to ${audienceLabel(company.limitedAudienceId).toLowerCase()} only.`} ${result.findings.map((finding) => `${finding.title}: ${statusFor(finding.draftId)}`).join('. ')}. Draft text was not changed.`);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'The demo rollout result could not be confirmed.';
       const actionUnavailable = cause instanceof DemoActionUnavailableError;
@@ -487,7 +504,7 @@ export function App() {
     setSelectedId(null);
     setShowPath(false);
     try {
-      const result = await simulateTestAvailability(restoreTest);
+      const result = await simulateTestAvailability(campaignId, restoreTest);
       setReview(result);
       await refreshSupportingData();
       setSelectedId(result.findings.find((item) => item.needsReview)?.draftId ?? result.findings[0]?.draftId ?? null);
@@ -511,7 +528,7 @@ export function App() {
     setScenarioMessage(null);
     setWorkspaceMessage(null);
     try {
-      const response = await fetch('/api/workspace/demo/reset', { method: 'POST' });
+      const response = await fetch('/api/workspace/demo/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId }) });
       if (!response.ok) throw new Error(await responseError(response, 'The fictional demo could not be reset.'));
       clearAssistantResponse();
       setOwnerUnavailable(false);
@@ -735,7 +752,7 @@ export function App() {
   const openLandingFinding = () => {
     showLaunchTab('drafts');
     setDraftFilter('all');
-    setSelectedId('draft-landing');
+    setSelectedId(review?.findings.find((item) => item.needsReview)?.draftId ?? review?.findings[0]?.draftId ?? null);
     setShowPath(false);
     scrollTo('draft-details');
   };
@@ -743,7 +760,7 @@ export function App() {
   const showLandingSources = () => {
     showLaunchTab('drafts');
     setDraftFilter('all');
-    setSelectedId('draft-landing');
+    setSelectedId(review?.findings.find((item) => item.needsReview)?.draftId ?? review?.findings[0]?.draftId ?? null);
     setShowPath(true);
     scrollTo('draft-details');
   };
@@ -781,12 +798,12 @@ export function App() {
   );
 
   return (
-    <div className={`app-shell connected-shell ${sidebarOpen ? '' : 'sidebar-closed'} ${chatOpen ? 'chat-open' : 'chat-closed'}`}>
+    <div className={`app-shell connected-shell company-${company.key} ${sidebarOpen ? '' : 'sidebar-closed'} ${chatOpen ? 'chat-open' : 'chat-closed'}`}>
       <aside className="sidebar" aria-label="Workspace sidebar">
         <div className="sidebar-top"><a className="brand" href="/" aria-label="official marketing site">
           <span className="brand-dot" aria-hidden="true" />official
         </a><button ref={sidebarCloseButtonRef} className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={closeSidebar}><SidebarIcon expanded /></button></div>
-        <div className="workspace-identity"><div className="workspace-monogram">A<span>&amp;</span>F</div><div><strong>{workspace?.company.shortName ?? 'Alder & Finch'}</strong><small>Spring reporting release</small></div></div>
+        <div className="workspace-identity"><div className="workspace-monogram">{company.monogram}</div><div><strong>{workspace?.company.shortName ?? company.shortName}</strong><small>{workspace?.project.name ?? 'Loading project'}</small></div></div>
         <div className="workspace-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
           <a className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`} href="#overview" onClick={handleSidebarNavigation} aria-current={activeSection === 'overview' ? 'page' : undefined}><span className="nav-icon"><LayoutDashboard size={17} /></span> Overview</a>
@@ -800,7 +817,10 @@ export function App() {
             <div><strong>FalkorDB</strong><small>{error ? 'Connection needed' : review ? 'Connected' : scenarioError ? 'Check required' : 'Connecting'}</small></div>
             <span className="connection-menu">···</span>
           </div>
-          <div className="profile-row"><div className="avatar">A</div><div><strong>Alder &amp; Finch</strong><small>Fictional launch workspace</small></div></div>
+          <div className="company-switcher">
+            <button className="profile-row company-switcher-toggle" type="button" aria-expanded={companyMenuOpen} aria-controls="company-switcher-menu" onClick={() => setCompanyMenuOpen((open) => !open)}><div className="avatar">{company.monogram.slice(0, 1)}</div><div><strong>{company.shortName}</strong><small>Fictional company</small></div><ChevronDown size={17} aria-hidden="true" /></button>
+            {companyMenuOpen && <div className="company-switcher-menu" id="company-switcher-menu" role="group" aria-label="Choose company">{demoCompanies.map((item) => <button key={item.key} type="button" aria-current={item.key === company.key ? 'true' : undefined} onClick={() => { setCompanyMenuOpen(false); onSelectCompany(item.key); }}><span className="company-option-mark">{item.monogram}</span><span><strong>{item.shortName}</strong><small>{item.key === 'alder-finch' ? 'Spring reporting' : 'Delivery timeline'}</small></span>{item.key === company.key && <span aria-hidden="true">✓</span>}</button>)}</div>}
+          </div>
         </div>
       </aside>
 
@@ -808,7 +828,7 @@ export function App() {
         <header className="topbar">
           {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={openSidebar}><SidebarIcon expanded={false} /></button>}
           <a className="brand" href="/" aria-label="official marketing site"><span className="brand-dot" aria-hidden="true" />official</a>
-          <div className="header-context"><span>{workspace?.company.shortName ?? 'Alder & Finch'}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
+          <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
           <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask agent</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label="How campaign checks work" hidden={!showHelp}><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></section></div><div className="avatar small" aria-hidden="true">A</div></div>
         </header>
         <div className="app-dock">
@@ -816,8 +836,8 @@ export function App() {
         </div>
 
         {activeSection === 'memory' || activeSection === 'brain' ? <ConnectedWorkspace key={brainEpoch}
-          view={activeSection} workspace={workspace} loading={workspaceLoading} error={workspaceError}
-          brainTab={brainTab} onBrainTabChange={(tab) => { setBrainTab(tab); window.location.hash = tab === 'notes' ? '#brain' : tab === 'coverage' ? '#coverage' : '#brain-history'; }}
+          company={company} view={activeSection} workspace={workspace} loading={workspaceLoading} error={workspaceError}
+          brainTab={brainTab} onBrainTabChange={(tab) => { setBrainTab(tab); window.location.hash = tab === 'graph' ? '#brain' : tab === 'notes' ? '#brain-notes' : tab === 'coverage' ? '#coverage' : '#brain-history'; }}
           canWrite={demoRolloutAvailable} busy={workspaceBusy} message={workspaceMessage}
           ownerUnavailable={ownerUnavailable} selectedNoteId={selectedNoteId}
           onSelectNote={setSelectedNoteId} onOwnerUnavailable={setOwnerUnavailable}
@@ -834,8 +854,8 @@ export function App() {
           resetBusy={resetBusy}
         /> : <>
         <section className="page-heading review-page-heading" id="campaign">
-          <div><div className="eyebrow">SPRING REPORTING RELEASE <span className="eyebrow-divider" aria-hidden="true">/</span> FICTIONAL DEMO</div><h1 tabIndex={-1}>Launch review</h1><p className="subheading">{review ? `${review.findings.filter((item) => item.needsReview).length} drafts need a decision. Choose one to inspect its evidence.` : 'Choose a draft to inspect its claim and current evidence.'}</p></div>
-          <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? 'Restore tester-only rollout' : 'Include all accounts'}</button><button type="button" onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
+          <div><div className="eyebrow">{workspace?.project.name ?? company.shortName} <span className="eyebrow-divider" aria-hidden="true">/</span> FICTIONAL DEMO</div><h1 tabIndex={-1}>Launch review</h1><p className="subheading">{review ? `${review.findings.filter((item) => item.needsReview).length} drafts need a decision. Choose one to inspect its evidence.` : 'Choose a draft to inspect its claim and current evidence.'}</p></div>
+          <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`}</button><button type="button" onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
         </section>
 
         {error && <section className="connection-alert" role="alert"><div className="alert-icon" aria-hidden="true">!</div><div><strong>{error.toLowerCase().includes('campaign not found') ? 'Campaign data unavailable' : 'Campaign check unavailable'}</strong><p>{error} Check that FalkorDB is reachable and the campaign data is loaded, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh(demoRolloutAvailable)}>Retry</button></section>}
@@ -844,7 +864,7 @@ export function App() {
         {proposalMessage && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{proposalMessage}</section>}
         {proposalError && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert scenario-alert-error" role="alert"><strong>Review action unavailable.</strong> {proposalError}</section>}
 
-        <div className="review-context"><strong>{review?.campaign.name ?? 'Spring reporting release'}</strong><span>{review ? `${counts.contradicted} contradicted · ${counts.unknown} unknown · ${counts.supported} supported · ${counts.notChecked} not checked` : 'Waiting for the graph check'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : 'Not available'}</small></div>
+        <div className="review-context"><strong>{review?.campaign.name ?? workspace?.project.name ?? company.shortName}</strong><span>{review ? `${counts.contradicted} contradicted · ${counts.unknown} unknown · ${counts.supported} supported · ${counts.notChecked} not checked` : 'Waiting for the graph check'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : 'Not available'}</small></div>
         <LocalTabs label="Launch review sections" idPrefix="launch" tabs={[
           { id: 'drafts' as const, label: 'Drafts', count: review?.findings.length ?? '—' },
           { id: 'approvals' as const, label: 'Approvals', count: proposalState === 'ready' ? proposals.filter((item) => item.status === 'pending').length : '—' },
@@ -880,7 +900,7 @@ export function App() {
                 {selected.status === 'Contradicted' && selected.draftState !== 'paused' && demoRolloutAvailable && <div className="proposal-compose">
                   <div className="proposal-compose-actions">
                     <button className="secondary-button" onClick={() => void createProposal('pause', selected)} disabled={loading || simulating || proposalState !== 'ready' || Boolean(proposalBusy) || selectedHasPendingProposal}>{proposalBusy === selected.draftId ? 'Saving…' : 'Propose pause'}</button>
-                    <button className="text-button" onClick={() => { setEditingProposalFor(selected.draftId); setProposalCopy(''); setProposalAudience('audience-internal-testers'); }} disabled={loading || simulating || proposalState !== 'ready' || Boolean(proposalBusy) || selectedHasPendingProposal}>Suggest revised wording</button>
+                    <button className="text-button" onClick={() => { setEditingProposalFor(selected.draftId); setProposalCopy(''); setProposalAudience(company.limitedAudienceId); }} disabled={loading || simulating || proposalState !== 'ready' || Boolean(proposalBusy) || selectedHasPendingProposal}>Suggest revised wording</button>
                   </div>
                   {selectedHasPendingProposal && <p className="proposal-help">A proposal for this draft is already waiting for review.</p>}
                   {editingProposalFor === selected.draftId && <div className="proposal-editor">
@@ -888,8 +908,8 @@ export function App() {
                     <textarea id="proposal-copy" value={proposalCopy} maxLength={600} onChange={(event) => setProposalCopy(event.target.value)} placeholder="Write copy that matches a specific audience." />
                     <label className="micro-label" htmlFor="proposal-audience">AUDIENCE FOR THE NEW PROMISE</label>
                     <select id="proposal-audience" value={proposalAudience} onChange={(event) => setProposalAudience(event.target.value)}>
-                      <option value="audience-internal-testers">Internal testers</option>
-                      <option value="audience-all-accounts">All customer accounts</option>
+                      <option value={company.limitedAudienceId}>{audienceLabel(company.limitedAudienceId)}</option>
+                      <option value={company.broadAudienceId}>{audienceLabel(company.broadAudienceId)}</option>
                     </select>
                     <div className="proposal-compose-actions"><button className="primary-button" onClick={() => void createProposal('edit', selected)} disabled={!proposalCopy.trim() || simulating || proposalState !== 'ready' || Boolean(proposalBusy)}>Create edit proposal</button><button className="text-button" onClick={() => setEditingProposalFor(null)} disabled={Boolean(proposalBusy) || simulating}>Cancel</button></div>
                   </div>}
@@ -898,7 +918,7 @@ export function App() {
                 {selected.draftState === 'paused' && selected.status === 'Supported' && demoRolloutAvailable && <button className="secondary-button full-width resume-button" onClick={() => void resumeDraft(selected)} disabled={Boolean(proposalBusy) || loading || simulating}>{proposalBusy === selected.draftId ? 'Checking…' : 'Resume draft after fresh check'}</button>}
                 <div className="trail-heading"><span>Evidence trail</span><span className="live-label"><i /> FROM FALKORDB</span></div>
                 <div className="evidence-list">
-                  {selected.evidence.length ? selected.evidence.map((item, index) => <div className="evidence-item" key={`${item.id}-${index}`}><div className={`evidence-icon evidence-${item.kind}`}>{item.kind === 'deployment' ? '↗' : item.kind === 'rollout' ? '◉' : '✓'}</div><div><strong>{item.label}</strong><p>{item.detail}</p><p className="evidence-meta">{formatObservedAt(item.observedAt)} · Reviewed by {item.reviewedBy || 'not recorded'}</p></div></div>) : <div className="no-evidence">{selected.status === 'Not checked' ? 'No evidence trail is expected because this draft has no linked CSV export promise.' : 'No reviewed source records were returned for this promise.'}</div>}
+                  {selected.evidence.length ? selected.evidence.map((item, index) => <div className="evidence-item" key={`${item.id}-${index}`}><div className={`evidence-icon evidence-${item.kind}`}>{item.kind === 'deployment' ? '↗' : item.kind === 'rollout' ? '◉' : '✓'}</div><div><strong>{item.label}</strong><p>{item.detail}</p><p className="evidence-meta">{formatObservedAt(item.observedAt)} · Reviewed by {item.reviewedBy || 'not recorded'}</p></div></div>) : <div className="no-evidence">{selected.status === 'Not checked' ? 'No evidence trail is expected because this draft has no linked promise.' : 'No reviewed source records were returned for this promise.'}</div>}
                 </div>
                 <button className="secondary-button full-width" aria-expanded={showPath} aria-controls="connection-path" onClick={() => setShowPath((visible) => !visible)}>{showPath ? 'Hide connection path' : 'View connection path'} <span>{showPath ? '⌃' : '↗'}</span></button>
                 <ol className="connection-path" id="connection-path" hidden={!showPath}><li>{selected.title}</li>{selected.wordingSourceTitle && <li>Reuses wording from {selected.wordingSourceTitle}</li>}{selected.promiseText && <li>{selected.promiseText}</li>}{selected.featureName && <li>{selected.featureName}</li>}{selected.audienceName && <li>{selected.audienceName}</li>}{selected.evidence.map((item) => <li key={`path-${item.id}`}>{item.label}</li>)}</ol>
@@ -934,8 +954,8 @@ export function App() {
         </>}
       </main>
       <WorkspaceChat key={chatEpoch} open={chatOpen} onClose={() => setChatOpen(false)} workspace={workspace} ownerUnavailable={ownerUnavailable}
-        advancedAssistant={advancedAssistant}
-        onOpenNote={(id) => { setSelectedNoteId(id); setBrainEpoch((epoch) => epoch + 1); window.location.hash = '#brain'; }} />
+        advancedAssistant={company.key === 'alder-finch' ? advancedAssistant : null}
+        campaignId={campaignId} onOpenNote={(id) => { setSelectedNoteId(id); setBrainEpoch((epoch) => epoch + 1); window.location.hash = '#brain-notes'; }} />
     </div>
   );
 }

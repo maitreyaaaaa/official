@@ -17,6 +17,7 @@ import { ApiRequestLimiter } from './config/api-rate-limit.js';
 import { AssistantServiceError, AssistantUnavailableError, runCampaignAssistant } from './agent/assistant.js';
 import type { CampaignAssistantResponse } from '../shared/contracts.js';
 import { answerWorkspaceQuestion, approveBackup, approveTone, loadWorkspace, proposeBackup, resetWorkspaceDemo, reviewWriterDraft, runWriterSession, WorkspaceError } from './workspace/workspace.js';
+import { defaultDemoCompany, demoCompanyByCampaignId } from '../shared/demo-companies.js';
 
 export const app = express();
 app.use((request, response, next) => {
@@ -78,6 +79,18 @@ function demoWritesEnabled(request: express.Request): boolean {
     origin: request.get('origin'),
     host: request.get('host'),
   });
+}
+
+function workspaceCampaignId(request: express.Request, response: express.Response): string | null {
+  const input = request.method === 'GET' ? request.query.campaignId
+    : typeof request.body === 'object' && request.body !== null && 'campaignId' in request.body
+      ? (request.body as { campaignId?: unknown }).campaignId : undefined;
+  const campaignId = input === undefined ? defaultDemoCompany.campaignId : input;
+  if (typeof campaignId !== 'string' || !demoCompanyByCampaignId(campaignId)) {
+    response.status(400).json({ error: 'Choose a valid demo company.' });
+    return null;
+  }
+  return campaignId;
 }
 
 app.get('/api/capabilities', (request, response) => {
@@ -169,7 +182,7 @@ async function requireFixtureReady(
   campaignId: string,
   response: express.Response,
 ): Promise<boolean> {
-  if (campaignId !== 'campaign-csv-launch' || await isFixtureReady(graph)) return true;
+  if (!demoCompanyByCampaignId(campaignId) || await isFixtureReady(graph)) return true;
   response.status(503).json({ error: 'The local campaign fixture is still initializing. Retry this request.' });
   return false;
 }
@@ -187,7 +200,7 @@ app.get('/api/health', async (_request, response) => {
 
 app.get('/api/campaigns/:campaignId/review', async (request, response) => {
   response.set('Cache-Control', 'no-store');
-  if (request.params.campaignId !== 'campaign-csv-launch') {
+  if (!demoCompanyByCampaignId(request.params.campaignId)) {
     response.status(404).json({ error: 'Campaign not found in the local fictional campaign.' });
     return;
   }
@@ -223,7 +236,7 @@ app.get('/api/campaigns/:campaignId/review', async (request, response) => {
 });
 
 app.post('/api/campaigns/:campaignId/check', async (request, response) => {
-  if (!demoWritesEnabled(request) || request.params.campaignId !== 'campaign-csv-launch') {
+  if (!demoWritesEnabled(request) || !demoCompanyByCampaignId(request.params.campaignId)) {
     response.status(404).json({ error: 'Persistent checks are only available for the local fictional campaign.' });
     return;
   }
@@ -245,7 +258,7 @@ app.post('/api/campaigns/:campaignId/check', async (request, response) => {
 });
 
 app.get('/api/campaigns/:campaignId/activity', async (request, response) => {
-  if (request.params.campaignId !== 'campaign-csv-launch') {
+  if (!demoCompanyByCampaignId(request.params.campaignId)) {
     response.status(404).json({ error: 'Activity history is only available for the local fictional campaign.' });
     return;
   }
@@ -261,7 +274,7 @@ app.get('/api/campaigns/:campaignId/activity', async (request, response) => {
 });
 
 app.get('/api/campaigns/:campaignId/proposals', async (request, response) => {
-  if (request.params.campaignId !== 'campaign-csv-launch') {
+  if (!demoCompanyByCampaignId(request.params.campaignId)) {
     response.status(404).json({ error: 'Proposals are only available for the local fictional campaign.' });
     return;
   }
@@ -276,7 +289,7 @@ app.get('/api/campaigns/:campaignId/proposals', async (request, response) => {
 });
 
 app.post('/api/campaigns/:campaignId/drafts/:draftId/proposals', async (request, response) => {
-  if (!demoWritesEnabled(request) || request.params.campaignId !== 'campaign-csv-launch'
+  if (!demoWritesEnabled(request) || !demoCompanyByCampaignId(request.params.campaignId)
     || !/^draft-[a-z0-9-]{1,80}$/.test(request.params.draftId)) {
     response.status(404).json({ error: 'Proposal creation is only available for a local fictional draft.' });
     return;
@@ -302,7 +315,7 @@ app.post('/api/campaigns/:campaignId/drafts/:draftId/proposals', async (request,
 });
 
 app.post('/api/campaigns/:campaignId/proposals/:proposalId/approve', async (request, response) => {
-  if (!demoWritesEnabled(request) || request.params.campaignId !== 'campaign-csv-launch'
+  if (!demoWritesEnabled(request) || !demoCompanyByCampaignId(request.params.campaignId)
     || !/^[0-9a-f-]{36}$/i.test(request.params.proposalId)) {
     response.status(404).json({ error: 'Proposal approval is only available for a local fictional proposal.' });
     return;
@@ -323,7 +336,7 @@ app.post('/api/campaigns/:campaignId/proposals/:proposalId/approve', async (requ
 });
 
 app.post('/api/campaigns/:campaignId/proposals/:proposalId/reject', async (request, response) => {
-  if (!demoWritesEnabled(request) || request.params.campaignId !== 'campaign-csv-launch'
+  if (!demoWritesEnabled(request) || !demoCompanyByCampaignId(request.params.campaignId)
     || !/^[0-9a-f-]{36}$/i.test(request.params.proposalId)) {
     response.status(404).json({ error: 'Proposal rejection is only available for a local fictional proposal.' });
     return;
@@ -344,7 +357,7 @@ app.post('/api/campaigns/:campaignId/proposals/:proposalId/reject', async (reque
 });
 
 app.post('/api/campaigns/:campaignId/drafts/:draftId/resume', async (request, response) => {
-  if (!demoWritesEnabled(request) || request.params.campaignId !== 'campaign-csv-launch'
+  if (!demoWritesEnabled(request) || !demoCompanyByCampaignId(request.params.campaignId)
     || !/^draft-[a-z0-9-]{1,80}$/.test(request.params.draftId)) {
     response.status(404).json({ error: 'Draft resume is only available for the local fictional campaign.' });
     return;
@@ -365,7 +378,7 @@ app.post('/api/campaigns/:campaignId/drafts/:draftId/resume', async (request, re
 });
 
 app.post('/api/campaigns/:campaignId/fixture', async (request, response) => {
-  if (!fixtureInitializationAllowed(request) || request.params.campaignId !== 'campaign-csv-launch') {
+  if (!fixtureInitializationAllowed(request) || !demoCompanyByCampaignId(request.params.campaignId)) {
     response.status(404).json({ error: 'Fixture initialization is only available for the local fictional campaign.' });
     return;
   }
@@ -381,7 +394,7 @@ app.post('/api/campaigns/:campaignId/fixture', async (request, response) => {
 });
 
 app.post('/api/campaigns/:campaignId/demo-rollout', async (request, response) => {
-  if (!demoWritesEnabled(request) || request.params.campaignId !== 'campaign-csv-launch') {
+  if (!demoWritesEnabled(request) || !demoCompanyByCampaignId(request.params.campaignId)) {
     response.status(404).json({ error: 'This demo control is only available for the local fictional campaign.' });
     return;
   }
@@ -396,8 +409,8 @@ app.post('/api/campaigns/:campaignId/demo-rollout', async (request, response) =>
   try {
     const graph = await requestGraph();
     await seedFixtureIfMissing(graph);
-    if (expanded) await expandDemoRollout(graph);
-    else await restoreDemoRollout(graph);
+    if (expanded) await expandDemoRollout(graph, request.params.campaignId);
+    else await restoreDemoRollout(graph, request.params.campaignId);
     const review = await checkCampaign(graph, request.params.campaignId);
     await recordCampaignCheck(graph, review);
     response.json(review);
@@ -412,7 +425,7 @@ app.post('/api/campaigns/:campaignId/demo-rollout', async (request, response) =>
 });
 
 app.post('/api/campaigns/:campaignId/demo-test-state', async (request, response) => {
-  if (!demoWritesEnabled(request) || request.params.campaignId !== 'campaign-csv-launch') {
+  if (!demoWritesEnabled(request) || !demoCompanyByCampaignId(request.params.campaignId)) {
     response.status(404).json({ error: 'This demo control is only available for the local fictional campaign.' });
     return;
   }
@@ -426,7 +439,7 @@ app.post('/api/campaigns/:campaignId/demo-test-state', async (request, response)
   try {
     const graph = await requestGraph();
     await seedFixtureIfMissing(graph);
-    await setDemoTestAvailability(graph, available);
+    await setDemoTestAvailability(graph, available, request.params.campaignId);
     const review = await checkCampaign(graph, request.params.campaignId);
     await recordCampaignCheck(graph, review);
     response.set('Cache-Control', 'no-store').json(review);
@@ -442,6 +455,8 @@ app.post('/api/campaigns/:campaignId/demo-test-state', async (request, response)
 
 app.get('/api/workspace', async (request, response) => {
   response.set('Cache-Control', 'no-store');
+  const campaignId = workspaceCampaignId(request, response);
+  if (!campaignId) return;
   const rawUnavailable = request.query.ownerUnavailable;
   if (rawUnavailable !== undefined && rawUnavailable !== 'true' && rawUnavailable !== 'false') {
     response.status(400).json({ error: 'The owner scenario must be true or false.' });
@@ -449,8 +464,8 @@ app.get('/api/workspace', async (request, response) => {
   }
   try {
     const graph = await requestGraph();
-    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
-    response.json(await loadWorkspace(graph, rawUnavailable === 'true'));
+    if (!await requireFixtureReady(graph, campaignId, response)) return;
+    response.json(await loadWorkspace(graph, rawUnavailable === 'true', campaignId));
   } catch (error) {
     console.error(JSON.stringify({ event: 'workspace_read_failed', ...safeErrorDetails(error) }));
     response.status(error instanceof WorkspaceError ? error.statusCode : 503)
@@ -460,6 +475,8 @@ app.get('/api/workspace', async (request, response) => {
 
 app.post('/api/workspace/chat', async (request, response) => {
   response.set('Cache-Control', 'no-store');
+  const campaignId = workspaceCampaignId(request, response);
+  if (!campaignId) return;
   const body: unknown = request.body;
   const message = typeof body === 'object' && body !== null && 'message' in body
     ? (body as { message?: unknown }).message : undefined;
@@ -471,9 +488,9 @@ app.post('/api/workspace/chat', async (request, response) => {
   }
   try {
     const graph = await requestGraph();
-    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
+    if (!await requireFixtureReady(graph, campaignId, response)) return;
     const [snapshot, review] = await Promise.all([
-      loadWorkspace(graph, ownerUnavailable), checkCampaign(graph, 'campaign-csv-launch'),
+      loadWorkspace(graph, ownerUnavailable, campaignId), checkCampaign(graph, campaignId),
     ]);
     response.json(answerWorkspaceQuestion(message.trim(), snapshot, review));
   } catch (error) {
@@ -491,15 +508,17 @@ for (const [path, operation] of [
 ] as const) {
   app.post(path, async (request, response) => {
     response.set('Cache-Control', 'no-store');
+    const campaignId = workspaceCampaignId(request, response);
+    if (!campaignId) return;
     if (!demoWritesEnabled(request)) {
       response.status(404).json({ error: 'This action is available only in the fictional reviewer demo.' });
       return;
     }
     try {
       const graph = await requestGraph();
-      if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
-      await operation(graph);
-      response.json(await loadWorkspace(graph));
+      if (!await requireFixtureReady(graph, campaignId, response)) return;
+      await operation(graph, campaignId);
+      response.json(await loadWorkspace(graph, false, campaignId));
     } catch (error) {
       console.error(JSON.stringify({ event: 'workspace_action_failed', ...safeErrorDetails(error) }));
       response.status(error instanceof WorkspaceError ? error.statusCode : 503)
@@ -510,17 +529,19 @@ for (const [path, operation] of [
 
 app.post('/api/workspace/demo/reset', async (request, response) => {
   response.set('Cache-Control', 'no-store');
+  const campaignId = workspaceCampaignId(request, response);
+  if (!campaignId) return;
   if (!demoWritesEnabled(request)) {
     response.status(404).json({ error: 'Reset is available only in the fictional reviewer demo.' });
     return;
   }
   try {
     const graph = await requestGraph();
-    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
-    await restoreDemoRollout(graph);
-    await setDemoTestAvailability(graph, true);
-    await resetWorkspaceDemo(graph);
-    response.json(await loadWorkspace(graph));
+    if (!await requireFixtureReady(graph, campaignId, response)) return;
+    await restoreDemoRollout(graph, campaignId);
+    await setDemoTestAvailability(graph, true, campaignId);
+    await resetWorkspaceDemo(graph, campaignId);
+    response.json(await loadWorkspace(graph, false, campaignId));
   } catch (error) {
     console.error(JSON.stringify({ event: 'workspace_demo_reset_failed', ...safeErrorDetails(error) }));
     response.status(error instanceof WorkspaceError ? error.statusCode : 503)
@@ -530,6 +551,8 @@ app.post('/api/workspace/demo/reset', async (request, response) => {
 
 app.post('/api/workspace/memory/drafts/:draftId/:decision', async (request, response) => {
   response.set('Cache-Control', 'no-store');
+  const campaignId = workspaceCampaignId(request, response);
+  if (!campaignId) return;
   if (!demoWritesEnabled(request)) {
     response.status(404).json({ error: 'Draft review is available only in the fictional reviewer demo.' });
     return;
@@ -540,9 +563,9 @@ app.post('/api/workspace/memory/drafts/:draftId/:decision', async (request, resp
   }
   try {
     const graph = await requestGraph();
-    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
-    await reviewWriterDraft(graph, request.params.draftId, request.params.decision);
-    response.json(await loadWorkspace(graph));
+    if (!await requireFixtureReady(graph, campaignId, response)) return;
+    await reviewWriterDraft(graph, request.params.draftId, request.params.decision, campaignId);
+    response.json(await loadWorkspace(graph, false, campaignId));
   } catch (error) {
     console.error(JSON.stringify({ event: 'writer_draft_review_failed', ...safeErrorDetails(error) }));
     response.status(error instanceof WorkspaceError ? error.statusCode : 503)

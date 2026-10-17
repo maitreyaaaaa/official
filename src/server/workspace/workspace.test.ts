@@ -25,7 +25,7 @@ const review = { findings: [
 test('company-note questions list the actually linked source records and date the decision', () => {
   const response = answerWorkspaceQuestion('Which company notes have sources?', snapshot, review);
   assert.match(response.answer, /2 have direct source or decision links/);
-  assert.match(response.answer, /October 16 audience decision is historical/);
+  assert.match(response.answer, /dated rollout decision is historical/);
   assert.deepEqual(response.sources.map((source) => source.id), ['note-company', 'note-release-decision', 'note-launch-checklist']);
 });
 

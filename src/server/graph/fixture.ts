@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { Graph } from 'falkordb';
+import { defaultDemoCompany, demoCompanies, demoCompanyByCampaignId, type DemoCompany } from '../../shared/demo-companies.js';
 import {
   acquireFixtureSeedLock,
   FIXTURE_SEED_LOCK_TTL_MS,
@@ -41,8 +42,10 @@ type FixtureQueryParam = string | number | boolean | string[] | Array<Record<str
 
 const fixturePath = fileURLToPath(new URL('../../../data/fixtures/csv-launch.json', import.meta.url));
 const connectedFixturePath = fileURLToPath(new URL('../../../data/fixtures/connected-workspace.json', import.meta.url));
+const northstarFixturePath = fileURLToPath(new URL('../../../data/fixtures/northstar-launch.json', import.meta.url));
+const northstarConnectedFixturePath = fileURLToPath(new URL('../../../data/fixtures/northstar-workspace.json', import.meta.url));
 const allowedLabels = ['Campaign', 'Draft', 'Promise', 'Feature', 'Audience', 'Deployment', 'Rollout', 'Test', 'Source', 'Company', 'Person', 'Project', 'Process', 'Decision', 'KnowledgeNote', 'InstructionVersion', 'Task', 'Handoff', 'ReviewEpisode'] as const;
-const fixtureVersion = 'csv-launch-v9';
+const fixtureVersion = 'connected-companies-v11';
 let seedInProgress: Promise<void> | undefined;
 const fixtureLockWaitMs = FIXTURE_SEED_LOCK_TTL_MS * 2 + 5_000;
 
@@ -79,11 +82,11 @@ const edgeQueries: Record<string, { from: string; to: string }> = {
   SOURCE_NOTE: { from: 'ReviewEpisode', to: 'KnowledgeNote' },
 };
 
-function connectedGraphFixture(base: FixtureData, extra: ConnectedFixtureData): FixtureData {
+function connectedGraphFixture(base: FixtureData, extra: ConnectedFixtureData, company: DemoCompany): FixtureData {
   const edges: FixtureEdge[] = [...base.edges];
   const add = (type: string, from: string, to: string) => edges.push({ type, from, to });
   add('HAS_PROJECT', extra.company.id, extra.project.id);
-  add('RUNS_CAMPAIGN', extra.project.id, 'campaign-csv-launch');
+  add('RUNS_CAMPAIGN', extra.project.id, company.campaignId);
   for (const process of extra.processes) {
     add('HAS_PROCESS', extra.project.id, String(process.id));
     add('PRIMARY_OWNER', String(process.id), String(process.primaryId));
@@ -91,19 +94,19 @@ function connectedGraphFixture(base: FixtureData, extra: ConnectedFixtureData): 
     add('USES_GUIDE', String(process.id), String(process.guideId));
     add('FOLLOWS_DECISION', String(process.id), String(process.decisionId));
   }
-  add('ROSTER_SOURCE', 'process-launch-evidence', 'note-roster');
+  add('ROSTER_SOURCE', company.processId, company.noteIds.roster);
   for (const [from, to] of extra.noteLinks) add('LINKS_TO', from, to);
   for (const [from, to] of extra.sourceLinks) add('CITES_SOURCE', from, to);
   for (const note of extra.notes) add('ABOUT_PROJECT', String(note.id), extra.project.id);
-  for (const id of ['note-release-decision', 'note-launch-checklist', 'note-qa-guide']) add('CITES_DECISION', id, extra.decision.id);
-  for (const instruction of extra.instructions) add('HAS_INSTRUCTION', 'campaign-csv-launch', String(instruction.id));
-  add('FOR_CAMPAIGN', extra.task.id, 'campaign-csv-launch');
+  for (const id of [company.noteIds.decision, company.noteIds.guide, String(extra.processes[1]?.guideId)]) add('CITES_DECISION', id, extra.decision.id);
+  for (const instruction of extra.instructions) add('HAS_INSTRUCTION', company.campaignId, String(instruction.id));
+  add('FOR_CAMPAIGN', extra.task.id, company.campaignId);
   add('FOR_TASK', String(extra.handoff.id), extra.task.id);
-  add('INCLUDES_INSTRUCTION', String(extra.handoff.id), 'instruction-playful');
-  add('INCLUDES_INSTRUCTION', String(extra.handoff.id), 'instruction-benefit');
-  add('RECORDED_EPISODE', 'campaign-csv-launch', extra.episode.id);
-  add('REVIEWS_DRAFT', extra.episode.id, 'draft-email');
-  add('SOURCE_NOTE', extra.episode.id, 'note-editorial-review');
+  add('INCLUDES_INSTRUCTION', String(extra.handoff.id), company.oldToneId);
+  add('INCLUDES_INSTRUCTION', String(extra.handoff.id), company.openingId);
+  add('RECORDED_EPISODE', company.campaignId, extra.episode.id);
+  add('REVIEWS_DRAFT', extra.episode.id, String(base.nodes.Draft?.[1]?.id));
+  add('SOURCE_NOTE', extra.episode.id, company.noteIds.review);
   return {
     nodes: {
       ...base.nodes,
@@ -116,17 +119,35 @@ function connectedGraphFixture(base: FixtureData, extra: ConnectedFixtureData): 
   };
 }
 
+function mergeFixtures(fixtures: FixtureData[]): FixtureData {
+  const nodes: FixtureData['nodes'] = {};
+  for (const fixture of fixtures) {
+    for (const [label, records] of Object.entries(fixture.nodes)) nodes[label] = [...(nodes[label] ?? []), ...records];
+  }
+  return { nodes, edges: fixtures.flatMap((fixture) => fixture.edges) };
+}
+
 export async function seedFixture(graph: Graph, lease: FixtureSeedLease): Promise<void> {
-  const fixture = connectedGraphFixture(
-    JSON.parse(await readFile(fixturePath, 'utf8')) as FixtureData,
-    JSON.parse(await readFile(connectedFixturePath, 'utf8')) as ConnectedFixtureData,
-  );
+  const fixture = mergeFixtures([
+    connectedGraphFixture(
+      JSON.parse(await readFile(fixturePath, 'utf8')) as FixtureData,
+      JSON.parse(await readFile(connectedFixturePath, 'utf8')) as ConnectedFixtureData,
+      demoCompanies[0],
+    ),
+    connectedGraphFixture(
+      JSON.parse(await readFile(northstarFixturePath, 'utf8')) as FixtureData,
+      JSON.parse(await readFile(northstarConnectedFixturePath, 'utf8')) as ConnectedFixtureData,
+      demoCompanies[1],
+    ),
+  ]);
   const observedAt = new Date().toISOString();
 
-  await writeFixtureQuery(graph, lease,
-    'MATCH (rollout:Rollout {id: $rolloutId}) SET rollout.current = false',
-    { rolloutId: 'rollout-all-accounts' },
-  );
+  for (const company of demoCompanies) {
+    await writeFixtureQuery(graph, lease,
+      'MATCH (rollout:Rollout {id: $rolloutId}) SET rollout.current = false',
+      { rolloutId: company.expandedRolloutId },
+    );
+  }
 
   for (const label of allowedLabels) {
     const records = (fixture.nodes[label] ?? []).map((record) => (
@@ -180,16 +201,12 @@ DETACH DELETE promise`,
   }
 
   await writeFixtureQuery(graph, lease,
-    `MATCH (feature:Feature {id: $featureId})
-SET feature.factsRevision = coalesce(feature.factsRevision, 0) + 1
-MERGE (state:FixtureState {id: $id})
-SET state.version = $version, state.completedAt = $completedAt`,
-    {
-      featureId: 'feature-csv-export',
-      id: 'official-csv-launch',
-      version: fixtureVersion,
-      completedAt: new Date().toISOString(),
-    },
+    `MATCH (feature:Feature {id: $featureId}), (other:Feature {id: $otherFeatureId})
+SET feature.factsRevision = coalesce(feature.factsRevision, 0) + 1,
+    other.factsRevision = coalesce(other.factsRevision, 0) + 1
+MERGE (state:FixtureState {id: $id}) SET state.version = $version, state.completedAt = $completedAt`,
+    { featureId: demoCompanies[0].featureId, otherFeatureId: demoCompanies[1].featureId,
+      id: 'official-csv-launch', version: fixtureVersion, completedAt: new Date().toISOString() },
   );
 }
 
@@ -266,7 +283,9 @@ async function writeFixtureQuery(
   }
 }
 
-export async function expandDemoRollout(graph: Graph): Promise<void> {
+export async function expandDemoRollout(graph: Graph, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = demoCompanyByCampaignId(campaignId);
+  if (!company) throw new Error('Unknown demo company.');
   const query = `
 MATCH (feature:Feature {id: $featureId})-[:HAS_ROLLOUT]->(old:Rollout {id: $oldRolloutId})
 MATCH (allAccounts:Audience {id: $allAccountsId})
@@ -287,25 +306,26 @@ MERGE (feature)-[:HAS_ROLLOUT]->(rollout)
 MERGE (rollout)-[:INCLUDES]->(allAccounts)
 MERGE (rollout)-[:INCLUDES]->(testers)
 MERGE (rollout)-[:HAS_SOURCE]->(source)
-CREATE (event:ActivityEvent {id: $eventId, campaignId: $campaignId, kind: 'rollout.expanded', occurredAt: $observedAt, title: 'Synthetic rollout expanded', detail: 'The local scenario now includes all customer accounts.'})
+CREATE (event:ActivityEvent {id: $eventId, campaignId: $campaignId, kind: 'rollout.expanded', occurredAt: $observedAt, title: 'Synthetic rollout expanded', detail: $eventDetail})
 RETURN rollout.id AS rolloutId, event.id AS eventId`;
 
   const result = await graph.query(query, {
     params: {
-      featureId: 'feature-csv-export',
-      oldRolloutId: 'rollout-testers-only',
-      allAccountsId: 'audience-all-accounts',
-      testersId: 'audience-internal-testers',
-      rolloutId: 'rollout-all-accounts',
-      rolloutName: 'All-account rollout',
+      featureId: company.featureId,
+      oldRolloutId: company.baselineRolloutId,
+      allAccountsId: company.broadAudienceId,
+      testersId: company.limitedAudienceId,
+      rolloutId: company.expandedRolloutId,
+      rolloutName: `All-audience rollout for ${company.shortName}`,
       environment: 'production',
       observedAt: new Date().toISOString(),
-      sourceId: 'source-s4',
-      sourceLabel: 'S4 · Rollout expanded',
-      sourceText: 'CSV export is enabled for all customer accounts, including internal testers.',
+      sourceId: company.key === 'alder-finch' ? 'source-s4' : `source-expanded-${company.key}`,
+      sourceLabel: 'Reviewed rollout expansion',
+      sourceText: `${company.shortName} has enabled the feature for the broad audience, including the original pilot group.`,
       reviewedBy: 'Product teammate',
       eventId: randomUUID(),
-      campaignId: 'campaign-csv-launch',
+      campaignId,
+      eventDetail: `The local scenario now includes ${company.broadAudienceId === 'audience-all-accounts' ? 'all customer accounts' : 'all merchants'}.`,
     },
   });
 
@@ -318,19 +338,21 @@ MATCH (rollout)-[:INCLUDES]->(:Audience {id: $testersId})
 MATCH (rollout)-[:HAS_SOURCE]->(:Source {id: $sourceId})
 RETURN rollout.id AS rolloutId LIMIT 1`, {
       params: {
-        featureId: 'feature-csv-export',
-        oldRolloutId: 'rollout-testers-only',
-        rolloutId: 'rollout-all-accounts',
-        allAccountsId: 'audience-all-accounts',
-        testersId: 'audience-internal-testers',
-        sourceId: 'source-s4',
+        featureId: company.featureId,
+        oldRolloutId: company.baselineRolloutId,
+        rolloutId: company.expandedRolloutId,
+        allAccountsId: company.broadAudienceId,
+        testersId: company.limitedAudienceId,
+        sourceId: company.key === 'alder-finch' ? 'source-s4' : `source-expanded-${company.key}`,
       },
     });
     if (!current.data?.length) throw new Error('The fictional rollout could not be updated in the graph.');
   }
 }
 
-export async function restoreDemoRollout(graph: Graph): Promise<void> {
+export async function restoreDemoRollout(graph: Graph, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = demoCompanyByCampaignId(campaignId);
+  if (!company) throw new Error('Unknown demo company.');
   const observedAt = new Date().toISOString();
   const query = `
 MATCH (feature:Feature {id: $featureId})-[:HAS_ROLLOUT]->(expanded:Rollout {id: $expandedRolloutId})
@@ -342,17 +364,18 @@ SET expanded.current = false, baseline.current = true, baseline.observedAt = $ob
 FOREACH (source IN sources | SET source.observedAt = $observedAt)
 SET feature.factsRevision = coalesce(feature.factsRevision, 0) + 1
 CREATE (event:ActivityEvent {id: $eventId, campaignId: $campaignId, kind: 'rollout.restored',
-       occurredAt: $observedAt, title: 'Synthetic rollout restored', detail: 'The local scenario again limits CSV export to internal testers.'})
+       occurredAt: $observedAt, title: 'Synthetic rollout restored', detail: $eventDetail})
 CREATE (feature)-[:HAS_EVENT]->(event)
 RETURN baseline.id AS rolloutId, event.id AS eventId`;
   const transition = await graph.query<Record<string, unknown>>(query, {
     params: {
-      featureId: 'feature-csv-export',
-      expandedRolloutId: 'rollout-all-accounts',
-      baselineRolloutId: 'rollout-testers-only',
+      featureId: company.featureId,
+      expandedRolloutId: company.expandedRolloutId,
+      baselineRolloutId: company.baselineRolloutId,
       observedAt,
       eventId: randomUUID(),
-      campaignId: 'campaign-csv-launch',
+      campaignId,
+      eventDetail: `The local scenario again limits ${company.shortName}'s feature to the reviewed group.`,
     },
   });
   if (transition.data?.length) return;
@@ -364,17 +387,19 @@ MATCH (baseline)-[:INCLUDES]->(:Audience {id: $testersId})
 MATCH (baseline)-[:EXCLUDES]->(:Audience {id: $allAccountsId})
 RETURN baseline.id AS rolloutId LIMIT 1`, {
     params: {
-      featureId: 'feature-csv-export',
-      expandedRolloutId: 'rollout-all-accounts',
-      baselineRolloutId: 'rollout-testers-only',
-      testersId: 'audience-internal-testers',
-      allAccountsId: 'audience-all-accounts',
+      featureId: company.featureId,
+      expandedRolloutId: company.expandedRolloutId,
+      baselineRolloutId: company.baselineRolloutId,
+      testersId: company.limitedAudienceId,
+      allAccountsId: company.broadAudienceId,
     },
   });
   if (!current.data?.length) throw new Error('The fictional rollout could not be restored in the graph.');
 }
 
-export async function setDemoTestAvailability(graph: Graph, available: boolean): Promise<void> {
+export async function setDemoTestAvailability(graph: Graph, available: boolean, campaignId: string = defaultDemoCompany.campaignId): Promise<void> {
+  const company = demoCompanyByCampaignId(campaignId);
+  if (!company) throw new Error('Unknown demo company.');
   const observedAt = new Date().toISOString();
   const query = `
 MATCH (feature:Feature {id: $featureId})-[:HAS_TEST]->(test:Test {id: $testId})
@@ -390,15 +415,15 @@ CREATE (feature)-[:HAS_EVENT]->(event)
 RETURN test.id AS testId, event.id AS eventId`;
   const transition = await graph.query<Record<string, unknown>>(query, {
     params: {
-      featureId: 'feature-csv-export',
-      testId: 'test-csv-r17',
+      featureId: company.featureId,
+      testId: company.testId,
       available,
       observedAt,
       eventId: randomUUID(),
-      campaignId: 'campaign-csv-launch',
+      campaignId,
       title: available ? 'Synthetic test restored' : 'Synthetic test result removed',
       detail: available
-        ? 'The local scenario restored the reviewed production test result for CSV export.'
+        ? `The local scenario restored the reviewed production test result for ${company.shortName}.`
         : 'The local scenario removed the current production test result to demonstrate an Unknown finding.',
     },
   });
@@ -407,7 +432,7 @@ RETURN test.id AS testId, event.id AS eventId`;
   const current = await graph.query<unknown[]>(`
 MATCH (:Feature {id: $featureId})-[:HAS_TEST]->(test:Test {id: $testId, current: $available})
 RETURN test.id AS testId LIMIT 1`, {
-    params: { featureId: 'feature-csv-export', testId: 'test-csv-r17', available },
+    params: { featureId: company.featureId, testId: company.testId, available },
   });
   if (!current.data?.length) throw new Error('The fictional test scenario could not be updated in the graph.');
 }

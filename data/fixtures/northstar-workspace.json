@@ -1,0 +1,47 @@
+{
+  "company": { "id": "company-northstar-parcel", "name": "Northstar Parcel", "shortName": "Northstar Parcel", "description": "Fictional parcel platform helping merchants explain delivery progress." },
+  "people": [
+    { "id": "person-northstar-iris", "name": "Iris Malik", "role": "Merchant operations lead", "team": "Merchant operations" },
+    { "id": "person-northstar-nolan", "name": "Nolan Price", "role": "Implementation partner", "team": "Merchant operations" },
+    { "id": "person-northstar-theo", "name": "Theo Grant", "role": "Platform engineer", "team": "Delivery systems" },
+    { "id": "person-northstar-lian", "name": "Lian Park", "role": "Content editor", "team": "Merchant operations" }
+  ],
+  "project": { "id": "project-delivery-timeline", "name": "Delivery timeline release", "team": "Merchant operations", "summary": "Give pilot merchants a source-backed live timeline while avoiding an all-merchant availability claim." },
+  "processes": [
+    { "id": "process-timeline-evidence", "name": "Timeline claim review", "summary": "Compare each delivery-timeline promise with the N24 deployment, merchant rollout, and carrier-event test.", "primaryId": "person-northstar-iris", "guideId": "note-northstar-checklist", "decisionId": "decision-northstar-pilot", "rosterReviewed": true, "revision": 1 },
+    { "id": "process-delivery-qa", "name": "Carrier-event QA sign-off", "summary": "Check the carrier-scan and ETA test on N24 before availability claims are approved.", "primaryId": "person-northstar-theo", "backupId": "person-northstar-lian", "guideId": "note-northstar-qa", "decisionId": "decision-northstar-pilot", "rosterReviewed": true, "revision": 1 }
+  ],
+  "decision": { "id": "decision-northstar-pilot", "title": "Timeline access for N24", "body": "At the October 17 launch review, N24 had a passing carrier-event test, but live timeline sharing was enabled only for pilot merchants. An all-merchant claim needs a separately reviewed rollout change and a current passing test. The dated decision does not replace the current campaign check.", "approvedBy": "Iris Malik", "reviewedAt": "2026-10-17T09:30:00.000Z" },
+  "notes": [
+    { "id": "note-northstar-company", "title": "Northstar / delivery workspace", "category": "Company", "summary": "Teams, release scope, and source map for the delivery timeline.", "body": "Northstar Parcel is a fictional parcel operations platform. Merchant operations owns customer-facing release copy; Delivery systems owns the carrier-event service and production checks. Timeline availability is determined by the reviewed merchant rollout, not by a deployment alone.", "reviewedBy": "Iris Malik", "reviewedAt": "2026-10-17T09:20:00.000Z" },
+    { "id": "note-northstar-rollout", "title": "Decision / pilot merchant access", "category": "Decisions", "summary": "N24 timeline sharing was approved for pilot merchants only.", "body": "The October 17 decision limits timeline sharing to the named pilot merchant cohort. All other merchants remain excluded even though N24 contains the feature. The decision can become historical after a reviewed rollout expansion; read the live claim check before publishing availability copy.", "reviewedBy": "Iris Malik", "reviewedAt": "2026-10-17T09:30:00.000Z" },
+    { "id": "note-northstar-checklist", "title": "Playbook / timeline evidence review", "category": "Playbooks", "summary": "How to check release claims and hand off an owner review.", "body": "1. Identify the merchant audience named in the draft. 2. Confirm N24 is the running revision and contains the timeline service. 3. Read the latest reviewed merchant rollout. 4. Check the current carrier-event test on N24. 5. Prepare a draft hold or edit for a human approver. If Iris is unavailable, use a confirmed backup and the linked records. A proposal alone is not coverage.", "reviewedBy": "Iris Malik", "reviewedAt": "2026-10-17T10:00:00.000Z" },
+    { "id": "note-northstar-brief", "title": "Campaign / delivery timeline brief", "category": "Campaigns", "summary": "Lead with the value of a clear delivery view, then name the eligible merchants.", "body": "The campaign explains live delivery timelines for merchants. Lead with one reader benefit: less time chasing shipment updates. The current approved tone and opening instruction are versioned in agent memory. Do not imply that every merchant has access while the rollout includes only pilot merchants.", "reviewedBy": "Lian Park", "reviewedAt": "2026-10-17T10:15:00.000Z" },
+    { "id": "note-northstar-review", "title": "Review / ETA promise opening", "category": "Reviews", "summary": "A reviewer removed an unqualified exact-arrival promise.", "body": "The first email opening promised an exact arrival time for every parcel. Lian rejected it because carrier events can arrive late and the test only proved timeline updates, not exact delivery predictions. The reviewed episode applies to this release task; it is not a universal policy.", "reviewedBy": "Lian Park", "reviewedAt": "2026-10-17T11:00:00.000Z" },
+    { "id": "note-northstar-handoff", "title": "Handoff / timeline writer", "category": "Handoffs", "summary": "The original task snapshot saved brief revision 1 and reviewed ETA feedback.", "body": "The planning agent passed a pilot-merchant email task at brief revision 1. A new writing session must compare that snapshot with current approved instructions, the N24 rollout, and Lian's reviewed feedback before preparing internal copy.", "reviewedBy": "Iris Malik", "reviewedAt": "2026-10-17T11:20:00.000Z" },
+    { "id": "note-northstar-roster", "title": "Roster review / timeline claims", "category": "Ownership", "summary": "Iris is primary; no backup was confirmed at roster revision 1.", "body": "At roster revision 1, Iris Malik was the reviewed primary owner for timeline claim checks. Nolan Price was a candidate for backup but had not been assigned. Only an approved assignment changes unavailable-owner coverage; the live process graph is the current record.", "reviewedBy": "Iris Malik", "reviewedAt": "2026-10-17T11:30:00.000Z" },
+    { "id": "note-northstar-qa", "title": "Playbook / carrier-event QA", "category": "Playbooks", "summary": "Delivery systems checks the N24 event stream and test result.", "body": "Theo Grant confirms that N24 is running and its carrier-scan and ETA update smoke test passed. Lian Park is the reviewed backup for QA sign-off in this fictional process. A missing or stale test leaves the claim check uncertain; QA does not approve campaign copy.", "reviewedBy": "Theo Grant", "reviewedAt": "2026-10-17T11:45:00.000Z" },
+    { "id": "note-northstar-faq", "title": "Support / pilot merchant FAQ", "category": "Operations", "summary": "How support explains timeline access without overstating the rollout.", "body": "Support may tell pilot merchants where to enable timeline sharing and how to report a missing carrier scan. For other merchants, support should say the feature is still in a controlled rollout. Escalate conflicting access reports to Merchant operations rather than editing a customer promise without review.", "reviewedBy": "Nolan Price", "reviewedAt": "2026-10-17T12:00:00.000Z" }
+  ],
+  "noteLinks": [
+    ["note-northstar-company", "note-northstar-rollout"], ["note-northstar-company", "note-northstar-brief"], ["note-northstar-company", "note-northstar-roster"],
+    ["note-northstar-rollout", "note-northstar-checklist"], ["note-northstar-rollout", "note-northstar-faq"],
+    ["note-northstar-checklist", "note-northstar-qa"], ["note-northstar-checklist", "note-northstar-roster"],
+    ["note-northstar-brief", "note-northstar-review"], ["note-northstar-brief", "note-northstar-handoff"],
+    ["note-northstar-faq", "note-northstar-qa"]
+  ],
+  "sourceLinks": [
+    ["note-northstar-rollout", "source-northstar-rollout"], ["note-northstar-rollout", "source-northstar-deploy"],
+    ["note-northstar-checklist", "source-northstar-deploy"], ["note-northstar-checklist", "source-northstar-rollout"], ["note-northstar-checklist", "source-northstar-test"],
+    ["note-northstar-qa", "source-northstar-deploy"], ["note-northstar-qa", "source-northstar-test"],
+    ["note-northstar-faq", "source-northstar-rollout"]
+  ],
+  "instructions": [
+    { "id": "instruction-northstar-brisk", "topic": "tone", "text": "Use a brisk, upbeat tone for the pilot timeline email.", "status": "approved", "revision": 1, "approvedBy": "Iris Malik" },
+    { "id": "instruction-northstar-benefit", "topic": "opening", "text": "Open with reduced time spent chasing shipment updates; do not promise an exact arrival time.", "status": "approved", "revision": 1, "approvedBy": "Lian Park" },
+    { "id": "instruction-northstar-assured", "topic": "tone", "text": "Use a clear, assured tone for the pilot timeline email.", "status": "pending", "revision": 2, "approvedBy": "" }
+  ],
+  "task": { "id": "task-northstar-email", "title": "Write the pilot merchant timeline email", "status": "received" },
+  "handoff": { "id": "handoff-timeline-v1", "summary": "Planner passed the pilot merchant email task at brief revision 1 with reviewed ETA feedback.", "revision": 1, "fromRole": "Planning agent", "toRole": "Writing agent", "createdAt": "2026-10-17T11:25:00.000Z" },
+  "episode": { "id": "episode-northstar-eta", "kind": "draft.rejected", "summary": "The first opening promised an exact arrival time that the N24 evidence did not support.", "reviewedBy": "Lian Park", "occurredAt": "2026-10-17T11:00:00.000Z" }
+}

@@ -31,7 +31,7 @@ export function WorkspaceOverview({ review, workspace, loading, error, onRefresh
 
   return <section className="workspace-overview" id="overview" aria-labelledby="overview-title">
     <header className="overview-intro">
-      <span className="eyebrow">ALDER &amp; FINCH <span aria-hidden="true">/</span> SPRING REPORTING RELEASE</span>
+      <span className="eyebrow">{workspace?.company.name ?? 'COMPANY WORKSPACE'} <span aria-hidden="true">/</span> {workspace?.project.name ?? 'CONNECTED LAUNCH'}</span>
       <h1 id="overview-title" tabIndex={-1}>What needs your attention</h1>
       <p>One launch across claims, writer memory, and company knowledge. Choose a task to see its evidence and next step.</p>
       <div className="overview-status" role="status" aria-live="polite" aria-atomic="true">
@@ -69,10 +69,10 @@ export function WorkspaceOverview({ review, workspace, loading, error, onRefresh
       <div className="overview-walkthrough-body">
         <ol>
           <li><strong>Check the claim.</strong> Compare the landing page draft with its reviewed rollout. <button type="button" onClick={onOpenFinding} disabled={!review}>Open claim</button> <button type="button" onClick={onOpenSources} disabled={!review}>See evidence</button></li>
-          <li><strong>Refresh the writer.</strong> Review the calm tone, start a fresh session, then inspect the internal draft. <button type="button" onClick={onOpenMemory}>Open Agent memory</button></li>
+          <li><strong>Refresh the writer.</strong> Review the proposed tone, start a fresh session, then inspect the internal draft. <button type="button" onClick={onOpenMemory}>Open Agent memory</button></li>
           <li><strong>Cover the owner.</strong> Follow the guide, propose a backup, and confirm the assignment. <button type="button" onClick={onOpenCoverage}>Review coverage</button></li>
         </ol>
-        <div className="overview-reset"><p>Alder &amp; Finch and all records are fictional. Reset restores the launch scenario for another walkthrough; earlier graph history remains.</p><button type="button" className="text-button" onClick={onReset} disabled={!canReset}>{resetBusy ? 'Resetting…' : 'Reset fictional demo'}</button></div>
+        <div className="overview-reset"><p>{workspace?.company.name ?? 'This company'} and all records are fictional. Reset restores this launch scenario for another walkthrough; earlier graph history remains.</p><button type="button" className="text-button" onClick={onReset} disabled={!canReset}>{resetBusy ? 'Resetting…' : 'Reset fictional demo'}</button></div>
       </div>
     </details>
   </section>;
