@@ -7,6 +7,7 @@ import { app } from './index.js';
 
 const envNames = [
   'NODE_ENV', 'PORT', 'SEED_FIXTURE', 'ENABLE_DEMO_WRITES', 'FALKORDB_GRAPH',
+  'ENABLE_PUBLIC_DEMO', 'ALLOW_INSECURE_FALKORDB', 'VERCEL_URL', 'VERCEL_PROJECT_PRODUCTION_URL',
   'FALKORDB_HOST', 'FALKORDB_PORT', 'FALKORDB_TLS', 'FALKORDB_USERNAME', 'FALKORDB_PASSWORD',
   'OPENAI_API_KEY', 'OPENAI_MODEL',
 ] as const;
@@ -18,17 +19,23 @@ let baseUrl: string;
 let localOrigin: string;
 let graphAccessCount = 0;
 
-function requestWithHost(path: string, host: string): Promise<{ statusCode: number | undefined; body: string }> {
+function requestWithHost(
+  path: string,
+  host: string,
+  headers: Record<string, string> = {},
+  method = 'GET',
+  requestBody?: string,
+): Promise<{ statusCode: number | undefined; body: string }> {
   const url = new URL(`${baseUrl}${path}`);
   return new Promise((resolve, reject) => {
-    const request = httpRequest(url, { headers: { host } }, (response) => {
+    const request = httpRequest(url, { method, headers: { ...headers, host } }, (response) => {
       let body = '';
       response.setEncoding('utf8');
       response.on('data', (chunk: string) => { body += chunk; });
       response.on('end', () => resolve({ statusCode: response.statusCode, body }));
     });
     request.on('error', reject);
-    request.end();
+    request.end(requestBody);
   });
 }
 
@@ -194,6 +201,33 @@ test('campaign mutations remain disabled until the local write opt-in is enabled
   });
   assert.equal(response.status, 404);
   assert.equal(graphAccessCount, 0);
+});
+
+test('hosted demo capabilities and fixture initialization require the exact public host and origin', async () => {
+  graphAccessCount = 0;
+  process.env.NODE_ENV = 'production';
+  process.env.ENABLE_PUBLIC_DEMO = 'true';
+  process.env.SEED_FIXTURE = 'true';
+  process.env.ENABLE_DEMO_WRITES = 'true';
+  process.env.ALLOW_INSECURE_FALKORDB = 'true';
+  process.env.FALKORDB_HOST = 'graph.example.test';
+  process.env.VERCEL_URL = 'official-sand.vercel.app';
+  process.env.VERCEL_PROJECT_PRODUCTION_URL = 'official-sand.vercel.app';
+
+  const host = 'official-sand.vercel.app';
+  const origin = `https://${host}`;
+  const capabilities = await requestWithHost('/api/capabilities', host, { referer: `${origin}/app` });
+  assert.equal(capabilities.statusCode, 200);
+  assert.deepEqual(JSON.parse(capabilities.body), { demoRollout: true, assistant: false });
+
+  const fixture = await requestWithHost('/api/campaigns/campaign-csv-launch/fixture', host, {
+    origin,
+    'content-type': 'application/json',
+  }, 'POST', '{}');
+  assert.equal(fixture.statusCode, 503);
+  assert.deepEqual(JSON.parse(fixture.body), { error: 'The local fictional campaign could not be initialized.' });
+  assert.equal(graphAccessCount, 1, 'the exact hosted origin reaches the graph provider');
+  graphAccessCount = 0;
 });
 
 test('imported app refuses production requests before graph access', async () => {

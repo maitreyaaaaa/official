@@ -67,6 +67,7 @@ function fixtureInitializationAllowed(request: express.Request): boolean {
   return canInitializeFixture(localDemoConfigFromEnvironment(process.env), {
     remoteAddress: request.socket.remoteAddress,
     origin: request.get('origin'),
+    host: request.get('host'),
   });
 }
 
@@ -74,6 +75,7 @@ function demoWritesEnabled(request: express.Request): boolean {
   return canWriteDemo(localDemoConfigFromEnvironment(process.env), {
     remoteAddress: request.socket.remoteAddress,
     origin: request.get('origin'),
+    host: request.get('host'),
   });
 }
 
@@ -86,7 +88,11 @@ app.get('/api/capabilities', (request, response) => {
       return undefined;
     }
   })();
-  const writesAvailable = canWriteDemo(config, { remoteAddress: request.socket.remoteAddress, origin });
+  const writesAvailable = canWriteDemo(config, {
+    remoteAddress: request.socket.remoteAddress,
+    origin,
+    host: request.get('host'),
+  });
   response.set('Cache-Control', 'no-store').json({
     demoRollout: writesAvailable,
     assistant: Boolean(process.env.OPENAI_API_KEY?.trim()) && writesAvailable,
