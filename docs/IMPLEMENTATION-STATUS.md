@@ -58,11 +58,10 @@ This page separates verified repository work from behavior that still needs a li
 - Production `/api/health` returns `200` with FalkorDB connected. The hosted app returns four campaign findings from the fictional Alder & Finch fixture: two Contradicted, one Supported, and one Not checked. Fixture seeding is enabled and the initial baseline is restored after acceptance.
 - Browser-verified production flows: changing access to all accounts changes the three CSV claims to Supported; restoring internal-tester access returns the two contradictions. A pause proposal was created, approved, and resumed after a fresh Supported check. Activity entries recorded the checks and human decisions.
 - Fixed deployment-specific issues found during this pass: the SPA fallback had intercepted API paths; the function runtime imported the local Vite server; deeper campaign routes were not registered as Vercel functions; and hosted write guards were not given the request host. Production UI actions now follow the server's hosted-demo capability flags.
-- `npm run build`, `npm test` (84/84), and `git diff --check` passed locally before the final deployment. Production deployment from commit `9cfc191` reached Ready and the public reviewer flow was exercised against FalkorDB.
+- `npm run build`, `npm test` (84/84), and `git diff --check` passed locally before deployment. The production UI is deployed from `9cfc191`; the documentation update at `17b81d0` also reached Ready.
 
 ## Still needs verification
 
-- The optional assistant remains disabled until `OPENAI_API_KEY` is configured; no live OpenAI call was made.
 - The optional assistant remains disabled because `OPENAI_API_KEY` is not configured; no live OpenAI request was made.
 
 ## Not implemented
