@@ -13,17 +13,17 @@ This page separates verified repository work from behavior that still needs a li
 - Fail closed when a current fact has no environment, include only the relevant environment and running-revision evidence in a finding, and name missing tests alongside a known audience contradiction.
 - Detect conflicting rows that reuse a graph fact ID, reject source records without a stable ID or readable content, and refresh evidence timestamps when the synthetic fixture is reseeded.
 - Reject missing or duplicate draft graph IDs while allowing multiple promise paths from one draft.
-- Kept review GET requests read-only and restricted them to the fictional campaign. Fixture-bound reads wait for an in-process seed and require the current completion marker, so they cannot read a partially seeded campaign. Explicit local check POSTs record a review run containing only finding IDs and statuses plus an ActivityEvent; synthetic rollout and missing-test scenario writes create their own ActivityEvent in the same graph query. Fixture, check, rollout, and test-scenario writes are limited to local development, a loopback database, and same-origin requests.
+- Kept review GET requests read-only and restricted them to the fictional campaign. Fixture-bound reads wait for an in-process seed and require the current completion marker, so they cannot read a partially seeded campaign. Explicit check POSTs record a review run containing only finding IDs and statuses plus an ActivityEvent; synthetic rollout and missing-test scenario writes create their own ActivityEvent in the same graph query. Writes require local development with a loopback graph or the explicitly enabled hosted demo, exact Vercel host, and same-origin HTTPS request.
 - Added local pause/edit proposals for contradicted drafts. Edit proposals require a currently Supported assessment for their selected audience at both creation and approval. The server allows only one pending proposal per draft. Approval reruns the checker, compares the complete finding fingerprint and draft/fact revisions, then applies the internal draft update and records approval/execution events in one graph query. A revision race or changed finding moves the proposal to `needs_recheck`.
 - Added explicit rejection and resume endpoints. Resume requires a new Supported check and compares draft/fact revisions in its graph write; no finding automatically resumes a paused draft.
 - Edit approval relinks only the chosen draft to a new reviewed promise and audience, so an email that reused another draft's promise can be revised without changing the original draft.
 - Required TLS for remote FalkorDB hosts; Compose binds local ports to loopback and pins the FalkorDB image version.
 - Set the supported Node.js engine to `>=22`, matching the installed FalkorDB client.
-- Added the campaign review UI, evidence trail, proactive review list, mobile navigation with active-location semantics, help panel, and unavailable-graph state. Initial campaign loads use read-only review requests; the guarded development fixture initializer may seed the opted-in local fixture, and only the explicit check action records check history. The UI identifies the Alder & Finch workspace as a fictional demo.
+- Added the campaign review UI, evidence trail, proactive review list, mobile navigation with active-location semantics, help panel, and unavailable-graph state. Initial campaign loads use the guarded fixture initializer and then read-only review requests; only the explicit check action records check history. The UI identifies the Alder & Finch workspace as a fictional demo.
 - Scoped reused-draft wording lookups to the selected campaign so review results cannot expose another campaign's draft title or promise text. The UI has separate Contradicted, Unknown, Supported, and Not checked counts; draft and proactive controls expose their visible claim details and status to assistive technology, the scenario disclosure has a visible keyboard focus indicator, and stale supporting-data responses are ignored after newer refreshes or scenarios begin.
 - Added an Activity history panel that reads the latest 20 persisted check, synthetic rollout, test-scenario, proposal, rejection, and resume events. Unavailable history is shown separately from an empty history.
 - Added a reversible local test-evidence scenario control. Removing the synthetic current test advances the feature fact revision, records an activity event, and reruns the check so dependent claims can show **Unknown**; restoring it reverses the scenario.
-- Added a proposal queue with pause/edit proposal creation, explicit approve/reject actions, visible stale-proposal errors, and a resume control shown only for paused drafts with a fresh Supported finding. Unavailable proposal data is shown separately from an empty queue, decision controls are omitted when local writes are disabled, and action feedback receives focus after a decision.
+- Added a proposal queue with pause/edit proposal creation, explicit approve/reject actions, visible stale-proposal errors, and a resume control shown only for paused drafts with a fresh Supported finding. Unavailable proposal data is shown separately from an empty queue, decision controls are omitted when demo writes are disabled, and action feedback receives focus after a decision.
 - Added one shared Zod-validated tool registry for campaign checks, one-draft explanations, affected-draft lookup, saved-check comparison, and proposal preparation. Assistant tool calls return an unsaved preview; only an explicit UI click creates a pending proposal. An explicit MCP proposal tool call creates a pending proposal. Tool arguments are bounded and strict; the graph tool contract does not accept Cypher or external publish actions.
 - Added a local stdio MCP server (`npm run mcp`) that registers the same named tools and follows local fixture, history, and proposal write settings.
 - Added optional OpenAI Responses API assistance with sequential function calls, a four-tool limit, request timeout and output bounds. The same-origin local route accepts at most 2,000 characters, allows two concurrent requests, and exposes no API key. Proposal preview permission defaults off and requires a per-request explicit boolean; prompts and synthetic tool results are disclosed as being sent to OpenAI. Without an API key, deterministic checks stay available.
@@ -39,7 +39,7 @@ This page separates verified repository work from behavior that still needs a li
 
 ## Verified checks
 
-- `npm test`: 80/80 deterministic tests pass, including route handling, rollout input guards, per-client request limiting, campaign/evidence logic, status-only history, assistant tool bounds, fixture v4-to-v7 migration and recovery, reversible rollout and missing-test scenarios, proposal freshness/approval, and MCP protocol behavior.
+- `npm test`: 84/84 deterministic tests pass, including route handling, hosted exact-host and same-origin guards, rollout input guards, per-client request limiting, campaign/evidence logic, status-only history, assistant tool bounds, fixture v4-to-v7 migration and recovery, reversible rollout and missing-test scenarios, proposal freshness/approval, and MCP protocol behavior.
 - `npm run build`: TypeScript check and Vite production build pass. Marketing and app routes load separate bundles (56.71 kB marketing JavaScript, 241.80 kB app JavaScript, 432.56 kB shared entry); no chunk-size warning is emitted.
 - `npm audit --audit-level=moderate`: 0 vulnerabilities reported.
 - `npm install`: dependencies were up to date; 0 vulnerabilities reported.
@@ -52,15 +52,23 @@ This page separates verified repository work from behavior that still needs a li
 - Automated MCP protocol tests exercise initialize and `tools/list` for read-only and local-write configurations without contacting FalkorDB.
 - Deterministic tests use a query double and do not prove live Cypher execution or concurrent behavior; the live acceptance above verifies the baseline review and missing-test transition only.
 
+### Vercel production acceptance — 2026-10-17
+
+- Public reviewer site: [official-sand.vercel.app](https://official-sand.vercel.app/). The marketing site `/` and reviewer workspace `/app` load on the production alias. Vercel preview deployment URLs require a Vercel login; use the production alias for reviewers.
+- Production `/api/health` returns `200` with FalkorDB connected. The hosted app returns four campaign findings from the fictional Alder & Finch fixture: two Contradicted, one Supported, and one Not checked. Fixture seeding is enabled and the initial baseline is restored after acceptance.
+- Browser-verified production flows: changing access to all accounts changes the three CSV claims to Supported; restoring internal-tester access returns the two contradictions. A pause proposal was created, approved, and resumed after a fresh Supported check. Activity entries recorded the checks and human decisions.
+- Fixed deployment-specific issues found during this pass: the SPA fallback had intercepted API paths; the function runtime imported the local Vite server; deeper campaign routes were not registered as Vercel functions; and hosted write guards were not given the request host. Production UI actions now follow the server's hosted-demo capability flags.
+- `npm run build`, `npm test` (84/84), and `git diff --check` passed locally before the final deployment. Production deployment from commit `9cfc191` reached Ready and the public reviewer flow was exercised against FalkorDB.
+
 ## Still needs verification
 
 - The optional assistant remains disabled until `OPENAI_API_KEY` is configured; no live OpenAI call was made.
-- Vercel Express function and SPA routing have been added behind explicit demo environment flags. The Vercel deployment has not been created, the public function has not been exercised, and the Free FalkorDB connection has not yet been verified from Vercel.
+- The optional assistant remains disabled because `OPENAI_API_KEY` is not configured; no live OpenAI request was made.
 
 ## Not implemented
 
 - Background change detection, fact intake, or real product integrations.
-- Verified reviewer identity or account authentication. The optional Vercel mode is a public synthetic-data demo with same-origin write checks and fixed demo operations; it is not suitable for real customer data. Free FalkorDB has no persistence, and its no-TLS connection exposes traffic in transit. Keep all data synthetic.
+- Verified reviewer identity or account authentication. The Vercel deployment is a public synthetic-data demo with exact-host and same-origin write checks and fixed demo operations; it is not suitable for real customer data. The configured FalkorDB connection has TLS disabled on the free plan, so its traffic is not protected in transit. Keep all data synthetic and rotate the database credential after the demo if it has been shared.
 - A recorded demo video.
 
 ## Next implementation phases
