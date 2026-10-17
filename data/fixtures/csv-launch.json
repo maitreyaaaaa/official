@@ -1,7 +1,7 @@
 {
   "nodes": {
     "Campaign": [
-      { "id": "campaign-csv-launch", "name": "CSV export launch", "environment": "production", "audience": "All customer accounts", "updatedAt": "2026-10-14T18:46:00.000Z" }
+      { "id": "campaign-csv-launch", "name": "Spring reporting release", "companyName": "Alder & Finch Commerce", "industry": "Multi-brand retail", "region": "North America", "ownerTeam": "Product marketing", "releaseWindow": "Spring 2026", "environment": "production", "audience": "All customer accounts", "updatedAt": "2026-10-16T00:00:00.000Z" }
     ],
     "Draft": [
       { "id": "draft-landing", "title": "Landing page", "kind": "Landing page", "text": "CSV export is available to every account.", "position": 1, "status": "draft" },

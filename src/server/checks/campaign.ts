@@ -1,7 +1,32 @@
 import type { Graph } from 'falkordb';
+import { createHash } from 'node:crypto';
 import type { CampaignReview, DraftFinding, EvidenceItem } from '../../shared/contracts.js';
 
 type Row = unknown[];
+export class CampaignDataIntegrityError extends Error {
+  constructor() {
+    super('Campaign drafts must have unique graph IDs before they can be checked.');
+    this.name = 'CampaignDataIntegrityError';
+  }
+}
+export class CampaignLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CampaignLimitError';
+  }
+}
+export class CampaignCheckCapacityError extends Error {
+  constructor() {
+    super('A campaign check is already running. Retry shortly.');
+    this.name = 'CampaignCheckCapacityError';
+  }
+}
+export class CampaignChangedDuringCheckError extends Error {
+  constructor() {
+    super('Campaign drafts or evidence changed while the check was running. Retry to get a fresh, consistent result.');
+    this.name = 'CampaignChangedDuringCheckError';
+  }
+}
 interface DeploymentFact { id: string; revision: string; environment: string; includesFeature: boolean; reviewed: boolean; evidence: EvidenceItem[]; conflicting: boolean; }
 interface RolloutFact { id: string; name: string; environment: string; reviewed: boolean; includedIds: string[]; excludedIds: string[]; evidence: EvidenceItem[]; conflicting: boolean; }
 interface TestFact { id: string; revision: string; environment: string; passed: boolean; reviewed: boolean; evidence: EvidenceItem[]; conflicting: boolean; }
@@ -9,49 +34,97 @@ interface FeatureFacts { deployments: DeploymentFact[]; rollouts: RolloutFact[];
 
 const MAX_FACT_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const ALLOWED_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const MAX_CAMPAIGN_DRAFTS = 100;
+const MAX_CAMPAIGN_PROMISE_PATHS = 500;
+const MAX_CAMPAIGN_FEATURES = 25;
+const FEATURE_FACT_QUERY_CONCURRENCY = 4;
+const MAX_CONCURRENT_CAMPAIGN_CHECKS = 2;
+let activeCampaignChecks = 0;
 
 const campaignIdQuery = `
 MATCH (campaign:Campaign {id: $campaignId})
-RETURN campaign.id, campaign.name, campaign.audience, campaign.environment
+RETURN campaign.id AS campaignId, campaign.name AS campaignName,
+       campaign.companyName AS campaignCompanyName, campaign.industry AS campaignIndustry,
+       campaign.region AS campaignRegion, campaign.ownerTeam AS campaignOwnerTeam,
+       campaign.releaseWindow AS campaignReleaseWindow,
+       campaign.audience AS campaignAudience, campaign.environment AS campaignEnvironment
 LIMIT 1`;
+
+const draftIdentityQuery = `
+MATCH (campaign:Campaign {id: $campaignId})<-[:IN_CAMPAIGN]-(draft:Draft)
+RETURN draft.id AS draftId, count(DISTINCT draft) AS draftCount
+LIMIT 101`;
 
 const draftQuery = `
 MATCH (campaign:Campaign {id: $campaignId})<-[:IN_CAMPAIGN]-(draft:Draft)
 OPTIONAL MATCH (draft)-[:MAKES_PROMISE]->(directPromise:Promise)
-OPTIONAL MATCH (draft)-[:REUSES_DRAFT]->(reusedDraft:Draft)-[:MAKES_PROMISE]->(reusedPromise:Promise)
-WITH campaign, draft, coalesce(directPromise, reusedPromise) AS promise, reusedDraft
+OPTIONAL MATCH (draft)-[:REUSES_DRAFT]->(reusedDraft:Draft)-[:IN_CAMPAIGN]->(campaign)
+OPTIONAL MATCH (reusedDraft)-[:MAKES_PROMISE]->(reusedPromise:Promise)
+WITH campaign, draft, directPromise, reusedPromise,
+     coalesce(directPromise, reusedPromise) AS promise, reusedDraft
 OPTIONAL MATCH (promise)-[:ABOUT]->(feature:Feature)
 OPTIONAL MATCH (promise)-[:TARGETS]->(audience:Audience)
-RETURN DISTINCT draft.id, draft.title, draft.kind, draft.text, draft.status,
-       promise.id, promise.text, promise.reviewed,
-       feature.id, feature.name, audience.id, audience.name, reusedDraft.id, reusedDraft.title,
-       directPromise IS NOT NULL, reusedPromise IS NOT NULL
-ORDER BY draft.position`;
+RETURN DISTINCT draft.id AS draftId, draft.title AS draftTitle, draft.kind AS draftKind,
+       draft.text AS draftText, draft.status AS draftStatus,
+       promise.id AS promiseId, promise.text AS promiseText, promise.reviewed AS promiseReviewed,
+       feature.id AS featureId, feature.name AS featureName,
+       audience.id AS audienceId, audience.name AS audienceName,
+       reusedDraft.id AS reusedDraftId, reusedDraft.title AS reusedDraftTitle,
+       directPromise IS NOT NULL AS hasDirectPromise, reusedPromise IS NOT NULL AS hasReusedPromise,
+       draft.position AS sortPosition, coalesce(draft.officialRevision, 0) AS draftRevision,
+       coalesce(feature.factsRevision, 0) AS factRevision
+ORDER BY sortPosition
+LIMIT 501`;
+
+function draftSnapshot(rows: Row[]): string {
+  return rows.map((row) => JSON.stringify(row)).sort().join('\n');
+}
 
 const deploymentQuery = `
 MATCH (:Feature {id: $featureId})-[:RUNNING_AS]->(fact:Deployment {current: true})
 OPTIONAL MATCH (fact)-[:HAS_SOURCE]->(source:Source)
-RETURN fact.id, fact.revision, fact.environment, fact.includesFeature, fact.reviewed,
-       source.id, source.label, source.text, source.observedAt, source.reviewedBy`;
+RETURN fact.id AS factId, fact.revision AS revision, fact.environment AS environment,
+       fact.includesFeature AS includesFeature, fact.reviewed AS reviewed,
+       source.id AS sourceId, source.label AS sourceLabel, source.text AS sourceText,
+       source.observedAt AS observedAt, source.reviewedBy AS reviewedBy`;
 
 const rolloutQuery = `
 MATCH (:Feature {id: $featureId})-[:HAS_ROLLOUT]->(fact:Rollout {current: true})
 OPTIONAL MATCH (fact)-[:HAS_SOURCE]->(source:Source)
 OPTIONAL MATCH (fact)-[:INCLUDES]->(included:Audience)
 OPTIONAL MATCH (fact)-[:EXCLUDES]->(excluded:Audience)
-RETURN fact.id, fact.name, fact.environment, fact.reviewed,
-       collect(DISTINCT included.id), collect(DISTINCT excluded.id),
-       source.id, source.label, source.text, source.observedAt, source.reviewedBy`;
+RETURN fact.id AS factId, fact.name AS factName, fact.environment AS environment, fact.reviewed AS reviewed,
+       collect(DISTINCT included.id) AS includedIds, collect(DISTINCT excluded.id) AS excludedIds,
+       source.id AS sourceId, source.label AS sourceLabel, source.text AS sourceText,
+       source.observedAt AS observedAt, source.reviewedBy AS reviewedBy`;
 
 const testQuery = `
 MATCH (:Feature {id: $featureId})-[:HAS_TEST]->(fact:Test {current: true})
 OPTIONAL MATCH (fact)-[:HAS_SOURCE]->(source:Source)
-RETURN fact.id, fact.revision, fact.environment, fact.passed, fact.reviewed,
-       source.id, source.label, source.text, source.observedAt, source.reviewedBy`;
+RETURN fact.id AS factId, fact.revision AS revision, fact.environment AS environment,
+       fact.passed AS passed, fact.reviewed AS reviewed,
+       source.id AS sourceId, source.label AS sourceLabel, source.text AS sourceText,
+       source.observedAt AS observedAt, source.reviewedBy AS reviewedBy`;
 
-async function queryRows(graph: Graph, query: string, params: Record<string, string>): Promise<Row[]> {
-  const result = await graph.query<Row>(query, { params });
-  return result.data ?? [];
+const campaignAudienceQuery = `
+MATCH (:Campaign {id: $campaignId})<-[:IN_CAMPAIGN]-(:Draft)-[:MAKES_PROMISE]->(promise:Promise)-[:ABOUT]->(:Feature {id: $featureId})
+MATCH (promise)-[:TARGETS]->(audience:Audience {id: $audienceId})
+WHERE coalesce(promise.reviewed, false) = true
+RETURN DISTINCT audience.id AS audienceId, audience.name AS audienceName
+LIMIT 1`;
+
+async function queryRows(
+  graph: Graph,
+  query: string,
+  params: Record<string, string>,
+  columns: string[],
+): Promise<Row[]> {
+  const result = await graph.query<Record<string, unknown>>(query, { params });
+  return ((result.data ?? []) as unknown[]).map((row) => {
+    if (Array.isArray(row)) return row;
+    if (typeof row !== 'object' || row === null) return [];
+    return columns.map((column) => (row as Record<string, unknown>)[column]);
+  });
 }
 
 function asString(value: unknown): string {
@@ -60,6 +133,11 @@ function asString(value: unknown): string {
 
 function asBoolean(value: unknown): boolean {
   return value === true || value === 1 || value === 'true' || value === '1';
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function asStringArray(value: unknown): string[] {
@@ -133,11 +211,56 @@ function hasFreshReviewedSource(sources: EvidenceItem[], checkedAt: Date): boole
   });
 }
 
+function evidenceForFacts(...groups: Array<Array<{ evidence: EvidenceItem[] }>>): EvidenceItem[] {
+  const evidenceItems = groups.flatMap((group) => group.flatMap((fact) => fact.evidence))
+    .filter((item) => item.id.trim());
+  return [...new Map(evidenceItems.map((item) => [item.id, item])).values()];
+}
+
+function fingerprintFinding(
+  finding: DraftFinding,
+  row: Row,
+  facts: FeatureFacts | undefined,
+  environment: string,
+  draftRevision: number,
+  factRevision: number,
+): string {
+  const normalizeFacts = <T extends { id: string; evidence: EvidenceItem[] }>(items: T[]) => items
+    .map((fact) => ({
+      ...fact,
+      evidence: [...fact.evidence].sort((left, right) => left.id.localeCompare(right.id)),
+    }))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const basis = {
+    draftId: finding.draftId,
+    draftRevision,
+    draftText: finding.text,
+    promiseId: asString(row[5]),
+    promiseText: finding.promiseText,
+    featureId: asString(row[8]),
+    audienceId: asString(row[10]),
+    environment,
+    factRevision,
+    facts: facts ? {
+      deployments: normalizeFacts(facts.deployments),
+      rollouts: normalizeFacts(facts.rollouts),
+      tests: normalizeFacts(facts.tests),
+    } : null,
+  };
+  return createHash('sha256').update(JSON.stringify(basis)).digest('hex');
+}
+
 async function getFeatureFacts(graph: Graph, featureId: string): Promise<FeatureFacts> {
   const [deploymentRows, rolloutRows, testRows] = await Promise.all([
-    queryRows(graph, deploymentQuery, { featureId }),
-    queryRows(graph, rolloutQuery, { featureId }),
-    queryRows(graph, testQuery, { featureId }),
+    queryRows(graph, deploymentQuery, { featureId }, [
+      'factId', 'revision', 'environment', 'includesFeature', 'reviewed', 'sourceId', 'sourceLabel', 'sourceText', 'observedAt', 'reviewedBy',
+    ]),
+    queryRows(graph, rolloutQuery, { featureId }, [
+      'factId', 'factName', 'environment', 'reviewed', 'includedIds', 'excludedIds', 'sourceId', 'sourceLabel', 'sourceText', 'observedAt', 'reviewedBy',
+    ]),
+    queryRows(graph, testQuery, { featureId }, [
+      'factId', 'revision', 'environment', 'passed', 'reviewed', 'sourceId', 'sourceLabel', 'sourceText', 'observedAt', 'reviewedBy',
+    ]),
   ]);
 
   const deployments = mergeFactSources(deploymentRows.map((row): DeploymentFact => ({
@@ -177,32 +300,40 @@ function classifyPromise(
   facts: FeatureFacts,
   checkedAt: Date,
 ): Pick<DraftFinding, 'status' | 'reason' | 'evidence'> {
-  const allEvidence = [
-    ...facts.deployments.flatMap((fact) => fact.evidence),
-    ...facts.rollouts.flatMap((fact) => fact.evidence),
-    ...facts.tests.flatMap((fact) => fact.evidence),
-  ].filter((item) => item.id);
-  const evidenceItems = [...new Map(allEvidence.map((item) => [item.id, item])).values()];
-
   if (!promiseReviewed) {
-    return { status: 'Unknown', reason: 'This promise has not been reviewed by a person.', evidence: evidenceItems };
+    return { status: 'Unknown', reason: 'This promise has not been reviewed by a person.', evidence: [] };
   }
 
-  if ([...facts.deployments, ...facts.rollouts, ...facts.tests]
-    .some((fact) => fact.environment === environment && fact.conflicting)) {
-    return { status: 'Unknown', reason: 'Current graph facts with the same ID disagree about their data or source.', evidence: evidenceItems };
+  const unscopedRollouts = facts.rollouts.filter((fact) => !fact.environment.trim());
+  if (unscopedRollouts.length) {
+    return {
+      status: 'Unknown',
+      reason: 'A current rollout has no environment, so it cannot be safely scoped to this campaign.',
+      evidence: evidenceForFacts(unscopedRollouts),
+    };
   }
 
-  const currentRollouts = facts.rollouts.filter((fact) => fact.reviewed && fact.environment === environment);
-  const unreviewedCurrentRollout = facts.rollouts.some((fact) => !fact.reviewed && fact.environment === environment);
+  const currentRollouts = facts.rollouts.filter((fact) => fact.environment === environment);
+  const currentDeployments = facts.deployments.filter((fact) => fact.environment === environment);
+  const currentTests = facts.tests.filter((fact) => fact.environment === environment);
+  const conflictingFacts = [...currentDeployments, ...currentRollouts, ...currentTests].filter((fact) => fact.conflicting);
+  if (conflictingFacts.length) {
+    return {
+      status: 'Unknown',
+      reason: 'Current graph facts with the same ID disagree about their data or source.',
+      evidence: evidenceForFacts(conflictingFacts),
+    };
+  }
+
+  const unreviewedCurrentRollout = currentRollouts.some((fact) => !fact.reviewed);
   if (unreviewedCurrentRollout) {
-    return { status: 'Unknown', reason: 'A current rollout record has not been reviewed by a person.', evidence: evidenceItems };
+    return { status: 'Unknown', reason: 'A current rollout record has not been reviewed by a person.', evidence: evidenceForFacts(currentRollouts) };
   }
   if (currentRollouts.some((fact) => !fact.id.trim())) {
-    return { status: 'Unknown', reason: 'A current rollout is missing its stable graph ID.', evidence: evidenceItems };
+    return { status: 'Unknown', reason: 'A current rollout is missing its stable graph ID.', evidence: evidenceForFacts(currentRollouts) };
   }
   if (currentRollouts.some((fact) => !hasFreshReviewedSource(fact.evidence, checkedAt))) {
-    return { status: 'Unknown', reason: 'A current rollout is missing a fresh source reviewed by a person.', evidence: evidenceItems };
+    return { status: 'Unknown', reason: 'A current rollout is missing a fresh source reviewed by a person.', evidence: evidenceForFacts(currentRollouts) };
   }
   const rolloutVerdicts = currentRollouts.map((fact) => {
     const included = fact.includedIds.includes(audienceId);
@@ -213,75 +344,123 @@ function classifyPromise(
   const hasConflictingRollouts = rolloutVerdicts.includes('conflicting') || new Set(rolloutVerdicts).size > 1;
 
   if (hasConflictingRollouts) {
-    return { status: 'Unknown', reason: 'Current reviewed rollout records disagree about this audience.', evidence: evidenceItems };
+    return { status: 'Unknown', reason: 'Current reviewed rollout records disagree about this audience.', evidence: evidenceForFacts(currentRollouts) };
   }
 
-  if (rolloutVerdicts.includes('excluded')) {
-    return { status: 'Contradicted', reason: `The current rollout excludes ${audienceName}.`, evidence: evidenceItems };
+  const hasKnownExclusion = rolloutVerdicts.includes('excluded');
+  const exclusionReason = `The current rollout excludes ${audienceName}.`;
+  const finish = (
+    status: 'Supported' | 'Contradicted' | 'Unknown',
+    reason: string,
+    ...usedFacts: Array<Array<{ evidence: EvidenceItem[] }>>
+  ): Pick<DraftFinding, 'status' | 'reason' | 'evidence'> => {
+    if (hasKnownExclusion) {
+      const details = status === 'Unknown' ? ` Additional gap: ${reason}` : '';
+      return {
+        status: 'Contradicted',
+        reason: `${exclusionReason}${details}`,
+        evidence: evidenceForFacts(currentRollouts),
+      };
+    }
+    return { status, reason, evidence: evidenceForFacts(currentRollouts, ...usedFacts) };
+  };
+
+  const unscopedReadinessFacts = [...facts.deployments, ...facts.tests].filter((fact) => !fact.environment.trim());
+  if (unscopedReadinessFacts.length) {
+    return finish('Unknown', 'A current deployment or test has no environment and cannot be safely matched to this campaign.', unscopedReadinessFacts);
   }
 
-  const currentDeployments = facts.deployments.filter((fact) => fact.environment === environment);
   if (currentDeployments.some((fact) => !fact.reviewed)) {
-    return { status: 'Unknown', reason: 'A current deployment record has not been reviewed by a person.', evidence: evidenceItems };
+    return finish('Unknown', 'A current deployment record has not been reviewed by a person.', currentDeployments);
   }
   if (currentDeployments.some((fact) => !hasFreshReviewedSource(fact.evidence, checkedAt))) {
-    return { status: 'Unknown', reason: 'A current deployment is missing a fresh source reviewed by a person.', evidence: evidenceItems };
+    return finish('Unknown', 'A current deployment is missing a fresh source reviewed by a person.', currentDeployments);
   }
   if (currentDeployments.some((fact) => !fact.id.trim() || !fact.revision.trim())
     || new Set(currentDeployments.map((fact) => fact.revision)).size > 1
     || new Set(currentDeployments.map((fact) => fact.includesFeature)).size > 1) {
-    return { status: 'Unknown', reason: 'Current deployment records disagree about the running revision or whether this feature is present.', evidence: evidenceItems };
+    return finish('Unknown', 'Current deployment records disagree about the running revision or whether this feature is present.', currentDeployments);
   }
   const deployments = currentDeployments.filter((fact) => fact.includesFeature);
   const includesAudience = rolloutVerdicts.length > 0 && rolloutVerdicts.every((verdict) => verdict === 'included');
 
   if (!deployments.length) {
-    return { status: 'Unknown', reason: `No current, reviewed ${environment} deployment includes this feature.`, evidence: evidenceItems };
+    return finish('Unknown', `No current, reviewed ${environment} deployment includes this feature.`, currentDeployments);
   }
-  if (!includesAudience) {
-    return { status: 'Unknown', reason: `No current reviewed rollout confirms access for ${audienceName}.`, evidence: evidenceItems };
+  if (!includesAudience && !hasKnownExclusion) {
+    return finish('Unknown', `No current reviewed rollout confirms access for ${audienceName}.`, currentRollouts, currentDeployments);
   }
 
-  const relevantTests = facts.tests.filter((fact) =>
-    fact.reviewed && fact.environment === environment && deployments.some((deployment) => deployment.revision === fact.revision),
-  );
-  if (facts.tests.some((fact) => !fact.reviewed && fact.environment === environment && deployments.some((deployment) => deployment.revision === fact.revision))) {
-    return { status: 'Unknown', reason: 'A current test record for the running revision has not been reviewed by a person.', evidence: evidenceItems };
+  const relevantTests = currentTests.filter((fact) => deployments.some((deployment) => deployment.revision === fact.revision));
+  if (relevantTests.some((fact) => !fact.reviewed)) {
+    return finish('Unknown', 'A current test record for the running revision has not been reviewed by a person.', currentDeployments, relevantTests);
   }
   if (relevantTests.some((fact) => !hasFreshReviewedSource(fact.evidence, checkedAt))) {
-    return { status: 'Unknown', reason: 'A current test is missing a fresh source reviewed by a person.', evidence: evidenceItems };
+    return finish('Unknown', 'A current test is missing a fresh source reviewed by a person.', currentDeployments, relevantTests);
   }
   if (relevantTests.some((fact) => !fact.id.trim())) {
-    return { status: 'Unknown', reason: 'A current test record is missing its stable graph ID.', evidence: evidenceItems };
+    return finish('Unknown', 'A current test record is missing its stable graph ID.', currentDeployments, relevantTests);
   }
   if (new Set(relevantTests.map((fact) => fact.passed)).size > 1) {
-    return { status: 'Unknown', reason: 'Current reviewed test records disagree for the running revision.', evidence: evidenceItems };
+    return finish('Unknown', 'Current reviewed test records disagree for the running revision.', currentDeployments, relevantTests);
   }
   const passingTest = relevantTests.some((fact) => fact.passed);
   if (!passingTest) {
-    return { status: 'Unknown', reason: `No current passing ${environment} test is recorded for the running revision.`, evidence: evidenceItems };
+    return finish('Unknown', `No current passing ${environment} test is recorded for the running revision.`, currentDeployments, relevantTests);
   }
 
-  return { status: 'Supported', reason: `Reviewed records confirm access for ${audienceName} and a passing test on the running revision.`, evidence: evidenceItems };
+  return hasKnownExclusion
+    ? finish('Contradicted', exclusionReason, currentDeployments, relevantTests)
+    : finish('Supported', `Reviewed records confirm access for ${audienceName} and a passing test on the running revision.`, currentRollouts, currentDeployments, relevantTests);
 }
 
-export async function checkCampaign(graph: Graph, campaignId: string, checkedAt = new Date()): Promise<CampaignReview> {
-  const [campaignRows, draftRows] = await Promise.all([
-    queryRows(graph, campaignIdQuery, { campaignId }),
-    queryRows(graph, draftQuery, { campaignId }),
+async function runCampaignCheck(graph: Graph, campaignId: string, checkedAt: Date): Promise<CampaignReview> {
+  const [campaignRows, draftIdentityRows, draftRows] = await Promise.all([
+    queryRows(graph, campaignIdQuery, { campaignId }, [
+      'campaignId', 'campaignName', 'campaignCompanyName', 'campaignIndustry', 'campaignRegion',
+      'campaignOwnerTeam', 'campaignReleaseWindow', 'campaignAudience', 'campaignEnvironment',
+    ]),
+    queryRows(graph, draftIdentityQuery, { campaignId }, ['draftId', 'draftCount']),
+    queryRows(graph, draftQuery, { campaignId }, [
+      'draftId', 'draftTitle', 'draftKind', 'draftText', 'draftStatus', 'promiseId', 'promiseText', 'promiseReviewed',
+      'featureId', 'featureName', 'audienceId', 'audienceName', 'reusedDraftId', 'reusedDraftTitle',
+      'hasDirectPromise', 'hasReusedPromise', 'sortPosition', 'draftRevision', 'factRevision',
+    ]),
   ]);
   const campaignRow = campaignRows[0];
   if (!campaignRow) throw new Error('Campaign not found in FalkorDB.');
 
+  if (draftIdentityRows.length > MAX_CAMPAIGN_DRAFTS) {
+    throw new CampaignLimitError(`This campaign has more than ${MAX_CAMPAIGN_DRAFTS} drafts. Split it into smaller campaigns before checking.`);
+  }
+  if (draftIdentityRows.some((row) => !asString(row[0]).trim() || asNumber(row[1]) > 1)) {
+    throw new CampaignDataIntegrityError();
+  }
+  if (draftRows.length > MAX_CAMPAIGN_PROMISE_PATHS) {
+    throw new CampaignLimitError(`This campaign has more than ${MAX_CAMPAIGN_PROMISE_PATHS} promise paths. Resolve duplicate links before checking.`);
+  }
+
   const campaign = {
     id: asString(campaignRow[0]),
     name: asString(campaignRow[1]),
-    audience: asString(campaignRow[2]),
-    environment: asString(campaignRow[3]),
+    companyName: asString(campaignRow[2]),
+    industry: asString(campaignRow[3]),
+    region: asString(campaignRow[4]),
+    ownerTeam: asString(campaignRow[5]),
+    releaseWindow: asString(campaignRow[6]),
+    audience: asString(campaignRow[7]),
+    environment: asString(campaignRow[8]),
   };
 
   const featureIds = [...new Set(draftRows.map((row) => asString(row[8])).filter(Boolean))];
-  const factEntries = await Promise.all(featureIds.map(async (id) => [id, await getFeatureFacts(graph, id)] as const));
+  if (featureIds.length > MAX_CAMPAIGN_FEATURES) {
+    throw new CampaignLimitError(`This campaign references more than ${MAX_CAMPAIGN_FEATURES} features. Split it into smaller campaigns before checking.`);
+  }
+  const factEntries: Array<readonly [string, FeatureFacts]> = [];
+  for (let index = 0; index < featureIds.length; index += FEATURE_FACT_QUERY_CONCURRENCY) {
+    const batch = featureIds.slice(index, index + FEATURE_FACT_QUERY_CONCURRENCY);
+    factEntries.push(...await Promise.all(batch.map(async (id) => [id, await getFeatureFacts(graph, id)] as const)));
+  }
   const factsByFeature = new Map(factEntries);
 
   const rowsByDraft = new Map<string, Row[]>();
@@ -348,6 +527,27 @@ export async function checkCampaign(graph: Graph, campaignId: string, checkedAt 
     };
   });
 
+  for (const finding of findings) {
+    const row = rowsByDraft.get(finding.draftId)?.[0];
+    if (!row) continue;
+    const featureId = asString(row[8]);
+    const draftRevision = asNumber(row[17]);
+    const factRevision = asNumber(row[18]);
+    finding.draftState = asString(row[4]);
+    finding.draftRevision = draftRevision;
+    finding.factRevision = factRevision;
+    finding.featureId = featureId || null;
+    finding.audienceId = asString(row[10]) || null;
+    finding.basisFingerprint = fingerprintFinding(
+      finding,
+      row,
+      featureId ? factsByFeature.get(featureId) : undefined,
+      campaign.environment,
+      draftRevision,
+      factRevision,
+    );
+  }
+
   const proactiveItems = findings
     .filter((finding) => finding.needsReview)
     .map((finding) => ({
@@ -357,5 +557,73 @@ export async function checkCampaign(graph: Graph, campaignId: string, checkedAt 
       status: finding.status as 'Contradicted' | 'Unknown',
     }));
 
+  const latestDraftRows = await queryRows(graph, draftQuery, { campaignId }, [
+    'draftId', 'draftTitle', 'draftKind', 'draftText', 'draftStatus', 'promiseId', 'promiseText', 'promiseReviewed',
+    'featureId', 'featureName', 'audienceId', 'audienceName', 'reusedDraftId', 'reusedDraftTitle',
+    'hasDirectPromise', 'hasReusedPromise', 'sortPosition', 'draftRevision', 'factRevision',
+  ]);
+  if (draftSnapshot(latestDraftRows) !== draftSnapshot(draftRows)) {
+    throw new CampaignChangedDuringCheckError();
+  }
+
   return { campaign, checkedAt: checkedAt.toISOString(), findings, proactiveItems };
+}
+
+export async function checkCampaign(graph: Graph, campaignId: string, checkedAt = new Date()): Promise<CampaignReview> {
+  if (activeCampaignChecks >= MAX_CONCURRENT_CAMPAIGN_CHECKS) throw new CampaignCheckCapacityError();
+  activeCampaignChecks += 1;
+  try {
+    return await runCampaignCheck(graph, campaignId, checkedAt);
+  } finally {
+    activeCampaignChecks -= 1;
+  }
+}
+
+export interface CampaignAudienceAssessment {
+  audienceId: string;
+  audienceName: string;
+  status: DraftFinding['status'];
+  reason: string;
+  evidence: EvidenceItem[];
+}
+
+export async function assessDraftForAudience(
+  graph: Graph,
+  review: CampaignReview,
+  finding: DraftFinding,
+  audienceId: string,
+  checkedAt = new Date(review.checkedAt),
+): Promise<CampaignAudienceAssessment> {
+  if (!finding.featureId || !finding.promiseText) {
+    return { audienceId, audienceName: '', status: 'Unknown', reason: 'This draft has no reviewed feature promise to assess.', evidence: [] };
+  }
+
+  const audienceRows = await queryRows(graph, campaignAudienceQuery, {
+    campaignId: review.campaign.id,
+    featureId: finding.featureId,
+    audienceId,
+  }, ['audienceId', 'audienceName']);
+  const audienceRow = audienceRows[0];
+  const linkedAudienceId = asString(audienceRow?.[0]);
+  const audienceName = asString(audienceRow?.[1]);
+  if (linkedAudienceId !== audienceId || !audienceName.trim()) {
+    return {
+      audienceId,
+      audienceName,
+      status: 'Unknown',
+      reason: 'This audience is not linked to a reviewed promise for the campaign feature.',
+      evidence: [],
+    };
+  }
+
+  const facts = await getFeatureFacts(graph, finding.featureId);
+  const result = classifyPromise(
+    true,
+    audienceId,
+    audienceName,
+    review.campaign.environment,
+    facts,
+    checkedAt,
+  );
+  return { audienceId, audienceName, ...result };
 }

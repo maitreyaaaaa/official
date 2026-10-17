@@ -4,20 +4,25 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "tsx watch src/server/index.ts",
-    "test": "tsx --test src/server/checks/campaign.test.ts",
+    "test": "tsx --test marketing-site/frontend/routes.test.ts src/server/index.test.ts src/server/config/guards.test.ts src/server/config/api-rate-limit.test.ts src/server/checks/campaign.test.ts src/server/activity/activity.test.ts src/server/review/review.test.ts src/server/graph/fixture.test.ts src/server/agent/assistant.test.ts src/server/agent/mcp.test.ts",
     "build": "tsc --noEmit && vite build",
-    "start": "tsx src/server/index.ts"
+    "start": "tsx src/server/index.ts",
+    "mcp": "tsx src/server/agent/mcp.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/server": "^2.3.1",
+    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "falkordb": "^6.8.0",
-    "dotenv": "^16.6.1",
+    "lucide-react": "^1.57.0",
+    "motion": "^14.2.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
