@@ -4,6 +4,8 @@ import type { ActivityEntry, CampaignReview } from '../../shared/contracts.js';
 
 const activityQuery = `
 MATCH (event:ActivityEvent {campaignId: $campaignId})
+MATCH (campaign:Campaign {id: $campaignId})
+WHERE event.occurredAt >= coalesce(campaign.demoResetAt, '')
 RETURN event.id AS id, event.campaignId AS campaignId, event.kind AS kind,
        event.occurredAt AS occurredAt, event.title AS title, event.detail AS detail,
        event.runId AS runId

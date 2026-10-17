@@ -116,7 +116,7 @@ test('fixture readiness is false until the current version marker exists', async
     },
   } as unknown as Graph;
   assert.equal(await isFixtureReady(graph), false);
-  assert.equal(requestedVersion, 'csv-launch-v7');
+  assert.equal(requestedVersion, 'csv-launch-v9');
 });
 
 test('fixture version upgrade reseeds a previously completed v4 campaign', async () => {
@@ -141,7 +141,7 @@ test('fixture version upgrade reseeds a previously completed v4 campaign', async
 
   await seedFixtureIfMissing(graph);
 
-  assert.equal(markerVersion, 'csv-launch-v7');
+  assert.equal(markerVersion, 'csv-launch-v9');
   assert.equal(completionWrites, 1);
 });
 

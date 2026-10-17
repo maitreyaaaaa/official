@@ -1,12 +1,17 @@
 # official
 
-**official** is the standalone Track 1 application for the Graph Hacks track **Agents That Act on Connected Data**. It checks whether draft launch promises match reviewed deployment, rollout, and test evidence for the audience named by each promise.
+**official** is one connected Graph Hacks application spanning **Agents That Act on Connected Data**, **Agent Memory and Coordination**, and **Company Brain**. It checks launch claims against product evidence, lets a fresh writer resume an approved brief, and shows who can carry the launch review with linked company notes.
 
 FalkorDB is part of the decision path: graph relationships connect drafts to promises, audiences, product facts, and evidence sources. The current slice runs on request, returns a source trail, persists local Activity history, and supports a visible stale-checked approval flow for internal draft actions. Optional assistant and MCP tools use the same bounded graph operations.
 
-The workspace takes product interaction cues from [AirJelly](https://www.airjelly.ai/en), while focusing on launch claims. Its local account, Alder & Finch Commerce, is a fictional multi-brand retailer created for the demo. The campaign includes a spring reporting release, production revision R17, a tester-only rollout, four channel drafts, and reviewed deployment, rollout, and test records. These records are synthetic and do not describe a real business. A finding is not an approval to publish. Demo scenario controls change only the local synthetic graph. Optional AI assistance uses a constrained OpenAI Responses API loop over the same named tools exposed through MCP. When proposal previews are enabled, the assistant can prepare an unsaved preview only after an explicit request; the user must choose to save it as a pending proposal, and a separate reviewer must approve it before application.
+The shared Alder & Finch Commerce workspace is fictional. One FalkorDB graph connects the campaign, feature facts, planner handoff, reviewed instructions, people, processes, dated company notes, decisions, and source records. All records are synthetic. The right-side workspace chat answers bounded questions from the graph without a model call; its collapsed advanced section offers optional OpenAI campaign assistance only when configured and disclosed. No draft is sent or published. See [Connected workspace](docs/CONNECTED-WORKSPACE.md) for the integrated graph paths and demo walkthrough.
 
 ## Current scope
+
+- **Track 1:** The existing campaign checker and approval-first internal proposal queue remain the evidence core.
+- **Track 2:** A planner handoff at brief revision 1, a later approved tone, and a dated editorial review are connected to a fresh writer session. The server reads the current campaign check before preparing copy. The draft records brief and fact revisions and cannot be approved if either changed.
+- **Track 3:** The Company Brain sidebar opens searchable, categorized notes with full text, backlinks, source records, and an internal handover view. An unavailable-owner scenario reads the reviewed roster and backup link. A pending backup proposal does not count as coverage; approval changes the answer while an unrelated QA process stays unchanged.
+- A right-side chat answers questions about draft status, memory, company notes, owners, and workflow activity from current graph reads with clickable note citations. This is structured, deterministic assistance, not a general language model.
 
 - A fixed, parameterized FalkorDB checker returns **Supported**, **Contradicted**, **Unknown**, or **Not checked** for linked draft promises.
 - Missing, stale, unreviewed, or conflicting fact sources fail closed to **Unknown**. A reviewed current rollout exclusion can produce **Contradicted** for its named audience.
@@ -74,7 +79,7 @@ Open `http://127.0.0.1:3001` for the marketing site. The product demo lives at `
 
 - `http://127.0.0.1:3001/` — public-facing marketing home page.
 - `/review`, `/method`, and `/guardrails` — the three supporting marketing pages.
-- `/app` — the working campaign review application and its existing backend APIs.
+- `/app` — the integrated campaign review, agent memory, Company Brain, and workspace chat.
 - Unknown browser paths show a branded 404 page; unknown `/api` routes return JSON 404 responses.
 - API requests are limited to 120 per minute per local client address. The server remains loopback-bound and development-only; this limit is a local safeguard, not production access control.
 

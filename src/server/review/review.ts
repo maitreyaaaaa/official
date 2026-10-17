@@ -35,6 +35,7 @@ MATCH (feature:Feature {id: $featureId})
 MATCH (targetAudience:Audience {id: $targetAudienceId})
 MATCH (run:ReviewRun {id: $runId, campaignId: $campaignId})
 OPTIONAL MATCH (draft)-[:HAS_PROPOSAL]->(existing:ActionProposal {status: 'pending'})
+WHERE existing.createdAt >= coalesce(campaign.demoResetAt, '')
 WITH campaign, draft, feature, targetAudience, run, collect(existing) AS existingProposals
 WHERE size(existingProposals) = 0
   AND coalesce(draft.status, 'draft') <> 'paused'
@@ -64,18 +65,23 @@ proposal.id AS id, proposal.campaignId AS campaignId, proposal.draftId AS draftI
 
 const listPendingProposalsQuery = `
 MATCH (proposal:ActionProposal {campaignId: $campaignId, status: 'pending'})
+MATCH (campaign:Campaign {id: $campaignId})
+WHERE proposal.createdAt >= coalesce(campaign.demoResetAt, '')
 RETURN ${proposalColumns}
 ORDER BY createdAt DESC`;
 
 const listRecentResolvedProposalsQuery = `
 MATCH (proposal:ActionProposal {campaignId: $campaignId})
-WHERE proposal.status <> 'pending'
+MATCH (campaign:Campaign {id: $campaignId})
+WHERE proposal.status <> 'pending' AND proposal.createdAt >= coalesce(campaign.demoResetAt, '')
 RETURN ${proposalColumns}
 ORDER BY createdAt DESC
 LIMIT 20`;
 
 const findProposalQuery = `
 MATCH (proposal:ActionProposal {id: $proposalId, campaignId: $campaignId})
+MATCH (campaign:Campaign {id: $campaignId})
+WHERE proposal.createdAt >= coalesce(campaign.demoResetAt, '')
 RETURN proposal.id AS id, proposal.campaignId AS campaignId, proposal.draftId AS draftId,
        proposal.featureId AS featureId, proposal.targetAudienceId AS targetAudienceId,
        proposal.action AS action, proposal.proposedText AS proposedText,

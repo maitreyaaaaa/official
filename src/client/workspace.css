@@ -193,17 +193,22 @@
 .app-shell .reviewer-guide-intro h2 { margin: 0 0 10px; color: #253027; font: 500 clamp(26px, 3vw, 36px)/1.12 Georgia, 'Times New Roman', serif; }
 .app-shell .reviewer-guide-intro h2 em { color: #557a5c; font-weight: 400; }
 .app-shell .reviewer-guide-intro p { margin: 0; color: #5e6c60; font-size: 14px; line-height: 1.6; }
-.app-shell .reviewer-guide-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.app-shell .reviewer-guide-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
 .app-shell .reviewer-guide-step { display: grid; min-height: 174px; grid-template-columns: 35px minmax(0, 1fr); align-content: start; gap: 0 12px; padding: 18px; border: 1px solid #e5eae2; border-radius: 16px; background: #fff; }
 .app-shell .guide-step-number { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: #edf4eb; color: #456d4d; font-size: 10px; font-weight: 750; }
 .app-shell .reviewer-guide-step h3 { margin: 2px 0 6px; color: #2d382e; font-size: 14px; font-weight: 700; }
 .app-shell .reviewer-guide-step p { margin: 0; color: #667267; font-size: 12px; line-height: 1.55; }
 .app-shell .reviewer-guide-step p strong { color: #3e5943; }
-.app-shell .guide-link { display: inline-flex; grid-column: 2; align-items: center; justify-self: start; gap: 8px; margin-top: 15px; padding: 0; border: 0; background: transparent; color: #3f7048; font-size: 12px; font-weight: 700; cursor: pointer; }
+.app-shell .guide-link { display: inline-flex; grid-column: 2; align-items: center; justify-self: start; gap: 8px; margin-top: 15px; padding: 0; border: 0; background: transparent; color: #3f7048; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.app-shell .guide-step-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 0 18px; }
 .app-shell .guide-link:hover:not(:disabled) { color: #294d32; text-decoration: underline; text-underline-offset: 3px; }
 .app-shell .guide-link:disabled { color: #98a198; cursor: not-allowed; }
 .app-shell .guide-action { grid-column: 2; justify-self: start; min-height: 38px; margin-top: 13px; padding-inline: 12px; font-size: 11px; }
 .app-shell .reviewer-guide-note { margin: 15px 0 0; color: #798379; font-size: 10px; line-height: 1.5; }
+.app-shell .reviewer-guide-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.app-shell .reviewer-guide-footer .reviewer-guide-note { max-width: 680px; }
+.app-shell .reviewer-guide-footer .text-button { flex: 0 0 auto; font-size: 11px; }
+@media (max-width: 680px) { .app-shell .reviewer-guide-footer { align-items: flex-start; flex-direction: column; } }
 
 .app-shell .connection-alert,
 .app-shell .scenario-alert {

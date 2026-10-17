@@ -553,7 +553,7 @@ test('fixture seed refreshes source timestamps and clears the prior S4 rollout',
 
   const afterSeed = Date.now();
   assert.equal(resetRolloutId, 'rollout-all-accounts');
-  assert.equal(markerVersion, 'csv-launch-v7');
+  assert.equal(markerVersion, 'csv-launch-v9');
   assert.equal(seededFeatureRevision, undefined);
   assert.equal(factsRevisionIncremented, true);
   assert.equal(revisionAndMarkerAreAtomic, true);

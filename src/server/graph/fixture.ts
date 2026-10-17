@@ -22,11 +22,27 @@ interface FixtureData {
   edges: FixtureEdge[];
 }
 
+interface ConnectedFixtureData {
+  company: Record<string, string>;
+  people: Array<Record<string, string>>;
+  project: Record<string, string>;
+  processes: Array<Record<string, string | number | boolean>>;
+  decision: Record<string, string>;
+  notes: Array<Record<string, string>>;
+  noteLinks: Array<[string, string]>;
+  sourceLinks: Array<[string, string]>;
+  instructions: Array<Record<string, string | number>>;
+  task: Record<string, string>;
+  handoff: Record<string, string | number>;
+  episode: Record<string, string>;
+}
+
 type FixtureQueryParam = string | number | boolean | string[] | Array<Record<string, string | number | boolean>>;
 
 const fixturePath = fileURLToPath(new URL('../../../data/fixtures/csv-launch.json', import.meta.url));
-const allowedLabels = ['Campaign', 'Draft', 'Promise', 'Feature', 'Audience', 'Deployment', 'Rollout', 'Test', 'Source'] as const;
-const fixtureVersion = 'csv-launch-v7';
+const connectedFixturePath = fileURLToPath(new URL('../../../data/fixtures/connected-workspace.json', import.meta.url));
+const allowedLabels = ['Campaign', 'Draft', 'Promise', 'Feature', 'Audience', 'Deployment', 'Rollout', 'Test', 'Source', 'Company', 'Person', 'Project', 'Process', 'Decision', 'KnowledgeNote', 'InstructionVersion', 'Task', 'Handoff', 'ReviewEpisode'] as const;
+const fixtureVersion = 'csv-launch-v9';
 let seedInProgress: Promise<void> | undefined;
 const fixtureLockWaitMs = FIXTURE_SEED_LOCK_TTL_MS * 2 + 5_000;
 
@@ -42,10 +58,69 @@ const edgeQueries: Record<string, { from: string; to: string }> = {
   INCLUDES: { from: 'Rollout', to: 'Audience' },
   EXCLUDES: { from: 'Rollout', to: 'Audience' },
   HAS_SOURCE: { from: 'Deployment|Rollout|Test', to: 'Source' },
+  HAS_PROJECT: { from: 'Company', to: 'Project' },
+  RUNS_CAMPAIGN: { from: 'Project', to: 'Campaign' },
+  HAS_PROCESS: { from: 'Project', to: 'Process' },
+  PRIMARY_OWNER: { from: 'Process', to: 'Person' },
+  BACKUP_OWNER: { from: 'Process', to: 'Person' },
+  USES_GUIDE: { from: 'Process', to: 'KnowledgeNote' },
+  FOLLOWS_DECISION: { from: 'Process', to: 'Decision' },
+  ROSTER_SOURCE: { from: 'Process', to: 'KnowledgeNote' },
+  LINKS_TO: { from: 'KnowledgeNote', to: 'KnowledgeNote' },
+  CITES_SOURCE: { from: 'KnowledgeNote', to: 'Source' },
+  CITES_DECISION: { from: 'KnowledgeNote', to: 'Decision' },
+  ABOUT_PROJECT: { from: 'KnowledgeNote', to: 'Project' },
+  HAS_INSTRUCTION: { from: 'Campaign', to: 'InstructionVersion' },
+  FOR_CAMPAIGN: { from: 'Task', to: 'Campaign' },
+  FOR_TASK: { from: 'Handoff', to: 'Task' },
+  INCLUDES_INSTRUCTION: { from: 'Handoff', to: 'InstructionVersion' },
+  RECORDED_EPISODE: { from: 'Campaign', to: 'ReviewEpisode' },
+  REVIEWS_DRAFT: { from: 'ReviewEpisode', to: 'Draft' },
+  SOURCE_NOTE: { from: 'ReviewEpisode', to: 'KnowledgeNote' },
 };
 
+function connectedGraphFixture(base: FixtureData, extra: ConnectedFixtureData): FixtureData {
+  const edges: FixtureEdge[] = [...base.edges];
+  const add = (type: string, from: string, to: string) => edges.push({ type, from, to });
+  add('HAS_PROJECT', extra.company.id, extra.project.id);
+  add('RUNS_CAMPAIGN', extra.project.id, 'campaign-csv-launch');
+  for (const process of extra.processes) {
+    add('HAS_PROCESS', extra.project.id, String(process.id));
+    add('PRIMARY_OWNER', String(process.id), String(process.primaryId));
+    if (process.backupId) add('BACKUP_OWNER', String(process.id), String(process.backupId));
+    add('USES_GUIDE', String(process.id), String(process.guideId));
+    add('FOLLOWS_DECISION', String(process.id), String(process.decisionId));
+  }
+  add('ROSTER_SOURCE', 'process-launch-evidence', 'note-roster');
+  for (const [from, to] of extra.noteLinks) add('LINKS_TO', from, to);
+  for (const [from, to] of extra.sourceLinks) add('CITES_SOURCE', from, to);
+  for (const note of extra.notes) add('ABOUT_PROJECT', String(note.id), extra.project.id);
+  for (const id of ['note-release-decision', 'note-launch-checklist', 'note-qa-guide']) add('CITES_DECISION', id, extra.decision.id);
+  for (const instruction of extra.instructions) add('HAS_INSTRUCTION', 'campaign-csv-launch', String(instruction.id));
+  add('FOR_CAMPAIGN', extra.task.id, 'campaign-csv-launch');
+  add('FOR_TASK', String(extra.handoff.id), extra.task.id);
+  add('INCLUDES_INSTRUCTION', String(extra.handoff.id), 'instruction-playful');
+  add('INCLUDES_INSTRUCTION', String(extra.handoff.id), 'instruction-benefit');
+  add('RECORDED_EPISODE', 'campaign-csv-launch', extra.episode.id);
+  add('REVIEWS_DRAFT', extra.episode.id, 'draft-email');
+  add('SOURCE_NOTE', extra.episode.id, 'note-editorial-review');
+  return {
+    nodes: {
+      ...base.nodes,
+      Campaign: base.nodes.Campaign ?? [],
+      Company: [extra.company], Person: extra.people, Project: [extra.project], Process: extra.processes,
+      Decision: [extra.decision], KnowledgeNote: extra.notes, InstructionVersion: extra.instructions,
+      Task: [extra.task], Handoff: [extra.handoff], ReviewEpisode: [extra.episode],
+    },
+    edges,
+  };
+}
+
 export async function seedFixture(graph: Graph, lease: FixtureSeedLease): Promise<void> {
-  const fixture = JSON.parse(await readFile(fixturePath, 'utf8')) as FixtureData;
+  const fixture = connectedGraphFixture(
+    JSON.parse(await readFile(fixturePath, 'utf8')) as FixtureData,
+    JSON.parse(await readFile(connectedFixturePath, 'utf8')) as ConnectedFixtureData,
+  );
   const observedAt = new Date().toISOString();
 
   await writeFixtureQuery(graph, lease,
@@ -58,8 +133,9 @@ export async function seedFixture(graph: Graph, lease: FixtureSeedLease): Promis
       Object.hasOwn(record, 'observedAt') ? { ...record, observedAt } : record
     ));
     if (!records.length) continue;
+    const mutable = label === 'Process' || label === 'InstructionVersion';
     await writeFixtureQuery(graph, lease,
-      `UNWIND $records AS record MERGE (node:${label} {id: record.id}) SET node += record`,
+      `UNWIND $records AS record MERGE (node:${label} {id: record.id}) ${mutable ? 'ON CREATE SET' : 'SET'} node += record${label === 'Campaign' ? ' SET node.briefRevision = coalesce(node.briefRevision, 1)' : ''}`,
       { records },
     );
   }

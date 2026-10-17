@@ -1,0 +1,40 @@
+# One connected official workspace
+
+The local `/app` now demonstrates all three Graph Hacks tracks in one fictional Alder & Finch launch. This is a synthetic reviewer demo, not a customer-data product. The existing campaign checker is the source of truth for product availability. Agent memory and Company Brain read the same FalkorDB graph.
+
+## Three paths through one graph
+
+| Track | Question | Graph path and decision |
+| --- | --- | --- |
+| Agents That Act on Connected Data | Can this draft claim CSV export for its audience? | `Draft → Promise → Feature → Deployment/Rollout/Test → Source`; reviewed current facts return Supported, Contradicted, Unknown, or Not checked. Internal edits require a separate proposal and human approval. |
+| Agent Memory and Coordination | Can a fresh writer continue an old planner handoff? | `Campaign → InstructionVersion`, `Handoff → Task → Campaign`, and `Campaign → ReviewEpisode`; the writer compares the old handoff with the current approved brief, runs the Track 1 check, then records a pending internal `WriterDraft`. Brief and feature-fact revisions fence approval. |
+| Company Brain | Who can continue launch evidence review if Maya is unavailable? | `Company → Project → Process → Person` for ownership, then `Process → KnowledgeNote → Source/Decision` for the handover. A pending backup does not count. An approved `BACKUP_OWNER` changes coverage. The unrelated QA process is a control. |
+
+Eight browsable company notes have full text, linked notes, backlinks, and direct source or decision records. The browser groups their original categories under Launch, Operations, and Company. The audience decision is explicitly dated; its historical tester-only wording must not be read as the live rollout after a demo scenario changes. The handover view marks the guide incomplete when the current rollout no longer matches the reviewed decision.
+
+The right chat checks graph records and the campaign checker on each question. It returns structured answers with clickable company-note citations. It does not call an LLM or take action. The optional Track 1 OpenAI assistant is in the collapsed Advanced campaign AI section of that same panel.
+
+## Local walkthrough
+
+1. Start the documented FalkorDB stack and `npm run dev`. Open `http://127.0.0.1:3001/app`. The app initializes fixture `csv-launch-v9` when seeding is enabled.
+2. Use the three-step guide on Launch review. First inspect the baseline claim and its source path: two Contradicted, one Supported, one Not checked. Changing rollout or test evidence changes only dependent findings. Campaign activity is lower on this same page.
+3. Open Agent memory. Inspect handoff revision 1, approve the calm tone if pending, then start a fresh writer. Its draft uses the current approved tone, reviewed opening, and live evidence result. The text stays pending until a person approves it internally. If rollout or test facts change, approval of that old draft returns 409 and the UI labels it historical.
+4. Open Company Brain. Search and open a note, follow backlinks, and inspect dated source records. Simulate Maya unavailable. Without a confirmed backup, the process is Uncovered. Propose Zara: coverage stays Uncovered. Approve: coverage becomes Covered by backup; Release QA remains covered by Ines. The internal handover names the guide, decision, and source links. Expanding the rollout makes the old guide incomplete until reviewed against that change.
+5. Ask the right chat about drafts, the writer handoff, ownership, or notes. A note citation opens its reader. The optional campaign AI controls are under Advanced campaign AI in the same panel.
+6. Use Reset fictional demo to replay. It restores the tester-only rollout and production test, sets the calm instruction back to pending, removes the launch backup link, and starts a new visible run for writer drafts, proposals, and activity. Earlier records remain in FalkorDB history; old writer drafts and proposals cannot be approved in the new run. The reset requires the same local fictional-demo write guard as other mutations.
+
+## Verified locally on 2026-10-17
+
+- The TypeScript/Vite build and 88 deterministic tests pass.
+- Live FalkorDB accepted the v9 fixture and returned eight notes, linked sources, versioned instructions, and process ownership. v8-to-v9 seeding preserved an approved tone, backup assignment, and existing writer history while updating the dated note copy.
+- The unavailable-owner result changed from Uncovered to Covered by backup only after assignment approval; the QA control did not change.
+- The writer produced tester-only, all-account, and no-availability-claim copy from three distinct live evidence states. The fact revision changed with rollout evidence. A stale draft approval returned 409; rejecting it remained possible.
+- Expanding rollout made the old guide incomplete; restoring baseline made it current again. Browser review confirmed Company Brain note navigation, clickable chat citations, the right panel, and the close/open sidebar control.
+- The simplified three-item navigation, three-step launch guide, grouped Brain filters, and single agent panel were checked in the local browser. Live replay restored the baseline; fresh approval, writer, and backup actions worked. A proposed backup did not change unavailable-owner coverage, while approval did. Reset hid prior activity and proposals from the current view, allowed a new proposal for the same draft, and rejected approval of an old writer draft with 409.
+
+## Current boundaries
+
+- The integrated version has been exercised locally. The earlier public Vercel deployment documented in [Implementation status](IMPLEMENTATION-STATUS.md) still represents the previous Track 1 build until this version is deployed and retested there.
+- There is no authenticated reviewer identity, customer ingestion, automatic crawling, background scheduling, external publishing, or real customer data. Fixed demo approvals record the fictional reviewer name in graph records; they do not authenticate that person.
+- Writer copy and workspace chat are deterministic, bounded demo behavior. The handover is an internal brief; it is not sent to anyone.
+- The fixture is one fictional company and launch, not a general multi-company knowledge system.

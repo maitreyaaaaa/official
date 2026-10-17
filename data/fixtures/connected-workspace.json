@@ -1,0 +1,44 @@
+{
+  "company": { "id": "company-alder-finch", "name": "Alder & Finch Commerce", "shortName": "Alder & Finch", "description": "Fictional multi-brand commerce team preparing the spring reporting release." },
+  "people": [
+    { "id": "person-maya", "name": "Maya Chen", "role": "Product marketing lead", "team": "Launch operations" },
+    { "id": "person-zara", "name": "Zara Patel", "role": "Product operations partner", "team": "Launch operations" },
+    { "id": "person-leo", "name": "Leo Brooks", "role": "Product engineer", "team": "Reporting" },
+    { "id": "person-ines", "name": "Ines Alvarez", "role": "Content editor", "team": "Launch operations" }
+  ],
+  "project": { "id": "project-spring-reporting", "name": "Spring reporting release", "team": "Launch operations", "summary": "Release CSV export to a controlled audience and prepare accurate customer communications." },
+  "processes": [
+    { "id": "process-launch-evidence", "name": "Launch evidence review", "summary": "Check each customer-facing promise against the current production revision, rollout audience, and test evidence.", "primaryId": "person-maya", "guideId": "note-launch-checklist", "decisionId": "decision-csv-audience", "rosterReviewed": true, "revision": 1 },
+    { "id": "process-release-qa", "name": "Release QA sign-off", "summary": "Confirm the reporting release test result before a customer-facing availability claim is approved.", "primaryId": "person-leo", "backupId": "person-ines", "guideId": "note-qa-guide", "decisionId": "decision-csv-audience", "rosterReviewed": true, "revision": 1 }
+  ],
+  "decision": { "id": "decision-csv-audience", "title": "CSV export audience for R17", "body": "At the October 16 review, revision R17 contained CSV export and the approved production rollout was limited to internal tester accounts. Customer-wide availability claims required a later reviewed rollout expansion and a current passing test. Check the live campaign review for current access.", "approvedBy": "Maya Chen", "reviewedAt": "2026-10-16T09:30:00.000Z" },
+  "notes": [
+    { "id": "note-company", "title": "Alder & Finch / launch workspace", "category": "Company", "summary": "Team, project, and source map for the spring reporting release.", "body": "Alder & Finch Commerce is a fictional multi-brand retailer. The Launch operations team prepares customer communications for the Spring reporting release. Reporting engineering verifies the production revision and test result. Every availability statement is checked against the audience actually included in the current rollout.", "reviewedBy": "Maya Chen", "reviewedAt": "2026-10-16T09:20:00.000Z" },
+    { "id": "note-release-decision", "title": "Decision / CSV export audience", "category": "Decisions", "summary": "At the October 16 review, R17 access was limited to internal testers.", "body": "At the October 16 review, the team approved internal tester access for CSV export in production revision R17. The release did not then support a claim that every account could use CSV export. A broader claim needs a new reviewed rollout record and a current passing production test. This is a dated decision; check the live campaign review for current access. Draft copy remains under human review.", "reviewedBy": "Maya Chen", "reviewedAt": "2026-10-16T09:30:00.000Z" },
+    { "id": "note-launch-checklist", "title": "Playbook / launch evidence review", "category": "Playbooks", "summary": "A short checklist for checking product claims and preparing a reviewer handover.", "body": "1. Identify the exact promise and named audience in each draft. 2. Confirm the running production revision and linked feature. 3. Read the current rollout audience and source, then the current test on that revision. 4. Mark unsupported or missing evidence for review. 5. Prepare an internal proposal; a person approves any draft change. If the review owner is unavailable, use a confirmed backup and this source-backed checklist.", "reviewedBy": "Maya Chen", "reviewedAt": "2026-10-16T10:00:00.000Z" },
+    { "id": "note-campaign-brief", "title": "Campaign / spring reporting brief", "category": "Campaigns", "summary": "Audience, customer benefit, and editorial opening for the launch campaign.", "body": "Audience: Alder & Finch customer accounts. Lead with one reader benefit: weekly reporting in one clear view. Avoid a feature list as the opening. The approved tone is stored as a versioned campaign instruction and must be checked before a writer resumes an older handoff. Product availability claims must be checked separately against rollout evidence.", "reviewedBy": "Ines Alvarez", "reviewedAt": "2026-10-16T10:15:00.000Z" },
+    { "id": "note-editorial-review", "title": "Review / first email opening", "category": "Reviews", "summary": "A reviewer rejected a feature-list opening and recorded why.", "body": "The first proposed email opened with a list of dashboards, exports, filters, and alerts. The editor rejected that opening because it did not give the reader one clear benefit. This review is a dated episode for this campaign. It is not a new company-wide writing rule.", "reviewedBy": "Ines Alvarez", "reviewedAt": "2026-10-16T11:00:00.000Z" },
+    { "id": "note-handoff", "title": "Handoff / planner to writer", "category": "Handoffs", "summary": "The original handoff saved brief revision 1; a new writer must check current instructions.", "body": "The planning agent prepared the launch email task under brief revision 1. It handed the task, initial tone, opening rule, and reviewed feedback to the writing agent. The handoff is a historical snapshot. A fresh writer session must compare it with approved current instructions before drafting.", "reviewedBy": "Maya Chen", "reviewedAt": "2026-10-16T11:20:00.000Z" },
+    { "id": "note-roster", "title": "Roster review / launch evidence", "category": "Ownership", "summary": "Reviewed baseline: Maya is primary; no backup was confirmed at revision 1.", "body": "At roster revision 1, Maya Chen was confirmed as primary owner of launch evidence review. The roster was reviewed as complete and recorded no approved backup. This is a historical baseline; use the live assignment graph for current coverage after a manager approves a backup.", "reviewedBy": "Maya Chen", "reviewedAt": "2026-10-16T11:30:00.000Z" },
+    { "id": "note-qa-guide", "title": "Playbook / release QA sign-off", "category": "Playbooks", "summary": "Engineering checks the R17 production test and reports any missing result.", "body": "Reporting engineering confirms that revision R17 is running and the CSV export smoke test passed. Leo Brooks is the primary owner and Ines Alvarez is the reviewed backup for this demo process. Missing or stale test evidence leaves claim review uncertain; the QA process does not approve marketing copy.", "reviewedBy": "Leo Brooks", "reviewedAt": "2026-10-16T11:45:00.000Z" }
+  ],
+  "noteLinks": [
+    ["note-company", "note-release-decision"], ["note-company", "note-campaign-brief"], ["note-company", "note-roster"],
+    ["note-release-decision", "note-launch-checklist"], ["note-release-decision", "note-campaign-brief"],
+    ["note-launch-checklist", "note-qa-guide"], ["note-campaign-brief", "note-editorial-review"],
+    ["note-campaign-brief", "note-handoff"], ["note-roster", "note-launch-checklist"]
+  ],
+  "sourceLinks": [
+    ["note-release-decision", "source-s2"], ["note-release-decision", "source-s1"],
+    ["note-launch-checklist", "source-s1"], ["note-launch-checklist", "source-s2"], ["note-launch-checklist", "source-s3"],
+    ["note-qa-guide", "source-s1"], ["note-qa-guide", "source-s3"]
+  ],
+  "instructions": [
+    { "id": "instruction-playful", "topic": "tone", "text": "Use a playful, energetic tone for the spring reporting email.", "status": "approved", "revision": 1, "approvedBy": "Maya Chen" },
+    { "id": "instruction-benefit", "topic": "opening", "text": "Open with one clear reader benefit; do not begin with a feature list.", "status": "approved", "revision": 1, "approvedBy": "Ines Alvarez" },
+    { "id": "instruction-calm", "topic": "tone", "text": "Use a calm, confident tone for the spring reporting email.", "status": "pending", "revision": 2, "approvedBy": "" }
+  ],
+  "task": { "id": "task-launch-email", "title": "Write the spring reporting launch email", "status": "received" },
+  "handoff": { "id": "handoff-launch-v1", "summary": "Planner passed the launch email task with brief revision 1 and the reviewed opening feedback.", "revision": 1, "fromRole": "Planning agent", "toRole": "Writing agent", "createdAt": "2026-10-16T11:25:00.000Z" },
+  "episode": { "id": "episode-opening-review", "kind": "draft.rejected", "summary": "The first opening listed features instead of one reader benefit.", "reviewedBy": "Ines Alvarez", "occurredAt": "2026-10-16T11:00:00.000Z" }
+}

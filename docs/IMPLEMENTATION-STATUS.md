@@ -2,6 +2,14 @@
 
 This page separates verified repository work from behavior that still needs a live database or another implementation phase.
 
+## Integrated local build — 2026-10-17
+
+The official app now includes the existing Track 1 claim checker, a Track 2 versioned planner-to-writer handoff, and a Track 3 Company Brain with searchable notes, linked sources, ownership coverage, and an internal handover view. All use one fictional Alder & Finch graph. A right-side chat reads current graph records and cites notes. See [Connected workspace](CONNECTED-WORKSPACE.md) for the graph paths, walkthrough, verified behavior, and limits.
+
+The integrated TypeScript/Vite build passes and `npm test` passes **88/88** deterministic tests. Local FalkorDB acceptance verified fixture v9, tone and backup approvals, unchanged QA control, three evidence-driven writer outcomes, stale-draft rejection, guide freshness under rollout change, note navigation, chat citations, sidebar control, and fictional demo replay. This integration has **not** been deployed to the public Vercel alias. The Track 1 production acceptance below refers to the earlier deployed build.
+
+## Earlier Track 1 implementation record
+
 ## Implemented
 
 - Created the public Track 1 repository `maitreyaaaaa/official` and its initial project structure.

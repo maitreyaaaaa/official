@@ -16,6 +16,7 @@ import { canInitializeFixture, canSeedFixture, canServeDemoApp, canWriteDemo, lo
 import { ApiRequestLimiter } from './config/api-rate-limit.js';
 import { AssistantServiceError, AssistantUnavailableError, runCampaignAssistant } from './agent/assistant.js';
 import type { CampaignAssistantResponse } from '../shared/contracts.js';
+import { answerWorkspaceQuestion, approveBackup, approveTone, loadWorkspace, proposeBackup, resetWorkspaceDemo, reviewWriterDraft, runWriterSession, WorkspaceError } from './workspace/workspace.js';
 
 export const app = express();
 app.use((request, response, next) => {
@@ -436,6 +437,116 @@ app.post('/api/campaigns/:campaignId/demo-test-state', async (request, response)
     }
     console.error(JSON.stringify({ event: 'demo_test_state_failed', campaignId: request.params.campaignId, ...safeErrorDetails(error) }));
     response.status(503).json({ error: 'The test scenario update or its follow-up check could not be confirmed. Run a fresh campaign check before relying on earlier findings.' });
+  }
+});
+
+app.get('/api/workspace', async (request, response) => {
+  response.set('Cache-Control', 'no-store');
+  const rawUnavailable = request.query.ownerUnavailable;
+  if (rawUnavailable !== undefined && rawUnavailable !== 'true' && rawUnavailable !== 'false') {
+    response.status(400).json({ error: 'The owner scenario must be true or false.' });
+    return;
+  }
+  try {
+    const graph = await requestGraph();
+    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
+    response.json(await loadWorkspace(graph, rawUnavailable === 'true'));
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'workspace_read_failed', ...safeErrorDetails(error) }));
+    response.status(error instanceof WorkspaceError ? error.statusCode : 503)
+      .json({ error: error instanceof WorkspaceError ? error.message : 'The connected workspace could not be loaded.' });
+  }
+});
+
+app.post('/api/workspace/chat', async (request, response) => {
+  response.set('Cache-Control', 'no-store');
+  const body: unknown = request.body;
+  const message = typeof body === 'object' && body !== null && 'message' in body
+    ? (body as { message?: unknown }).message : undefined;
+  const ownerUnavailable = typeof body === 'object' && body !== null && 'ownerUnavailable' in body
+    ? (body as { ownerUnavailable?: unknown }).ownerUnavailable : false;
+  if (typeof message !== 'string' || !message.trim() || message.trim().length > 500 || typeof ownerUnavailable !== 'boolean') {
+    response.status(400).json({ error: 'Enter a question up to 500 characters and a valid scenario state.' });
+    return;
+  }
+  try {
+    const graph = await requestGraph();
+    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
+    const [snapshot, review] = await Promise.all([
+      loadWorkspace(graph, ownerUnavailable), checkCampaign(graph, 'campaign-csv-launch'),
+    ]);
+    response.json(answerWorkspaceQuestion(message.trim(), snapshot, review));
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'workspace_chat_failed', ...safeErrorDetails(error) }));
+    response.status(error instanceof WorkspaceError ? error.statusCode : 503)
+      .json({ error: error instanceof WorkspaceError ? error.message : 'The workspace agent could not check the current graph.' });
+  }
+});
+
+for (const [path, operation] of [
+  ['/api/workspace/memory/approve-tone', approveTone],
+  ['/api/workspace/memory/run-writer', runWriterSession],
+  ['/api/workspace/company/propose-backup', proposeBackup],
+  ['/api/workspace/company/approve-backup', approveBackup],
+] as const) {
+  app.post(path, async (request, response) => {
+    response.set('Cache-Control', 'no-store');
+    if (!demoWritesEnabled(request)) {
+      response.status(404).json({ error: 'This action is available only in the fictional reviewer demo.' });
+      return;
+    }
+    try {
+      const graph = await requestGraph();
+      if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
+      await operation(graph);
+      response.json(await loadWorkspace(graph));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'workspace_action_failed', ...safeErrorDetails(error) }));
+      response.status(error instanceof WorkspaceError ? error.statusCode : 503)
+        .json({ error: error instanceof WorkspaceError ? error.message : 'The workspace action could not be confirmed.' });
+    }
+  });
+}
+
+app.post('/api/workspace/demo/reset', async (request, response) => {
+  response.set('Cache-Control', 'no-store');
+  if (!demoWritesEnabled(request)) {
+    response.status(404).json({ error: 'Reset is available only in the fictional reviewer demo.' });
+    return;
+  }
+  try {
+    const graph = await requestGraph();
+    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
+    await restoreDemoRollout(graph);
+    await setDemoTestAvailability(graph, true);
+    await resetWorkspaceDemo(graph);
+    response.json(await loadWorkspace(graph));
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'workspace_demo_reset_failed', ...safeErrorDetails(error) }));
+    response.status(error instanceof WorkspaceError ? error.statusCode : 503)
+      .json({ error: error instanceof WorkspaceError ? error.message : 'The fictional demo could not be reset.' });
+  }
+});
+
+app.post('/api/workspace/memory/drafts/:draftId/:decision', async (request, response) => {
+  response.set('Cache-Control', 'no-store');
+  if (!demoWritesEnabled(request)) {
+    response.status(404).json({ error: 'Draft review is available only in the fictional reviewer demo.' });
+    return;
+  }
+  if (request.params.decision !== 'approve' && request.params.decision !== 'reject') {
+    response.status(400).json({ error: 'Choose approve or reject.' });
+    return;
+  }
+  try {
+    const graph = await requestGraph();
+    if (!await requireFixtureReady(graph, 'campaign-csv-launch', response)) return;
+    await reviewWriterDraft(graph, request.params.draftId, request.params.decision);
+    response.json(await loadWorkspace(graph));
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'writer_draft_review_failed', ...safeErrorDetails(error) }));
+    response.status(error instanceof WorkspaceError ? error.statusCode : 503)
+      .json({ error: error instanceof WorkspaceError ? error.message : 'The writer draft could not be reviewed.' });
   }
 });
 

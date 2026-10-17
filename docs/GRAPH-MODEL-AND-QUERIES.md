@@ -20,6 +20,14 @@ FalkorDB stores the campaign facts used by the checker. The client never connect
 | `Campaign`, `Draft` | `HAS_PROPOSAL` | `ActionProposal` | Associate a bounded internal action with its campaign and target draft |
 | `ReviewRun` | `BASIS_FOR` / `VALIDATED` | `ActionProposal` | Record the check used to create and approve a proposal |
 | `ActionProposal` | `HAS_EVENT` | `ActivityEvent` | Record proposal, decision, and execution state changes |
+| `Company` | `HAS_PROJECT` | `Project` | Scope the fictional company workspace |
+| `Project` | `RUNS_CAMPAIGN` / `HAS_PROCESS` | `Campaign` / `Process` | Connect launch work and its review process |
+| `Process` | `PRIMARY_OWNER` / `BACKUP_OWNER` | `Person` | Determine reviewed continuity coverage |
+| `Process` | `USES_GUIDE` / `FOLLOWS_DECISION` | `KnowledgeNote` / `Decision` | Ground internal handover |
+| `KnowledgeNote` | `ABOUT_PROJECT` / `LINKS_TO` / `CITES_SOURCE` / `CITES_DECISION` | `Project` / `KnowledgeNote` / `Source` / `Decision` | Browse dated notes and their source paths |
+| `Campaign` | `HAS_INSTRUCTION` / `RECORDED_EPISODE` | `InstructionVersion` / `ReviewEpisode` | Keep approved memory and reviewed feedback |
+| `Handoff` | `FOR_TASK` / `INCLUDES_INSTRUCTION` | `Task` / `InstructionVersion` | Preserve the original planner snapshot |
+| `AgentSession` | `REFRESHED_FROM` / `USED_INSTRUCTION` / `USED_EPISODE` / `PRODUCED` | `Handoff` / `InstructionVersion` / `ReviewEpisode` / `WriterDraft` | Trace a fresh writer session |
 
 Nodes use stable `id` properties. Deployment, rollout, and test facts also use `current: true`, `environment`, and `reviewed`. A deployment has `revision` and `includesFeature`; a test has `revision` and `passed`. A source has `label`, `text`, `observedAt`, and `reviewedBy`. The checker treats a source as fresh when its timestamp is no more than 30 days before the check time and no more than five minutes in the future. At least one fresh source with an ID and reviewer is required for each current fact used.
 

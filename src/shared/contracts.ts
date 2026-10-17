@@ -100,3 +100,82 @@ export interface CampaignAssistantResponse {
   toolCalls: AgentToolTrace[];
   proposalPreview?: CampaignProposalPreview;
 }
+
+export interface KnowledgeSource {
+  id: string;
+  label: string;
+  detail: string;
+}
+
+export interface KnowledgeNote {
+  id: string;
+  title: string;
+  category: string;
+  summary: string;
+  body: string;
+  reviewedBy: string;
+  reviewedAt: string;
+  links: string[];
+  backlinks: string[];
+  sources: KnowledgeSource[];
+}
+
+export interface MemoryInstruction {
+  id: string;
+  topic: string;
+  text: string;
+  status: 'approved' | 'pending' | 'superseded';
+  revision: number;
+  approvedBy: string;
+}
+
+export interface WriterDraft {
+  id: string;
+  title: string;
+  text: string;
+  status: 'pending_approval' | 'approved_internal' | 'rejected';
+  tone: string;
+  briefRevision: number;
+  factRevision: number;
+  availabilityBasis: string;
+  createdAt: string;
+  memoryIds: string[];
+}
+
+export interface WorkspaceSnapshot {
+  company: { id: string; name: string; shortName: string; description: string };
+  project: { id: string; name: string; summary: string };
+  notes: KnowledgeNote[];
+  memory: {
+    briefRevision: number;
+    currentFactRevision: number;
+    instructions: MemoryInstruction[];
+    handoff: { id: string; summary: string; revision: number; fromRole: string; toRole: string; includedInstructionIds: string[] };
+    episode: { id: string; summary: string; reviewedBy: string };
+    drafts: WriterDraft[];
+    lastSessionAt: string | null;
+  };
+  companyBrain: {
+    processId: string;
+    processName: string;
+    processSummary: string;
+    primaryName: string;
+    backupName: string | null;
+    backupProposalStatus: 'pending' | null;
+    rosterReviewed: boolean;
+    coverage: 'Covered by primary' | 'Covered by backup' | 'Uncovered in this scenario' | 'Needs backup confirmation' | 'Unknown';
+    guideNoteId: string;
+    guideCurrent: boolean;
+    decisionTitle: string;
+    affectedProject: string;
+    controlProcess: { name: string; coverage: string };
+    ownerUnavailable: boolean;
+  };
+  events: Array<{ id: string; kind: string; title: string; detail: string; occurredAt: string }>;
+}
+
+export interface WorkspaceChatResponse {
+  answer: string;
+  sources: KnowledgeSource[];
+  checkedAt: string;
+}

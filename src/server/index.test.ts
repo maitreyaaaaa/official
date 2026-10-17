@@ -179,6 +179,7 @@ test('campaign mutations fail closed for cross-origin callers before graph acces
     ['POST', '/api/campaigns/campaign-csv-launch/fixture', {}],
     ['POST', '/api/campaigns/campaign-csv-launch/demo-rollout', {}],
     ['POST', '/api/campaigns/campaign-csv-launch/demo-test-state', { available: false }],
+    ['POST', '/api/workspace/demo/reset', {}],
   ];
 
   for (const [method, path, body] of requests) {

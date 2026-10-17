@@ -1,25 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { Activity, Files, LayoutDashboard } from 'lucide-react';
+import { BookOpenText, LayoutDashboard, MessageCircle, PanelLeftClose, PanelLeftOpen, Workflow } from 'lucide-react';
 import './workspace.css';
-import type { ActionProposal, ActivityEntry, CampaignAssistantResponse, CampaignProposalPreview, CampaignReview, DraftFinding, FindingStatus, ProposalAction } from '../shared/contracts.js';
+import './connected.css';
+import type { ActionProposal, ActivityEntry, CampaignAssistantResponse, CampaignProposalPreview, CampaignReview, DraftFinding, FindingStatus, ProposalAction, WorkspaceSnapshot, WriterDraft } from '../shared/contracts.js';
 import { AppleMailTabs, reviewFilterIcons, type ReviewFilter, type ReviewFilterTab } from './components/AppleMailTabs.js';
 import { MagneticDock } from './components/MagneticDock.js';
+import { ConnectedWorkspace } from './components/ConnectedWorkspace.js';
+import { WorkspaceChat } from './components/WorkspaceChat.js';
 
 const campaignId = 'campaign-csv-launch';
-type NavigationSection = 'overview' | 'campaign' | 'activity';
+type NavigationSection = 'overview' | 'campaign' | 'activity' | 'memory' | 'brain';
 type DataState = 'loading' | 'ready' | 'unavailable';
 const dockItems = [
-  { id: 'overview', label: 'Overview', href: '#overview', icon: LayoutDashboard },
-  { id: 'campaign', label: 'Campaigns', href: '#campaign', icon: Files },
-  { id: 'activity', label: 'Activity', href: '#activity', icon: Activity },
+  { id: 'overview', label: 'Launch review', href: '#overview', icon: LayoutDashboard },
+  { id: 'memory', label: 'Agent memory', href: '#memory', icon: Workflow },
+  { id: 'brain', label: 'Company Brain', href: '#brain', icon: BookOpenText },
 ];
 
 function navigationSectionFromHash(): NavigationSection {
   const hash = window.location.hash.slice(1);
   if (hash === 'campaign' || hash === 'drafts') return 'campaign';
-  if (hash === 'activity') return 'activity';
+  if (hash === 'activity' || hash === 'memory' || hash === 'brain') return hash;
   return 'overview';
 }
 
@@ -206,6 +209,18 @@ export function App() {
   const [scenarioMessage, setScenarioMessage] = useState<string | null>(null);
   const [scenarioError, setScenarioError] = useState<{ message: string; actionUnavailable: boolean } | null>(null);
   const [activeSection, setActiveSection] = useState<NavigationSection>(navigationSectionFromHash);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 920 && window.localStorage.getItem('official-sidebar-open') !== 'false');
+  const [chatOpen, setChatOpen] = useState(() => window.innerWidth >= 1360);
+  const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
+  const [workspaceBusy, setWorkspaceBusy] = useState<string | null>(null);
+  const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [chatEpoch, setChatEpoch] = useState(0);
+  const [brainEpoch, setBrainEpoch] = useState(0);
+  const [ownerUnavailable, setOwnerUnavailable] = useState(false);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
   const [editingProposalFor, setEditingProposalFor] = useState<string | null>(null);
   const [proposalCopy, setProposalCopy] = useState('');
@@ -219,9 +234,85 @@ export function App() {
   const rolloutExpanded = review?.findings.some((finding) => finding.evidence.some((item) => item.id === 'source-s4')) ?? false;
 
   useEffect(() => {
-    document.title = 'Campaign review — official';
-    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review campaign claims against connected product and rollout evidence in the official campaign workspace.');
+    document.title = `${activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : 'Campaign review'} — official`;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, agent memory, and company knowledge in one connected official workspace.');
+  }, [activeSection]);
+
+  useEffect(() => { window.localStorage.setItem('official-sidebar-open', String(sidebarOpen)); }, [sidebarOpen]);
+  useEffect(() => {
+    let wasWide = window.innerWidth > 920;
+    const onResize = () => {
+      const isWide = window.innerWidth > 920;
+      if (wasWide && !isWide) setSidebarOpen(false);
+      wasWide = isWide;
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
+  const handleSidebarNavigation = () => { if (window.innerWidth <= 920) setSidebarOpen(false); };
+
+  const refreshWorkspace = useCallback(async (unavailable: boolean) => {
+    setWorkspaceLoading(true);
+    setWorkspaceError(null);
+    try {
+      const response = await fetch(`/api/workspace?ownerUnavailable=${unavailable}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(await responseError(response, 'The connected workspace could not be loaded.'));
+      setWorkspace(await response.json() as WorkspaceSnapshot);
+    } catch (cause) {
+      setWorkspaceError(cause instanceof Error ? cause.message : 'The connected workspace could not be loaded.');
+    } finally {
+      setWorkspaceLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (review) void refreshWorkspace(ownerUnavailable);
+  }, [review, ownerUnavailable, refreshWorkspace]);
+
+  const workspaceAction = async (action: 'approve-tone' | 'run-writer' | 'propose-backup' | 'approve-backup') => {
+    if (workspaceBusy) return;
+    setWorkspaceBusy(action);
+    setWorkspaceMessage(null);
+    setWorkspaceError(null);
+    const routes = {
+      'approve-tone': '/api/workspace/memory/approve-tone',
+      'run-writer': '/api/workspace/memory/run-writer',
+      'propose-backup': '/api/workspace/company/propose-backup',
+      'approve-backup': '/api/workspace/company/approve-backup',
+    };
+    try {
+      const response = await fetch(routes[action], { method: 'POST' });
+      if (!response.ok) throw new Error(await responseError(response, 'The action could not be confirmed.'));
+      await refreshWorkspace(ownerUnavailable);
+      setWorkspaceMessage({
+        'approve-tone': 'The calm tone is approved. A new writer session will refresh the old handoff.',
+        'run-writer': 'The writer checked current memory and prepared an internal draft for review.',
+        'propose-backup': 'Zara is proposed as backup. Coverage has not changed.',
+        'approve-backup': 'Zara is now the reviewed backup. Coverage was checked again.',
+      }[action]);
+    } catch (cause) {
+      setWorkspaceError(cause instanceof Error ? cause.message : 'The action could not be confirmed.');
+    } finally {
+      setWorkspaceBusy(null);
+    }
+  };
+
+  const reviewWriterDraftAction = async (draft: WriterDraft, decision: 'approve' | 'reject') => {
+    if (workspaceBusy) return;
+    setWorkspaceBusy(`draft-${draft.id}`);
+    setWorkspaceMessage(null);
+    setWorkspaceError(null);
+    try {
+      const response = await fetch(`/api/workspace/memory/drafts/${encodeURIComponent(draft.id)}/${decision}`, { method: 'POST' });
+      if (!response.ok) throw new Error(await responseError(response, 'The writer draft could not be reviewed.'));
+      await refreshWorkspace(ownerUnavailable);
+      setWorkspaceMessage(decision === 'approve' ? 'Draft approved for internal use. Nothing was sent or published.' : 'Draft rejected and kept in review history.');
+    } catch (cause) {
+      setWorkspaceError(cause instanceof Error ? cause.message : 'The writer draft could not be reviewed.');
+    } finally {
+      setWorkspaceBusy(null);
+    }
+  };
 
   const clearAssistantResponse = useCallback(() => {
     assistantRequestVersion.current += 1;
@@ -353,6 +444,28 @@ export function App() {
       setScenarioError({ message, actionUnavailable });
     } finally {
       setSimulating(false);
+    }
+  };
+
+  const resetDemo = async () => {
+    if (resetBusy || loading || simulating || proposalBusy || workspaceBusy) return;
+    setResetBusy(true);
+    setScenarioError(null);
+    setScenarioMessage(null);
+    setWorkspaceMessage(null);
+    try {
+      const response = await fetch('/api/workspace/demo/reset', { method: 'POST' });
+      if (!response.ok) throw new Error(await responseError(response, 'The fictional demo could not be reset.'));
+      clearAssistantResponse();
+      setOwnerUnavailable(false);
+      setChatEpoch((epoch) => epoch + 1);
+      await Promise.all([refresh(false), refreshWorkspace(false)]);
+      setScenarioMessage('Fictional rollout, test, tone, and launch backup restored. Earlier graph activity remains in history.');
+    } catch (cause) {
+      setScenarioError({ message: cause instanceof Error ? cause.message : 'Reset could not be confirmed.', actionUnavailable: false });
+      await Promise.all([refresh(false), refreshWorkspace(ownerUnavailable)]);
+    } finally {
+      setResetBusy(false);
     }
   };
 
@@ -518,8 +631,9 @@ export function App() {
     }
     const targets = (['overview', 'campaign', 'activity'] as const)
       .map((id) => ({ id, element: document.getElementById(id) }))
-      .filter((item): item is { id: NavigationSection; element: HTMLElement } => item.element instanceof HTMLElement);
+      .filter((item): item is { id: 'overview' | 'campaign' | 'activity'; element: HTMLElement } => item.element instanceof HTMLElement);
     const observer = new IntersectionObserver((entries) => {
+      if (window.location.hash === '#memory' || window.location.hash === '#brain') return;
       const visible = entries
         .filter((entry) => entry.isIntersecting)
         .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
@@ -531,7 +645,11 @@ export function App() {
       window.removeEventListener('hashchange', syncActiveSection);
       observer.disconnect();
     };
-  }, []);
+  }, [activeSection === 'memory' || activeSection === 'brain']);
+
+  useEffect(() => {
+    if (activeSection === 'memory' || activeSection === 'brain') window.scrollTo({ top: 0 });
+  }, [activeSection]);
 
   const counts = useMemo(() => {
     const values = review?.findings ?? [];
@@ -595,17 +713,37 @@ export function App() {
     if (nextFindings.length === 0) setSelectedId(null);
   }
 
+  const advancedAssistant = (
+        <section className="assistant-card" aria-labelledby="assistant-heading">
+          <div className="assistant-heading"><div><div className="eyebrow">EVIDENCE ASSISTANT</div><h2 id="assistant-heading">Ask about this campaign</h2></div><span className="assistant-badge">Optional AI</span></div>
+          <p id="assistant-disclosure" className="assistant-disclosure">When enabled, your prompt and synthetic campaign evidence are sent to OpenAI. Assistant checks can also add a local status-only history entry. Do not enter sensitive information. A proposal preview is saved only after you select Create pending proposal; applying it still requires a separate human approval.</p>
+          <form className="assistant-form" onSubmit={(event) => void submitAssistantQuestion(event)}>
+            <label htmlFor="assistant-prompt">Question</label>
+            <textarea id="assistant-prompt" aria-describedby="assistant-disclosure" value={assistantPrompt} onChange={(event) => setAssistantPrompt(event.target.value)} maxLength={2000} placeholder="Why is the launch email contradicted?" disabled={!assistantAvailable || !review || assistantBusy} />
+            <label className="assistant-proposal-toggle"><input type="checkbox" checked={assistantProposalAllowed} onChange={(event) => setAssistantProposalAllowed(event.target.checked)} disabled={!assistantAvailable || !review || assistantBusy} /> Allow proposal previews; I must choose Create pending proposal to save one</label>
+            <div className="assistant-form-footer">
+              <span>{assistantAvailable ? (review ? 'Uses named campaign tools and reviewed evidence.' : 'Check the campaign before asking a question.') : 'Configure OPENAI_API_KEY and local demo writes to enable the assistant.'}</span>
+              <button className="primary-button" type="submit" disabled={!assistantAvailable || !review || !assistantPrompt.trim() || assistantBusy}>{assistantBusy ? 'Thinking…' : 'Ask assistant'}</button>
+            </div>
+          </form>
+          {assistantBusy && <p className="assistant-feedback" role="status" aria-live="polite">Checking campaign evidence…</p>}
+          {assistantError && <p className="assistant-error" role="alert">{assistantError}</p>}
+          {assistantResult && <div className="assistant-result" aria-live="polite"><p>{assistantResult.answer}</p>{assistantResult.toolCalls.length > 0 && <ul>{assistantResult.toolCalls.map((call, index) => <li key={`${call.name}-${index}`}><strong>{call.name.replaceAll('_', ' ')}</strong> · {call.summary}</li>)}</ul>}{assistantResult.proposalPreview && <section className="assistant-proposal-preview" aria-label="Unsaved proposal preview"><h3>{assistantResult.proposalPreview.action === 'pause' ? 'Pause proposal preview' : 'Edit proposal preview'} · {assistantResult.proposalPreview.draftTitle}</h3><p>{assistantResult.proposalPreview.action === 'pause' ? 'Pause this internal draft while its promise is contradicted.' : `Proposed wording for ${audienceLabel(assistantResult.proposalPreview.targetAudienceId)}:`}</p>{assistantResult.proposalPreview.proposedText && <blockquote>{assistantResult.proposalPreview.proposedText}</blockquote>}<p>{assistantResult.proposalPreview.reason}</p><div className="proposal-compose-actions"><button className="primary-button" type="button" onClick={() => void submitAssistantProposal()} disabled={!demoRolloutAvailable || proposalState !== 'ready' || Boolean(proposalBusy) || simulating || loading || proposals.some((item) => item.draftId === assistantResult.proposalPreview?.draftId && item.status === 'pending')}>{proposalBusy === assistantResult.proposalPreview.draftId ? 'Saving…' : 'Create pending proposal'}</button><button className="text-button" type="button" onClick={discardAssistantProposal} disabled={Boolean(proposalBusy) || simulating || loading}>Discard preview</button></div></section>}</div>}
+        </section>
+  );
+
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="/" aria-label="official marketing site">
+    <div className={`app-shell connected-shell ${sidebarOpen ? '' : 'sidebar-closed'} ${chatOpen ? 'chat-open' : 'chat-closed'}`}>
+      <aside className="sidebar" aria-label="Workspace sidebar">
+        <div className="sidebar-top"><a className="brand" href="/" aria-label="official marketing site">
           <span className="brand-mark">o</span><span>official</span>
-        </a>
+        </a><button className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={() => setSidebarOpen(false)}><PanelLeftClose size={18} /></button></div>
+        <div className="workspace-identity"><div className="workspace-monogram">A<span>&amp;</span>F</div><div><strong>{workspace?.company.shortName ?? 'Alder & Finch'}</strong><small>Spring reporting release</small></div></div>
         <div className="workspace-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
-          <a className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`} href="#overview" aria-current={activeSection === 'overview' ? 'location' : undefined}><span className="nav-icon">◫</span> Overview</a>
-          <a className={`nav-item ${activeSection === 'campaign' ? 'active' : ''}`} href="#campaign" aria-current={activeSection === 'campaign' ? 'location' : undefined}><span className="nav-icon">▤</span> Campaigns <span className="nav-count">1</span></a>
-          <a className={`nav-item ${activeSection === 'activity' ? 'active' : ''}`} href="#activity" aria-current={activeSection === 'activity' ? 'location' : undefined}><span className="nav-icon">◷</span> Activity</a>
+          <a className={`nav-item ${activeSection === 'overview' || activeSection === 'campaign' || activeSection === 'activity' ? 'active' : ''}`} href="#overview" onClick={handleSidebarNavigation} aria-current={activeSection === 'overview' || activeSection === 'campaign' || activeSection === 'activity' ? 'location' : undefined}><span className="nav-icon">◫</span> Launch review <span className="nav-count">1</span></a>
+          <a className={`nav-item ${activeSection === 'memory' ? 'active' : ''}`} href="#memory" onClick={handleSidebarNavigation} aria-current={activeSection === 'memory' ? 'location' : undefined}><span className="nav-icon"><Workflow size={17} /></span> Agent memory</a>
+          <a className={`nav-item ${activeSection === 'brain' ? 'active' : ''}`} href="#brain" onClick={handleSidebarNavigation} aria-current={activeSection === 'brain' ? 'location' : undefined}><span className="nav-icon"><BookOpenText size={17} /></span> Company Brain <span className="nav-count">{workspace?.notes.length ?? '—'}</span></a>
         </nav>
         <div className="sidebar-bottom">
           <div className="connection-card">
@@ -613,20 +751,30 @@ export function App() {
             <div><strong>FalkorDB</strong><small>{error ? 'Connection needed' : review ? 'Connected' : scenarioError ? 'Check required' : 'Connecting'}</small></div>
             <span className="connection-menu">···</span>
           </div>
-          <div className="profile-row"><div className="avatar">O</div><div><strong>Launch team</strong><small>Local workspace</small></div><span className="connection-menu">⌄</span></div>
+          <div className="profile-row"><div className="avatar">A</div><div><strong>Alder &amp; Finch</strong><small>Fictional launch workspace</small></div></div>
         </div>
       </aside>
 
       <main className="main-content" id="overview">
         <header className="topbar">
+          {!sidebarOpen && <button className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={() => setSidebarOpen(true)}><PanelLeftOpen size={20} /></button>}
           <a className="brand" href="/" aria-label="official marketing site"><span className="brand-mark">o</span><span>official</span></a>
-          <div className="header-context"><span>Launch workspace</span><span className="slash" aria-hidden="true">/</span><strong>Campaign review</strong></div>
-          <div className="topbar-actions"><span className={error ? "connection-inline offline" : review ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error ? "Graph offline" : review ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label="How campaign checks work" hidden={!showHelp}><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></section></div><div className="avatar small" aria-hidden="true">O</div></div>
+          <div className="header-context"><span>{workspace?.company.shortName ?? 'Alder & Finch'}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'brain' ? 'Company Brain' : activeSection === 'memory' ? 'Agent memory' : 'Launch review'}</strong></div>
+          <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask agent</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label="How campaign checks work" hidden={!showHelp}><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></section></div><div className="avatar small" aria-hidden="true">A</div></div>
         </header>
         <div className="app-dock">
-          <MagneticDock items={dockItems.map((item) => ({ ...item, active: activeSection === item.id }))} />
+          <MagneticDock items={dockItems.map((item) => ({ ...item, active: item.id === 'overview' ? activeSection === 'overview' || activeSection === 'campaign' || activeSection === 'activity' : activeSection === item.id }))} />
         </div>
 
+        {activeSection === 'memory' || activeSection === 'brain' ? <ConnectedWorkspace key={brainEpoch}
+          view={activeSection} workspace={workspace} loading={workspaceLoading} error={workspaceError}
+          canWrite={demoRolloutAvailable} busy={workspaceBusy} message={workspaceMessage}
+          ownerUnavailable={ownerUnavailable} selectedNoteId={selectedNoteId}
+          onSelectNote={setSelectedNoteId} onOwnerUnavailable={setOwnerUnavailable}
+          onAction={(action) => void workspaceAction(action)}
+          onReviewDraft={(draft, decision) => void reviewWriterDraftAction(draft, decision)}
+          onRefresh={() => void refreshWorkspace(ownerUnavailable)}
+        /> : <>
         <section className="page-heading">
           <div><div className="eyebrow">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date()).toUpperCase()} <span className="eyebrow-divider" aria-hidden="true">/</span> EVIDENCE WORKSPACE</div><h1>Launch claims, grounded in evidence.</h1><p className="subheading">Connect campaign copy to the reviewed product facts, rollouts, and tests behind it.</p></div>
           <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? 'Restore tester-only rollout' : 'Include all accounts'}</button><button type="button" onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><span className="button-spark" aria-hidden="true">✳</span>{loading ? 'Checking…' : 'Check campaign'}</button></div>
@@ -634,33 +782,28 @@ export function App() {
 
         <section className="reviewer-guide" id="reviewer-guide" aria-labelledby="reviewer-guide-title">
           <div className="reviewer-guide-intro">
-            <div className="eyebrow">REVIEWER WALKTHROUGH <span aria-hidden="true">·</span> ABOUT 2 MINUTES</div>
-            <h2 id="reviewer-guide-title">See what changes.<br /><em>See what stays the same.</em></h2>
-            <p>Can every account use CSV export today? Follow these four steps to see how official checks the promise.</p>
+            <div className="eyebrow">ONE CONNECTED DEMO <span aria-hidden="true">·</span> ABOUT 3 MINUTES</div>
+            <h2 id="reviewer-guide-title">One launch. Three connected decisions.</h2>
+            <p>Follow the same fictional release from a campaign claim to writer memory and team coverage. Open each step to inspect its graph evidence and review controls.</p>
           </div>
           <div className="reviewer-guide-steps">
             <article className="reviewer-guide-step">
               <span className="guide-step-number">01</span>
-              <div><h3>Read the promise</h3><p>The landing page says every account can use CSV export. The current rollout reaches internal testers only.</p></div>
-              <button className="guide-link" type="button" onClick={openLandingFinding} disabled={!review}>Open the landing page finding <span aria-hidden="true">→</span></button>
+              <div><h3>Check the claim</h3><p>The landing page promises CSV export to every account. Compare that with the reviewed rollout and test.</p></div>
+              <div className="guide-step-actions"><button className="guide-link" type="button" onClick={openLandingFinding} disabled={!review}>Open claim <span aria-hidden="true">→</span></button><button className="guide-link" type="button" onClick={showLandingSources} disabled={!review}>See evidence <span aria-hidden="true">→</span></button></div>
             </article>
             <article className="reviewer-guide-step">
               <span className="guide-step-number">02</span>
-              <div><h3>Follow the sources</h3><p>The product is live, and its test passed. A separate record shows who can use it.</p></div>
-              <button className="guide-link" type="button" onClick={showLandingSources} disabled={!review}>Show the source records <span aria-hidden="true">→</span></button>
+              <div><h3>Refresh the writer</h3><p>Approve the calm tone instruction, then run the writer. Review its draft before any external use.</p></div>
+              <a className="guide-link" href="#memory">Open agent memory <span aria-hidden="true">→</span></a>
             </article>
             <article className="reviewer-guide-step">
               <span className="guide-step-number">03</span>
-              <div><h3>Change access</h3><p>Current access: <strong>{rolloutExpanded ? 'all accounts' : 'internal testers only'}</strong>. Change it and see which findings move.</p></div>
-              <button className="primary-button guide-action" type="button" onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Checking the change…' : rolloutExpanded ? 'Restore tester-only access' : 'Open access to all accounts'}</button>
-            </article>
-            <article className="reviewer-guide-step">
-              <span className="guide-step-number">04</span>
-              <div><h3>Keep a person in control</h3><p>A check does not approve or publish a campaign. A person must approve a draft change. The activity list records each check.</p></div>
-              <button className="guide-link" type="button" onClick={() => scrollTo('review-queue')} disabled={!review}>See review controls <span aria-hidden="true">→</span></button>
+              <div><h3>Cover the owner</h3><p>Simulate an unavailable owner. Follow the linked guide, propose a backup, and confirm the assignment.</p></div>
+              <a className="guide-link" href="#brain">Open Company Brain <span aria-hidden="true">→</span></a>
             </article>
           </div>
-          <p className="reviewer-guide-note">Alder &amp; Finch and all campaign records are fictional. These controls change this local demo only.</p>
+          <div className="reviewer-guide-footer"><p className="reviewer-guide-note">Alder &amp; Finch and all campaign records are fictional. Reset restores rollout, test, tone, and launch backup for another walkthrough; earlier audit records stay in the graph.</p><button className="text-button" type="button" onClick={() => void resetDemo()} disabled={!demoRolloutAvailable || resetBusy || loading || simulating || Boolean(proposalBusy) || Boolean(workspaceBusy)}>{resetBusy ? 'Resetting…' : 'Reset fictional demo'}</button></div>
         </section>
 
         {error && <section className="connection-alert" role="alert"><div className="alert-icon" aria-hidden="true">!</div><div><strong>{error.toLowerCase().includes('campaign not found') ? 'Campaign data unavailable' : 'Campaign check unavailable'}</strong><p>{error} Check that FalkorDB is reachable and the campaign data is loaded, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh(demoRolloutAvailable)}>Retry</button></section>}
@@ -763,25 +906,12 @@ export function App() {
           </aside>
         </div>
         <section className="activity-card" id="activity"><div className="activity-heading"><span className="activity-icon">◷</span><div><div className="eyebrow">ACTIVITY HISTORY</div><h2>Campaign activity</h2></div></div><div className="activity-list" aria-live="polite">{activityState === 'loading' ? <div className="activity-empty">Loading campaign activity…</div> : activityState === 'unavailable' ? <div className="activity-empty">Campaign activity history is unavailable. Refresh to try again.</div> : activity.length ? activity.map((entry) => <div className="activity-entry" key={entry.id}><span className="activity-line" /><span className="activity-dot" /><div><strong>{entry.title}</strong><small>{formatActivityAt(entry.occurredAt)} · {entry.detail}</small>{entry.runId && <small className="activity-run-id">Run ID: {entry.runId}</small>}</div></div>) : <div className="activity-empty">No persisted activity is available yet. Enable local demo writes to keep check history.</div>}</div></section>
-        <section className="assistant-card" aria-labelledby="assistant-heading">
-          <div className="assistant-heading"><div><div className="eyebrow">EVIDENCE ASSISTANT</div><h2 id="assistant-heading">Ask about this campaign</h2></div><span className="assistant-badge">Optional AI</span></div>
-          <p id="assistant-disclosure" className="assistant-disclosure">When enabled, your prompt and synthetic campaign evidence are sent to OpenAI. Assistant checks can also add a local status-only history entry. Do not enter sensitive information. A proposal preview is saved only after you select Create pending proposal; applying it still requires a separate human approval.</p>
-          <form className="assistant-form" onSubmit={(event) => void submitAssistantQuestion(event)}>
-            <label htmlFor="assistant-prompt">Question</label>
-            <textarea id="assistant-prompt" aria-describedby="assistant-disclosure" value={assistantPrompt} onChange={(event) => setAssistantPrompt(event.target.value)} maxLength={2000} placeholder="Why is the launch email contradicted?" disabled={!assistantAvailable || !review || assistantBusy} />
-            <label className="assistant-proposal-toggle"><input type="checkbox" checked={assistantProposalAllowed} onChange={(event) => setAssistantProposalAllowed(event.target.checked)} disabled={!assistantAvailable || !review || assistantBusy} /> Allow proposal previews; I must choose Create pending proposal to save one</label>
-            <div className="assistant-form-footer">
-              <span>{assistantAvailable ? (review ? 'Uses named campaign tools and reviewed evidence.' : 'Check the campaign before asking a question.') : 'Configure OPENAI_API_KEY and local demo writes to enable the assistant.'}</span>
-              <button className="primary-button" type="submit" disabled={!assistantAvailable || !review || !assistantPrompt.trim() || assistantBusy}>{assistantBusy ? 'Thinking…' : 'Ask assistant'}</button>
-            </div>
-          </form>
-          {assistantBusy && <p className="assistant-feedback" role="status" aria-live="polite">Checking campaign evidence…</p>}
-          {assistantError && <p className="assistant-error" role="alert">{assistantError}</p>}
-          {assistantResult && <div className="assistant-result" aria-live="polite"><p>{assistantResult.answer}</p>{assistantResult.toolCalls.length > 0 && <ul>{assistantResult.toolCalls.map((call, index) => <li key={`${call.name}-${index}`}><strong>{call.name.replaceAll('_', ' ')}</strong> · {call.summary}</li>)}</ul>}{assistantResult.proposalPreview && <section className="assistant-proposal-preview" aria-label="Unsaved proposal preview"><h3>{assistantResult.proposalPreview.action === 'pause' ? 'Pause proposal preview' : 'Edit proposal preview'} · {assistantResult.proposalPreview.draftTitle}</h3><p>{assistantResult.proposalPreview.action === 'pause' ? 'Pause this internal draft while its promise is contradicted.' : `Proposed wording for ${audienceLabel(assistantResult.proposalPreview.targetAudienceId)}:`}</p>{assistantResult.proposalPreview.proposedText && <blockquote>{assistantResult.proposalPreview.proposedText}</blockquote>}<p>{assistantResult.proposalPreview.reason}</p><div className="proposal-compose-actions"><button className="primary-button" type="button" onClick={() => void submitAssistantProposal()} disabled={!demoRolloutAvailable || proposalState !== 'ready' || Boolean(proposalBusy) || simulating || loading || proposals.some((item) => item.draftId === assistantResult.proposalPreview?.draftId && item.status === 'pending')}>{proposalBusy === assistantResult.proposalPreview.draftId ? 'Saving…' : 'Create pending proposal'}</button><button className="text-button" type="button" onClick={discardAssistantProposal} disabled={Boolean(proposalBusy) || simulating || loading}>Discard preview</button></div></section>}</div>}
-        </section>
-
         <footer className="page-footer"><span>Built around evidence, not assumptions.</span><span>Fictional product data <span className="footer-separator">·</span> No external actions</span><a href="/">Marketing site <span aria-hidden="true">↗</span></a></footer>
+        </>}
       </main>
+      <WorkspaceChat key={chatEpoch} open={chatOpen} onClose={() => setChatOpen(false)} workspace={workspace} ownerUnavailable={ownerUnavailable}
+        advancedAssistant={advancedAssistant}
+        onOpenNote={(id) => { setSelectedNoteId(id); setBrainEpoch((epoch) => epoch + 1); window.location.hash = '#brain'; }} />
     </div>
   );
 }
