@@ -3,6 +3,7 @@ import { ArrowRight, BookOpenText, Check, ChevronRight, CircleHelp, FileText, Gi
 import type { KnowledgeNote, WorkspaceSnapshot, WriterDraft } from '../../shared/contracts.js';
 import type { DemoCompany } from '../../shared/demo-companies.js';
 import { CompanyLogo } from './CompanyLogo.js';
+import { ErrorNotice, LoadingStatus, SkeletonLines } from './AsyncStates.js';
 import { LocalTabs } from './LocalTabs.js';
 import { BrainGraph } from './BrainGraph.js';
 import { ProofStrip } from './ProofStrip.js';
@@ -43,7 +44,7 @@ function dateLabel(value: string): string {
   const date = new Date(value);
   return Number.isFinite(date.getTime())
     ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
-    : 'Date unavailable';
+    : 'Date not recorded';
 }
 
 function NoteLink({ note, onSelect }: { note: KnowledgeNote; onSelect: (id: string) => void }) {
@@ -82,8 +83,17 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
     onSelectNote(id);
   };
 
-  if (loading && !workspace) return <div className="connected-loading" role="status">Connecting the launch, memory, and company records…</div>;
-  if (error || !workspace) return <section className="connected-error" role="alert"><h2>Connected workspace unavailable</h2><p>{error ?? 'The graph could not be read.'}</p><button className="secondary-button" onClick={onRefresh}>Retry</button></section>;
+  if (loading && !workspace) return <section className="connected-page connected-skeleton" aria-busy="true">
+    <div className="connected-masthead"><div className="skeleton-block skeleton-mark" aria-hidden="true" /><div><LoadingStatus>Loading company records…</LoadingStatus><SkeletonLines count={2} className="skeleton-heading-lines" /></div></div>
+    <div className="connected-summary-grid">{[1, 2, 3].map((item) => <div className="connected-summary" aria-hidden="true" key={item}><SkeletonLines count={3} /></div>)}</div>
+    <div className="connected-two-column">{[1, 2].map((item) => <div className="connected-card" aria-hidden="true" key={item}><SkeletonLines count={5} /></div>)}</div>
+  </section>;
+  if (!workspace) return <section className="connected-page"><ErrorNotice
+    className="connected-error"
+    title="Company records could not be loaded"
+    message={error ?? 'The connected workspace has not returned records yet.'}
+    onRetry={onRefresh}
+  /></section>;
 
   const currentTone = workspace.memory.instructions.find((item) => item.topic === 'tone' && item.status === 'approved');
   const oldTone = savedHandoffInstruction(workspace, 'tone');
@@ -121,6 +131,8 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
           : 'Browse the notes, decisions, people, and source paths behind this launch.'}</p></div>
     </div>
     {message && <div className="connected-message" role="status"><Check size={16} aria-hidden="true" />{message}</div>}
+    {loading && <div className="connected-refreshing"><LoadingStatus>Refreshing company records…</LoadingStatus><span>Showing the last loaded records while the new copy arrives.</span></div>}
+    {error && <ErrorNotice className="connected-stale-error" title="Showing the last loaded records" message={error} onRetry={onRefresh} />}
     {proof && ((view === 'memory' && proof.title.startsWith('Approved brief')) || (view === 'brain' && proof.title.startsWith('Coverage'))) && <ProofStrip proof={proof} />}
 
     {view === 'memory' ? <>
@@ -140,7 +152,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
           </div>
           <h3 className="connected-subtitle">Instruction versions</h3>
           <div className="instruction-list">{workspace.memory.instructions.map((instruction) => <article key={instruction.id} className="instruction-item"><span className={`instruction-state ${instruction.status}`}>{instruction.status.replace('_', ' ')}</span><div><strong>{instruction.topic}</strong><p>{instruction.text}</p><small>Revision {instruction.revision}{instruction.approvedBy ? ` · Approved by ${instruction.approvedBy}` : ' · Waiting for review'}</small></div></article>)}</div>
-          {!canWrite && <p className="connected-help">Demo writes are unavailable in this workspace. You can still inspect the current memory.</p>}
+          {!canWrite && <p className="connected-help">This deployment is read-only. You can still inspect the current company memory.</p>}
         </section>
         <section className="connected-card memory-card">
           <div className="connected-card-heading"><span className="connected-icon"><BookOpenText size={19} /></span><div><span className="connected-label">REVIEWED EPISODE</span><h2>Notes for the next writer</h2></div></div>

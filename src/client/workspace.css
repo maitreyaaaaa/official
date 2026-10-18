@@ -322,7 +322,7 @@
 .app-shell .draft-reason { display: -webkit-box; overflow: hidden; color: #7a857b; font-size: 12px; line-height: 1.4; text-overflow: ellipsis; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .app-shell .status-pill { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 6px 10px; border: 1px solid transparent; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .app-shell .status-supported { border-color: #d9eadb; background: #edf6ee; color: #3d6d48; }
-.app-shell .status-contradicted { border-color: #f0d8d1; background: #fff1ed; color: #9f4b3c; }
+.app-shell .status-contradicted { border-color: #a51d1d; background: #c62828; color: #fff; }
 .app-shell .status-unknown { border-color: #eddfc6; background: #fff8e9; color: #765522; }
 .app-shell .status-not-checked { border-color: #e5e9e5; background: #f4f6f3; color: #5d6a62; }
 .app-shell .row-chevron { color: #89958a; font-size: 21px; font-weight: 400; }

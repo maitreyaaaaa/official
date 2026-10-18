@@ -10,7 +10,7 @@ const MarketingSite = lazy(() => import('../../marketing-site/frontend/Marketing
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Suspense fallback={<div className="route-loading" role="status">Loading official…</div>}>
+    <Suspense fallback={<div className="route-loading" role="status"><span className="loader" aria-hidden="true" />Loading page…</div>}>
       {route.kind === 'app' ? <App /> : <MarketingSite page={route.page} />}
     </Suspense>
   </React.StrictMode>,

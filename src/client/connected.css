@@ -311,3 +311,51 @@
 .unknown-next-step p { margin: 4px 0 0; font-size: 12px; line-height: 1.5; }
 @media (max-width: 1050px) { .proof-steps { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 600px) { .proof-steps { grid-template-columns: 1fr; } }
+
+/* Shared production states: clear progress, preserved stale data, and legible failures. */
+.app-shell .async-loading { display: inline-flex; align-items: center; gap: 8px; color: #53665a; font-size: 12px; line-height: 1.45; }
+.app-shell .async-spinner { flex: 0 0 auto; animation: official-async-spin .9s linear infinite; }
+.app-shell .sidebar-loading { gap: 5px; font-size: 10px; }
+.app-shell .sidebar-loading .async-spinner { width: 12px; height: 12px; }
+.app-shell .connection-loading-icon { color: #56785d; animation: official-async-spin .9s linear infinite; }
+@keyframes official-async-spin { to { transform: rotate(360deg); } }
+.app-shell .skeleton-lines { display: grid; gap: 10px; width: 100%; padding: 8px 0; }
+.app-shell .skeleton-line, .app-shell .skeleton-block { display: block; min-height: 11px; border-radius: 6px; background: linear-gradient(100deg, #edf0eb 20%, #f7f8f5 42%, #edf0eb 64%); background-size: 220% 100%; animation: official-skeleton 1.4s ease-in-out infinite; }
+.app-shell .skeleton-line-2 { width: 82%; }
+.app-shell .skeleton-line-3 { width: 66%; }
+.app-shell .skeleton-line-4 { width: 91%; }
+.app-shell .skeleton-line-5 { width: 73%; }
+.app-shell .skeleton-heading-lines { min-width: min(52vw, 460px); padding-top: 14px; }
+.app-shell .skeleton-mark { width: 59px; height: 59px; flex: 0 0 auto; border-radius: 16px; }
+@keyframes official-skeleton { to { background-position-x: -220%; } }
+.app-shell .async-error { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 12px 0; padding: 13px 15px; border: 1px solid #a51d1d; border-radius: 10px; background: #c62828; color: #fff; }
+.app-shell .async-error strong { color: #fff; font-size: 13px; }
+.app-shell .async-error p { margin: 4px 0 0; color: #fff; font-size: 12px; line-height: 1.5; }
+.app-shell .async-error-retry { display: inline-flex; min-height: 34px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid #fff; border-radius: 7px; background: #fff; color: #a51d1d; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.app-shell .async-error-retry:hover { background: #ffe9e9; }
+.app-shell .async-error-retry:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.app-shell .overview-error, .app-shell .connected-error, .app-shell .connected-stale-error, .app-shell .chat-context-error, .app-shell .panel-load-error { width: 100%; }
+.app-shell .connected-refreshing { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; padding: 10px 13px; border: 1px solid #dfe7db; border-radius: 9px; background: #f7faf5; }
+.app-shell .connected-refreshing > span:last-child { color: #647367; font-size: 11px; }
+.app-shell .overview-card-freshness { display: flex; min-height: 20px; align-items: center; gap: 6px; margin: 0 0 7px; color: #526b57; font-size: 10px; }
+.app-shell .overview-card-freshness.stale { color: #81642e; }
+.app-shell .overview-card-skeleton { display: grid; min-height: 97px; align-content: center; }
+.app-shell .campaign-load-skeleton { display: grid; gap: 10px; padding: 16px 8px; }
+.app-shell .panel-refresh-status { margin: 12px 0; color: #6d725b; font-size: 11px; }
+.app-shell .connected-skeleton .connected-summary { min-height: 120px; }
+.app-shell .connected-skeleton .connected-card { min-height: 210px; }
+.app-shell .status-contradicted { border-color: #a51d1d; background: #c62828; color: #fff; }
+.app-shell .stat-card.stat-contradicted { border-color: #a51d1d; background: #c62828; color: #fff; }
+.app-shell .stat-card.stat-contradicted .stat-label, .app-shell .stat-card.stat-contradicted .stat-value, .app-shell .stat-card.stat-contradicted .stat-value span, .app-shell .stat-card.stat-contradicted .stat-note, .app-shell .stat-card.stat-contradicted .stat-arrow { color: #fff; }
+.app-shell .contradicted-icon { background: #ffffff2e; color: #fff; }
+.app-shell .proactive-status.contradicted { background: #c62828; box-shadow: 0 0 0 3px #c6282826; }
+.app-shell .connection-inline.offline { color: #a51d1d; }
+.app-shell .connection-inline.offline .connection-dot, .app-shell .connection-dot.offline { background: #c62828; }
+.app-shell .connection-alert.async-error { display: flex; }
+.app-shell .scenario-alert-error { border-color: #a51d1d; background: #c62828; color: #fff; }
+.app-shell .scenario-alert-error strong { color: #fff; }
+.app-shell .assistant-error { padding: 9px 11px; border: 1px solid #a51d1d; border-radius: 8px; background: #c62828; color: #fff; }
+.app-shell .chat-error { border: 1px solid #a51d1d; background: #c62828; color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .async-spinner, .app-shell .skeleton-line, .app-shell .skeleton-block { animation: none; }
+}

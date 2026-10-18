@@ -1,11 +1,14 @@
 import { ArrowRight, BookOpenText, CircleCheck, FileWarning, Workflow } from 'lucide-react';
 import type { CampaignReview, WorkspaceSnapshot } from '../../shared/contracts.js';
+import { ErrorNotice, LoadingStatus, SkeletonLines } from './AsyncStates.js';
 
 interface WorkspaceOverviewProps {
   review: CampaignReview | null;
   workspace: WorkspaceSnapshot | null;
-  loading: boolean;
-  error: string | null;
+  reviewLoading: boolean;
+  workspaceLoading: boolean;
+  reviewError: string | null;
+  workspaceError: string | null;
   onRefresh: () => void;
   onOpenFinding: () => void;
   onOpenSources: () => void;
@@ -18,8 +21,20 @@ interface WorkspaceOverviewProps {
   resetBusy: boolean;
 }
 
-export function WorkspaceOverview({ review, workspace, loading, error, onRefresh, onOpenFinding, onOpenSources,
-  onOpenLaunch, onOpenMemory, onOpenBrain, onOpenCoverage, onReset, canReset, resetBusy }: WorkspaceOverviewProps) {
+function CardSkeleton() {
+  return <div className="overview-card-skeleton" aria-label="Loading records">
+    <SkeletonLines count={3} />
+  </div>;
+}
+
+function CardFreshness({ loading, error }: { loading: boolean; error: string | null }) {
+  if (loading) return <LoadingStatus className="overview-card-freshness">Updating</LoadingStatus>;
+  if (error) return <span className="overview-card-freshness stale">Last loaded data</span>;
+  return null;
+}
+
+export function WorkspaceOverview({ review, workspace, reviewLoading, workspaceLoading, reviewError, workspaceError, onRefresh,
+  onOpenFinding, onOpenSources, onOpenLaunch, onOpenMemory, onOpenBrain, onOpenCoverage, onReset, canReset, resetBusy }: WorkspaceOverviewProps) {
   const claimsToReview = review?.findings.filter((finding) => finding.needsReview).length ?? 0;
   const pendingTone = workspace?.memory.instructions.some((instruction) => instruction.topic === 'tone' && instruction.status === 'pending') ?? false;
   const pendingWriterDrafts = workspace?.memory.drafts.filter((draft) => draft.status === 'pending_approval').length ?? 0;
@@ -28,39 +43,62 @@ export function WorkspaceOverview({ review, workspace, loading, error, onRefresh
   const backupNeeded = brain ? !brain.backupName : false;
   const guideNeedsReview = brain ? !brain.guideCurrent : false;
   const attentionCount = (claimsToReview > 0 ? 1 : 0) + (pendingTone || pendingWriterDrafts > 0 || staleHandoff ? 1 : 0) + (backupNeeded || guideNeedsReview ? 1 : 0);
+  const errors = [reviewError && `Launch review: ${reviewError}`, workspaceError && `Company records: ${workspaceError}`].filter((value): value is string => Boolean(value));
+  const loading = reviewLoading || workspaceLoading;
+  const hasData = Boolean(review || workspace);
 
-  return <section className="workspace-overview" id="overview" aria-labelledby="overview-title">
+  return <section className="workspace-overview" id="overview" aria-labelledby="overview-title" aria-busy={loading}>
     <header className="overview-intro">
       <span className="eyebrow">{workspace?.company.name ?? 'COMPANY WORKSPACE'} <span aria-hidden="true">/</span> {workspace?.project.name ?? 'CONNECTED LAUNCH'}</span>
       <h1 id="overview-title" tabIndex={-1}>What needs your attention</h1>
       <p>One launch across claims, writer memory, and company knowledge. Choose a task to see its evidence and next step.</p>
-      <div className="overview-status" role="status" aria-live="polite" aria-atomic="true">
-        {error ? 'Some connected records are unavailable.' : loading || !review || !workspace ? 'Reading the connected workspace…' : attentionCount > 0 ? `${attentionCount} of 3 areas need attention` : 'The current review has no open decisions.'}
+      <div className={`overview-status ${errors.length ? 'has-error' : loading ? 'is-loading' : ''}`} role="status" aria-live="polite" aria-atomic="true">
+        {errors.length
+          ? 'Some records could not be refreshed. Saved records remain visible where possible.'
+          : loading
+            ? <LoadingStatus>{hasData ? 'Updating the connected workspace…' : 'Loading the connected workspace…'}</LoadingStatus>
+            : attentionCount > 0 ? `${attentionCount} of 3 areas need attention` : 'The current review has no open decisions.'}
       </div>
-      {error && <div className="overview-error" role="alert"><span>{error}</span><button type="button" className="text-button" onClick={onRefresh}>Retry</button></div>}
+      {errors.length > 0 && <ErrorNotice
+        className="overview-error"
+        title={hasData ? 'Showing the last loaded records' : 'Some records need another try'}
+        message={errors.join(' ')}
+        onRetry={onRefresh}
+      />}
     </header>
 
     <div className="overview-actions" aria-label="Connected work areas">
-      <article className="overview-action-card">
+      <article className="overview-action-card" aria-busy={reviewLoading}>
         <span className="overview-card-icon"><FileWarning size={20} aria-hidden="true" /></span>
         <span className="overview-card-kicker">01 / LAUNCH CLAIMS</span>
-        <h2>{review ? claimsToReview > 0 ? `${claimsToReview} ${claimsToReview === 1 ? 'draft needs' : 'drafts need'} review` : 'No drafts need review' : 'Campaign check unavailable'}</h2>
-        <p>{review ? claimsToReview > 0 ? 'Compare the draft promise with the current rollout and test evidence.' : 'All linked claims have a current result. You can inspect every draft.' : 'Open Launch review when the campaign graph is available.'}</p>
+        {review ? <>
+          <CardFreshness loading={reviewLoading} error={reviewError} />
+          <h2>{claimsToReview > 0 ? `${claimsToReview} ${claimsToReview === 1 ? 'draft needs' : 'drafts need'} review` : 'No drafts need review'}</h2>
+          <p>{claimsToReview > 0 ? 'Compare the draft promise with the current rollout and test evidence.' : 'All linked claims have a current result. You can inspect every draft.'}</p>
+        </> : reviewLoading ? <CardSkeleton /> : <div className="overview-card-failed"><h2>Campaign check needs a retry</h2><p>Campaign evidence will appear after the next successful check.</p></div>}
         <button className="overview-card-link" type="button" onClick={onOpenLaunch}>Open Launch review <ArrowRight size={17} aria-hidden="true" /></button>
       </article>
-      <article className="overview-action-card">
+
+      <article className="overview-action-card" aria-busy={workspaceLoading}>
         <span className="overview-card-icon"><Workflow size={20} aria-hidden="true" /></span>
         <span className="overview-card-kicker">02 / WRITING HANDOFF</span>
-        <h2>{!workspace ? 'Writer handoff unavailable' : pendingTone ? 'Tone approval is waiting' : pendingWriterDrafts > 0 ? `${pendingWriterDrafts} ${pendingWriterDrafts === 1 ? 'draft awaits' : 'drafts await'} review` : staleHandoff ? 'Handoff needs a refresh' : 'Writer handoff is current'}</h2>
-        <p>{workspace ? 'Check the approved brief before a fresh writing session or internal draft decision.' : 'The writer state appears when company records load.'}</p>
+        {workspace ? <>
+          <CardFreshness loading={workspaceLoading} error={workspaceError} />
+          <h2>{pendingTone ? 'Tone approval is waiting' : pendingWriterDrafts > 0 ? `${pendingWriterDrafts} ${pendingWriterDrafts === 1 ? 'draft awaits' : 'drafts await'} review` : staleHandoff ? 'Handoff needs a refresh' : 'Writer handoff is current'}</h2>
+          <p>Check the approved brief before a fresh writing session or internal draft decision.</p>
+        </> : workspaceLoading ? <CardSkeleton /> : <div className="overview-card-failed"><h2>Writing handoff needs a retry</h2><p>Retry to load the latest approved brief and writer status.</p></div>}
         <button className="overview-card-link" type="button" onClick={onOpenMemory}>Open writing handoff <ArrowRight size={17} aria-hidden="true" /></button>
       </article>
-      <article className="overview-action-card">
+
+      <article className="overview-action-card" aria-busy={workspaceLoading}>
         <span className="overview-card-icon"><BookOpenText size={20} aria-hidden="true" /></span>
         <span className="overview-card-kicker">03 / COMPANY RECORDS</span>
-        <h2>{!brain ? 'Company records unavailable' : backupNeeded ? 'Backup is not confirmed' : guideNeedsReview ? 'Handover guide needs review' : 'Launch review is covered'}</h2>
-        <p>{brain ? 'Find the guide and source records, then inspect ownership coverage.' : 'Company notes and coverage appear when graph records load.'}</p>
-        <button className="overview-card-link" type="button" onClick={backupNeeded || guideNeedsReview ? onOpenCoverage : onOpenBrain}>{backupNeeded || guideNeedsReview ? 'Review coverage' : 'Open company records'} <ArrowRight size={17} aria-hidden="true" /></button>
+        {brain ? <>
+          <CardFreshness loading={workspaceLoading} error={workspaceError} />
+          <h2>{backupNeeded ? 'Backup is not confirmed' : guideNeedsReview ? 'Handover guide needs review' : 'Launch review is covered'}</h2>
+          <p>Find the guide and source records, then inspect ownership coverage.</p>
+        </> : workspaceLoading ? <CardSkeleton /> : <div className="overview-card-failed"><h2>Company records need a retry</h2><p>Company notes and coverage will appear when records load.</p></div>}
+        <button className="overview-card-link" type="button" onClick={backupNeeded || guideNeedsReview ? onOpenCoverage : onOpenBrain}>Review company records <ArrowRight size={17} aria-hidden="true" /></button>
       </article>
     </div>
 

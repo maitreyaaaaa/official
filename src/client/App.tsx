@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpenText, Check, ChevronDown, ChevronLeft, FileWarning, LayoutDashboard, Menu, MessageCircle, Workflow } from 'lucide-react';
+import { BookOpenText, Check, ChevronDown, ChevronLeft, FileWarning, LayoutDashboard, LoaderCircle, Menu, MessageCircle, Workflow } from 'lucide-react';
 import './workspace.css';
 import './connected.css';
 import './company-logos.css';
@@ -14,6 +14,7 @@ import { WorkspaceOverview } from './components/WorkspaceOverview.js';
 import { PluginsWorkspace } from './components/PluginsWorkspace.js';
 import { LocalTabs } from './components/LocalTabs.js';
 import { CompanyLogo } from './components/CompanyLogo.js';
+import { ErrorNotice, LoadingStatus, SkeletonLines } from './components/AsyncStates.js';
 import { ProofStrip } from './components/ProofStrip.js';
 import { backupProof, rolloutProof, toneProof, unknownReviewStep, type ProofComparison } from '../shared/reviewer-proof.js';
 import { defaultDemoCompany, demoCompanies, demoCompanyByKey, type DemoCompany, type DemoCompanyKey } from '../shared/demo-companies.js';
@@ -21,7 +22,7 @@ import { defaultDemoCompany, demoCompanies, demoCompanyByKey, type DemoCompany, 
 type NavigationSection = 'overview' | 'campaign' | 'memory' | 'brain' | 'plugins';
 type LaunchTab = 'drafts' | 'approvals' | 'history';
 type BrainTab = 'graph' | 'notes' | 'coverage' | 'history';
-type DataState = 'loading' | 'ready' | 'unavailable';
+type DataState = 'loading' | 'ready' | 'error';
 const dockItems = [
   { id: 'overview', label: 'Overview', href: '#overview', icon: LayoutDashboard },
   { id: 'campaign', label: 'Launch review', href: '#campaign', icon: LayoutDashboard },
@@ -87,7 +88,7 @@ async function loadCampaign(campaignId: string, recordCheck = false): Promise<Ca
 
 async function loadCampaignActivity(campaignId: string): Promise<ActivityEntry[]> {
   const response = await fetch(`/api/campaigns/${campaignId}/activity`, { cache: 'no-store' });
-  if (!response.ok) throw new Error('Campaign activity history is unavailable.');
+  if (!response.ok) throw new Error('Campaign activity could not be loaded. Retry to check again.');
   const payload: unknown = await response.json();
   if (!Array.isArray(payload)) throw new Error('Campaign activity history returned an invalid response.');
   return payload as ActivityEntry[];
@@ -95,7 +96,7 @@ async function loadCampaignActivity(campaignId: string): Promise<ActivityEntry[]
 
 async function loadCampaignProposals(campaignId: string): Promise<ActionProposal[]> {
   const response = await fetch(`/api/campaigns/${campaignId}/proposals`, { cache: 'no-store' });
-  if (!response.ok) throw new Error('Campaign proposals are unavailable.');
+  if (!response.ok) throw new Error('The proposal queue could not be loaded. Retry to check again.');
   const payload: unknown = await response.json();
   if (!Array.isArray(payload)) throw new Error('Campaign proposals returned an invalid response.');
   return payload as ActionProposal[];
@@ -249,6 +250,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
   const [proposals, setProposals] = useState<ActionProposal[]>([]);
   const [activityState, setActivityState] = useState<DataState>('loading');
   const [proposalState, setProposalState] = useState<DataState>('loading');
+  const [activityLoadError, setActivityLoadError] = useState<string | null>(null);
+  const [proposalLoadError, setProposalLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftFilter, setDraftFilter] = useState<ReviewFilter>('all');
   const [error, setError] = useState<string | null>(null);
@@ -420,21 +423,23 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     const requestVersion = ++supportingDataRequestVersion.current;
     setActivityState('loading');
     setProposalState('loading');
+    setActivityLoadError(null);
+    setProposalLoadError(null);
     const [history, pending] = await Promise.allSettled([loadCampaignActivity(campaignId), loadCampaignProposals(campaignId)]);
     if (requestVersion !== supportingDataRequestVersion.current) return;
     if (history.status === 'fulfilled') {
       setActivity(history.value);
       setActivityState('ready');
     } else {
-      setActivity([]);
-      setActivityState('unavailable');
+      setActivityState('error');
+      setActivityLoadError(history.reason instanceof Error ? history.reason.message : 'Campaign activity could not be loaded.');
     }
     if (pending.status === 'fulfilled') {
       setProposals(pending.value);
       setProposalState('ready');
     } else {
-      setProposals([]);
-      setProposalState('unavailable');
+      setProposalState('error');
+      setProposalLoadError(pending.reason instanceof Error ? pending.reason.message : 'Proposals could not be loaded.');
     }
   }, [campaignId]);
 
@@ -445,15 +450,12 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setError(null);
     setScenarioMessage(null);
     setScenarioError(null);
-    setReview(null);
-    setActivity([]);
-    setProposals([]);
     setActivityState('loading');
     setProposalState('loading');
+    setActivityLoadError(null);
+    setProposalLoadError(null);
     setProposalMessage(null);
     setProposalError(null);
-    setSelectedId(null);
-    setShowPath(false);
     try {
       let campaignResult: PromiseSettledResult<CampaignReview>;
       if (recordCheck) {
@@ -485,9 +487,6 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setScenarioMessage(null);
     setLaunchProof(null);
     setScenarioError(null);
-    setReview(null);
-    setSelectedId(null);
-    setShowPath(false);
     try {
       const before = await loadCampaign(campaignId, false);
       const result = await simulateRolloutExpansion(campaignId, expanded);
@@ -521,9 +520,6 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setScenarioMessage(null);
     setLaunchProof(null);
     setScenarioError(null);
-    setReview(null);
-    setSelectedId(null);
-    setShowPath(false);
     try {
       const result = await simulateTestAvailability(campaignId, restoreTest);
       setReview(result);
@@ -821,6 +817,14 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
   );
 
   const draftsNeedingDecision = review?.findings.filter((item) => item.needsReview).length ?? 0;
+  const graphHasData = Boolean(review || workspace);
+  const graphLoading = loading || workspaceLoading || simulating;
+  const graphError = error ?? workspaceError;
+  const graphConnected = Boolean(review && workspace && !graphError);
+  const graphStatus = graphError
+    ? graphHasData ? 'Showing saved data · refresh failed' : 'Connection needs attention'
+    : graphLoading ? graphHasData ? 'Refreshing records' : 'Loading graph'
+      : graphConnected ? 'Graph connected' : 'Loading graph';
 
   return (
     <div className={`app-shell connected-shell company-${company.key} ${sidebarOpen ? '' : 'sidebar-closed'} ${chatOpen ? 'chat-open' : 'chat-closed'}`}>
@@ -828,7 +832,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         <div className="sidebar-top"><a className="brand" href="/" aria-label="official marketing site">
           <span className="brand-dot" aria-hidden="true" />official
         </a><button ref={sidebarCloseButtonRef} className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={closeSidebar}><ChevronLeft size={18} aria-hidden="true" /></button></div>
-        <div className="workspace-identity"><div className="workspace-monogram" aria-hidden="true"><CompanyLogo company={company} /></div><div><strong>{workspace?.company.shortName ?? company.shortName}</strong><small>{workspace?.project.name ?? 'Loading project'}</small></div></div>
+        <div className="workspace-identity"><div className="workspace-monogram" aria-hidden="true"><CompanyLogo company={company} /></div><div><strong>{workspace?.company.shortName ?? company.shortName}</strong><small>{workspace?.project.name ?? (workspaceError ? 'Project needs a retry' : <LoadingStatus className="sidebar-loading">Loading project</LoadingStatus>)}</small></div></div>
         <div className="workspace-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
           <a className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`} href="#overview" onClick={handleSidebarNavigation} aria-current={activeSection === 'overview' ? 'page' : undefined}><span className="nav-icon"><LayoutDashboard size={17} /></span> Overview</a>
@@ -839,8 +843,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         </nav>
         <div className="sidebar-bottom">
           <div className="connection-card">
-            <span className={`connection-dot ${error ? 'offline' : review ? 'online' : ''}`} />
-            <div><strong>FalkorDB</strong><small>{error ? 'Connection needed' : review ? 'Connected' : scenarioError ? 'Check required' : 'Connecting'}</small></div>
+            {graphLoading && !graphError ? <LoaderCircle className="async-spinner connection-loading-icon" size={15} aria-hidden="true" /> : <span className={`connection-dot ${graphError ? 'offline' : graphConnected ? 'online' : ''}`} />}
+            <div><strong>FalkorDB</strong><small>{graphStatus}</small></div>
           </div>
           <div className="company-switcher">
             <button className="profile-row company-switcher-toggle" type="button" aria-expanded={companyMenuOpen} aria-controls="company-switcher-menu" onClick={() => setCompanyMenuOpen((open) => !open)}><div className="avatar company-avatar"><CompanyLogo company={company} /></div><div><strong>{company.shortName}</strong><small>Fictional company</small></div><ChevronDown size={17} aria-hidden="true" /></button>
@@ -854,7 +858,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={openSidebar}><Menu size={18} aria-hidden="true" /></button>}
           <a className="brand" href="/" aria-label="official marketing site"><span className="brand-dot" aria-hidden="true" />official</a>
           <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company records' : activeSection === 'memory' ? 'Writing handoff' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
-          <div className="topbar-actions"><span className={error || workspaceError ? "connection-inline offline" : review && workspace ? "connection-inline online" : "connection-inline"} role="status"><span className="connection-dot" aria-hidden="true" />{error || workspaceError ? "Graph check needed" : review && workspace ? "Graph connected" : "Connecting to graph"}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask workspace</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Connecting a demo plugin saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview the source and its possible role. Disconnect at any time.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, writing handoff, and company records use the selected fictional company’s graph.</p><p>Ask workspace questions to check connected records. Answers cite the notes used, and chat does not change them.</p></>}</section></div><div className="avatar small company-avatar" aria-hidden="true"><CompanyLogo company={company} /></div></div>
+          <div className="topbar-actions"><span className={`connection-inline ${graphError ? 'offline' : graphConnected ? 'online' : 'loading'}`} role="status">{graphLoading && !graphError ? <LoaderCircle className="async-spinner" size={15} aria-hidden="true" /> : <span className="connection-dot" aria-hidden="true" />}{graphStatus}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask workspace</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Connecting a demo plugin saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview the source and its possible role. Disconnect at any time.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, writing handoff, and company records use the selected fictional company’s graph.</p><p>Ask workspace questions to check connected records. Answers cite the notes used, and chat does not change them.</p></>}</section></div><div className="avatar small company-avatar" aria-hidden="true"><CompanyLogo company={company} /></div></div>
         </header>
         <div className="app-dock">
           <MagneticDock items={dockItems.map((item) => ({ ...item, active: activeSection === item.id }))} />
@@ -870,7 +874,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           onReviewDraft={(draft, decision) => void reviewWriterDraftAction(draft, decision)}
           onRefresh={() => void refreshWorkspace(ownerUnavailable)}
         /> : activeSection === 'overview' ? <WorkspaceOverview
-          review={review} workspace={workspace} loading={loading || workspaceLoading} error={error ?? workspaceError}
+          review={review} workspace={workspace} reviewLoading={loading || simulating} workspaceLoading={workspaceLoading} reviewError={error} workspaceError={workspaceError}
           onRefresh={() => { void refresh(); void refreshWorkspace(ownerUnavailable); }}
           onOpenFinding={openLandingFinding} onOpenSources={showLandingSources}
           onOpenLaunch={() => showLaunchTab('drafts')} onOpenMemory={() => { focusViewHeading.current = true; window.location.hash = '#memory'; }}
@@ -883,17 +887,17 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" aria-label={rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`} onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`}</button><button type="button" aria-label={testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'} onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><Check size={16} aria-hidden="true" />{loading ? 'Checking…' : 'Check campaign'}</button></div>
         </section>
 
-        {error && <section className="connection-alert" role="alert"><div className="alert-icon" aria-hidden="true">!</div><div><strong>{error.toLowerCase().includes('campaign not found') ? 'Campaign data unavailable' : 'Campaign check unavailable'}</strong><p>{error} Check that FalkorDB is reachable and the campaign data is loaded, then try again. The check fails closed; no draft has changed.</p></div><button className="text-button" onClick={() => void refresh(demoRolloutAvailable)}>Retry</button></section>}
+        {error && <ErrorNotice className="connection-alert" title={review ? 'Showing the last successful check' : 'Campaign check needs a retry'} message={`${error} No draft has changed. ${review ? 'The last successful result remains visible.' : 'Campaign evidence will appear after a successful check.'}`} onRetry={() => void refresh(demoRolloutAvailable)} />}
         {scenarioMessage && <section className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{scenarioMessage}</section>}
         {launchProof && <ProofStrip proof={launchProof} />}
-        {scenarioError && <section className="scenario-alert scenario-alert-error" role="alert"><strong>{scenarioError.actionUnavailable ? 'Demo action unavailable.' : 'Scenario result unconfirmed.'}</strong> {scenarioError.message} {scenarioError.actionUnavailable ? 'The server rejected the request before any graph write. Current findings were reloaded.' : 'Current findings were reloaded. Run an explicit campaign check before relying on the scenario result.'}</section>}
+        {scenarioError && <section className="scenario-alert scenario-alert-error" role="alert"><strong>{scenarioError.actionUnavailable ? 'Demo action needs a retry.' : 'Scenario result unconfirmed.'}</strong> {scenarioError.message} {scenarioError.actionUnavailable ? 'The server rejected the request before any graph write. Current findings were reloaded.' : 'Current findings were reloaded. Run an explicit campaign check before relying on the scenario result.'}</section>}
         {proposalMessage && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{proposalMessage}</section>}
-        {proposalError && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert scenario-alert-error" role="alert"><strong>Review action unavailable.</strong> {proposalError}</section>}
+        {proposalError && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert scenario-alert-error" role="alert"><strong>Review action needs a retry.</strong> {proposalError}</section>}
 
-        <div className="review-context"><strong>{review?.campaign.name ?? workspace?.project.name ?? company.shortName}</strong><span>{review ? `${counts.contradicted} contradicted · ${counts.unknown} unknown · ${counts.supported} supported · ${counts.notChecked} not checked` : 'Waiting for the graph check'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : 'Not available'}</small></div>
+        <div className="review-context"><strong>{review?.campaign.name ?? workspace?.project.name ?? company.shortName}</strong><span>{review ? `${counts.contradicted} contradicted · ${counts.unknown} unknown · ${counts.supported} supported · ${counts.notChecked} not checked` : loading ? 'Waiting for the first successful graph check' : 'No successful graph check yet'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : loading ? 'Checking now' : 'Not recorded'}</small></div>
         <LocalTabs label="Launch review sections" idPrefix="launch" tabs={[
           { id: 'drafts' as const, label: 'Drafts', count: review?.findings.length ?? '—' },
-          { id: 'approvals' as const, label: 'Approvals', count: proposalState === 'ready' ? proposals.filter((item) => item.status === 'pending').length : '—' },
+          { id: 'approvals' as const, label: 'Approvals', count: proposalState === 'ready' ? proposals.filter((item) => item.status === 'pending').length : proposalState === 'loading' ? '…' : '!' },
           { id: 'history' as const, label: 'History' },
         ]} value={launchTab} onChange={showLaunchTab} />
 
@@ -908,7 +912,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
                   <StatusPill status={finding.status} /><span className="row-chevron" aria-hidden="true">›</span>
                 </motion.button>
               ))}
-              {!review && !error && <div className="loading-state" role="status"><span className="loader" /> Loading campaign evidence…</div>}
+              {!review && loading && <div className="campaign-load-skeleton" aria-busy="true"><LoadingStatus>Loading campaign evidence…</LoadingStatus><SkeletonLines count={5} /></div>}
+              {!review && error && <div className="empty-state">No previous campaign check is available. Retry to load the evidence.</div>}
               {review?.findings.length === 0 && <div className="empty-state" role="status" aria-live="polite" aria-atomic="true">No drafts are linked to this campaign yet.</div>}
               {review && findings.length > 0 && visibleFindings.length === 0 && <div className="empty-state filter-empty" role="status" aria-live="polite" aria-atomic="true">No drafts match this review status.</div>}
             </div>
@@ -949,7 +954,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
                 </div>
                 <button className="secondary-button full-width" aria-expanded={showPath} aria-controls="connection-path" onClick={() => setShowPath((visible) => !visible)}>{showPath ? 'Hide connection path' : 'View connection path'} <span>{showPath ? '⌃' : '↗'}</span></button>
                 <ol className="connection-path" id="connection-path" hidden={!showPath}><li>{selected.title}</li>{selected.wordingSourceTitle && <li>Reuses wording from {selected.wordingSourceTitle}</li>}{selected.promiseText && <li>{selected.promiseText}</li>}{selected.featureName && <li>{selected.featureName}</li>}{selected.audienceName && <li>{selected.audienceName}</li>}{selected.evidence.map((item) => <li key={`path-${item.id}`}>{item.label}</li>)}</ol>
-              </> : <div className="empty-detail">{review?.findings.length === 0 ? 'No drafts are linked to this campaign yet.' : review ? 'Select a draft to inspect its evidence and relationship path.' : error ? 'Draft details are unavailable until a fresh graph check succeeds.' : 'Campaign details will appear after the graph check completes.'}</div>}
+              </> : <div className="empty-detail">{review?.findings.length === 0 ? 'No drafts are linked to this campaign yet.' : review ? 'Select a draft to inspect its evidence and relationship path.' : loading ? <LoadingStatus>Loading campaign details…</LoadingStatus> : 'Draft details will appear after the first successful graph check.'}</div>}
             </section>
           </aside>
         </div>}
@@ -960,8 +965,10 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
             </section>
 
             <section className="review-queue-card" id="review-queue">
-              <div className="section-heading"><div><div className="eyebrow">HUMAN REVIEW</div><h2>Proposal queue</h2></div><span className="filter-button">{proposalState === 'ready' ? `${proposals.filter((item) => item.status === 'pending').length} pending` : proposalState === 'loading' ? 'Loading…' : 'Unavailable'}</span></div>
-              {proposalState === 'loading' ? <p className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">Loading proposals…</p> : proposalState === 'unavailable' ? <p className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">Proposal queue unavailable. Refresh before creating or reviewing a proposal.</p> : proposals.length ? <div className="proposal-list">{proposals.map((proposal) => {
+              <div className="section-heading"><div><div className="eyebrow">HUMAN REVIEW</div><h2>Proposal queue</h2></div><span className="filter-button">{proposalState === 'ready' ? `${proposals.filter((item) => item.status === 'pending').length} pending` : proposalState === 'loading' ? 'Updating…' : proposals.length ? 'Last loaded' : 'Retry needed'}</span></div>
+              {proposalState === 'error' && <ErrorNotice className="panel-load-error" title={proposals.length ? 'Showing saved proposals' : 'Proposals need another try'} message={proposalLoadError ?? 'The proposal queue could not be refreshed.'} onRetry={() => void refreshSupportingData()} />}
+              {proposalState === 'loading' && proposals.length > 0 && <LoadingStatus className="panel-refresh-status">Updating proposals · saved results remain visible</LoadingStatus>}
+              {proposalState === 'loading' && proposals.length === 0 ? <div className="proposal-empty"><LoadingStatus>Loading proposals…</LoadingStatus><SkeletonLines count={3} /></div> : proposals.length ? <div className="proposal-list">{proposals.map((proposal) => {
                 const draft = review?.findings.find((item) => item.draftId === proposal.draftId);
                 return <article className="proposal-item" key={proposal.id}>
                   <div className="proposal-item-heading"><h3 id={`proposal-title-${proposal.id}`}>{proposal.action === 'pause' ? 'Pause draft' : `Revise for ${audienceLabel(proposal.targetAudienceId)}`} · {draft?.title ?? proposal.draftId}</h3><span className={`proposal-status proposal-${proposal.status}`}>{proposal.status.replace('_', ' ')}</span></div>
@@ -969,18 +976,18 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
                   {proposal.proposedText && <blockquote>{proposal.proposedText}</blockquote>}
                   <small>{proposal.reason}</small>
                   {proposal.status === 'pending' && demoRolloutAvailable && <div className="proposal-compose-actions"><button className="primary-button" aria-label={`Approve proposal for ${draft?.title ?? proposal.draftId}`} onClick={() => void decideProposal(proposal, 'approve')} disabled={proposalState !== 'ready' || Boolean(proposalBusy) || loading || simulating}>{proposalBusy === proposal.id ? 'Saving…' : 'Approve'}</button><button className="text-button" aria-label={`Reject proposal for ${draft?.title ?? proposal.draftId}`} onClick={() => void decideProposal(proposal, 'reject')} disabled={proposalState !== 'ready' || Boolean(proposalBusy) || loading || simulating}>Reject</button></div>}
-                  {proposal.status === 'pending' && !demoRolloutAvailable && <p className="proposal-help">Decision controls are unavailable. Enable local demo writes to review this proposal.</p>}
+                  {proposal.status === 'pending' && !demoRolloutAvailable && <p className="proposal-help">This deployment is read-only. Review controls are enabled in the local demo.</p>}
                 </article>;
-              })}</div> : <div className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">No proposals are waiting. Review the drafts to prepare an internal change.<button className="text-button" type="button" onClick={() => showLaunchTab('drafts')}>Open drafts</button></div>}
+              })}</div> : proposalState === 'error' ? null : <div className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">No proposals are waiting. Review the drafts to prepare an internal change.<button className="text-button" type="button" onClick={() => showLaunchTab('drafts')}>Open drafts</button></div>}
               <p className="proposal-help">Approval is limited to internal drafts. The local demo does not verify reviewer identity or publish content.</p>
             </section>
 
         </div>}
-        {launchTab === 'history' && <section className="activity-card" id="launch-panel-history" role="tabpanel" aria-labelledby="launch-tab-history"><div className="activity-heading"><span className="activity-icon">◷</span><div><div className="eyebrow">ACTIVITY HISTORY</div><h2>Campaign activity</h2></div></div><div className="activity-list" aria-live="polite">{activityState === 'loading' ? <div className="activity-empty">Loading campaign activity…</div> : activityState === 'unavailable' ? <div className="activity-empty">Campaign activity history is unavailable. Refresh to try again.</div> : activity.length ? activity.map((entry) => <div className="activity-entry" key={entry.id}><span className="activity-line" /><span className="activity-dot" /><div><strong>{entry.title}</strong><small>{formatActivityAt(entry.occurredAt)} · {entry.detail}</small>{entry.runId && <small className="activity-run-id">Run ID: {entry.runId}</small>}</div></div>) : <div className="activity-empty">No persisted activity is available yet. Enable local demo writes to keep check history.</div>}</div></section>}
+        {launchTab === 'history' && <section className="activity-card" id="launch-panel-history" role="tabpanel" aria-labelledby="launch-tab-history"><div className="activity-heading"><span className="activity-icon">◷</span><div><div className="eyebrow">ACTIVITY HISTORY</div><h2>Campaign activity</h2></div></div>{activityState === 'error' && <ErrorNotice className="panel-load-error" title={activity.length ? 'Showing saved activity' : 'Activity history needs another try'} message={activityLoadError ?? 'Campaign activity could not be refreshed.'} onRetry={() => void refreshSupportingData()} />}{activityState === 'loading' && activity.length > 0 && <LoadingStatus className="panel-refresh-status">Updating activity · saved entries remain visible</LoadingStatus>}<div className="activity-list" aria-live="polite">{activityState === 'loading' && activity.length === 0 ? <div className="activity-empty"><LoadingStatus>Loading campaign activity…</LoadingStatus><SkeletonLines count={4} /></div> : activity.length ? activity.map((entry) => <div className="activity-entry" key={entry.id}><span className="activity-line" /><span className="activity-dot" /><div><strong>{entry.title}</strong><small>{formatActivityAt(entry.occurredAt)} · {entry.detail}</small>{entry.runId && <small className="activity-run-id">Run ID: {entry.runId}</small>}</div></div>) : activityState === 'error' ? null : <div className="activity-empty">No campaign activity has been recorded yet.</div>}</div></section>}
         <footer className="page-footer"><span>Built around evidence, not assumptions.</span><span>Fictional product data <span className="footer-separator">·</span> No external actions</span><a href="/">Marketing site <span aria-hidden="true">↗</span></a></footer>
         </>}
       </main>
-      <WorkspaceChat key={`${company.key}-${chatEpoch}`} open={chatOpen} onClose={() => setChatOpen(false)} workspace={workspace} ownerUnavailable={ownerUnavailable}
+      <WorkspaceChat key={`${company.key}-${chatEpoch}`} open={chatOpen} onClose={() => setChatOpen(false)} workspace={workspace} workspaceLoading={workspaceLoading} workspaceError={workspaceError} onRetryWorkspace={() => void refreshWorkspace(ownerUnavailable)} ownerUnavailable={ownerUnavailable}
         advancedAssistant={company.key === 'alder-finch' ? advancedAssistant : null}
         campaignId={campaignId} onOpenNote={(id) => { setSelectedNoteId(id); setBrainEpoch((epoch) => epoch + 1); window.location.hash = '#brain-notes'; }} />
     </div>

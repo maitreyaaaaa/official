@@ -90,10 +90,10 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
 .stats-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0 22px; }
 .stat-card { min-height: 106px; padding: 14px 15px 12px; border: 1px solid #e8ebe7; border-radius: 9px; background: #fff; transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px #203b2b0c; }
-.stat-card.stat-contradicted { border-color: #eadfce; background: #fffdfa; }
+.stat-card.stat-contradicted { border-color: #a51d1d; background: #c62828; color: #fff; }
 .stat-top { display: flex; align-items: center; gap: 7px; }
 .stat-icon { display: grid; width: 17px; height: 17px; place-items: center; border-radius: 5px; background: #f8ebd8; color: #805414; font-size: 11px; font-weight: 700; }
-.contradicted-icon { background: #f8ebd8; color: #805414; }
+.contradicted-icon { background: #ffffff2e; color: #fff; }
 .unknown-icon { background: #edf0ee; color: #52635a; }
 .supported-icon { background: #e7f2e8; color: #3d6d48; }
 .unchecked-icon { background: #eef0ed; color: #5d6a62; }
@@ -102,6 +102,11 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
 .stat-value { margin-top: 7px; font: 700 23px/1.1 Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: -.6px; }
 .stat-value span { color: #5d6a62; font: 500 10px 'DM Sans', sans-serif; letter-spacing: 0; }
 .stat-note { margin-top: 4px; color: #5d6a62; font-size: 9px; }
+.stat-card.stat-contradicted .stat-label,
+.stat-card.stat-contradicted .stat-value,
+.stat-card.stat-contradicted .stat-value span,
+.stat-card.stat-contradicted .stat-note,
+.stat-card.stat-contradicted .stat-arrow { color: #fff; }
 .content-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(290px, .8fr); align-items: start; gap: 18px; }
 .drafts-panel, .detail-card, .proactive-card, .review-queue-card, .activity-card { border: 1px solid #e7ebe7; border-radius: 10px; background: var(--panel); }
 .drafts-panel { overflow: hidden; }
@@ -124,7 +129,7 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
 .draft-reason { overflow: hidden; color: #5d6a62; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .status-pill { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 4px 7px; border: 1px solid transparent; border-radius: 5px; font-size: 8px; font-weight: 700; letter-spacing: .1px; }
 .status-supported { border-color: #d9eadb; background: #edf6ee; color: #3d6d48; }
-.status-contradicted { border-color: #f0d8d1; background: #fff1ed; color: #9f4b3c; }
+.status-contradicted { border-color: #a51d1d; background: #c62828; color: #fff; }
 .status-unknown { border-color: #eddfc6; background: #fff8e9; color: #765522; }
 .status-not-checked { border-color: #e5e9e5; background: #f4f6f3; color: #5d6a62; }
 .row-chevron { color: #5d6a62; font-size: 18px; font-weight: 400; }
@@ -331,4 +336,4 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
   .filter-empty { min-height: 90px; }
 }
 :root { --route-loading-bg: #f8f8f5; }
-.route-loading { min-height: 100vh; display: grid; place-items: center; background: var(--route-loading-bg); color: #56645a; font: 500 13px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; }
+.route-loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--route-loading-bg); color: #56645a; font: 500 13px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; }

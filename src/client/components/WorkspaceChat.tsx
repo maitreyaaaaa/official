@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowUp, PanelRightClose } from 'lucide-react';
 import type { WorkspaceChatResponse, WorkspaceSnapshot } from '../../shared/contracts.js';
+import { ErrorNotice, LoadingStatus, SkeletonLines } from './AsyncStates.js';
 
 interface WorkspaceChatProps {
   campaignId: string;
@@ -8,6 +9,9 @@ interface WorkspaceChatProps {
   onClose: () => void;
   onOpenNote: (id: string) => void;
   workspace: WorkspaceSnapshot | null;
+  workspaceLoading: boolean;
+  workspaceError: string | null;
+  onRetryWorkspace: () => void;
   ownerUnavailable: boolean;
   advancedAssistant: ReactNode;
 }
@@ -15,7 +19,7 @@ interface WorkspaceChatProps {
 type ChatItem = { id: number; role: 'user' | 'agent'; text: string; response?: WorkspaceChatResponse };
 const prompts = ['What drafts need review?', 'What changed in the writer handoff?', 'Who covers launch evidence?', 'Which company notes have sources?'];
 
-export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace, ownerUnavailable, advancedAssistant }: WorkspaceChatProps) {
+export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace, workspaceLoading, workspaceError, onRetryWorkspace, ownerUnavailable, advancedAssistant }: WorkspaceChatProps) {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
@@ -52,11 +56,18 @@ export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace
   const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void ask(question); };
   return <aside className={`workspace-chat ${open ? 'open' : 'closed'}`} aria-label="Workspace chat" aria-hidden={!open}>
     <div className="chat-head"><div><strong>Workspace chat</strong><small>Answers from connected company records</small></div><button type="button" aria-label="Close chat" title="Close chat" onClick={onClose}><PanelRightClose size={18} /></button></div>
-    <div className="chat-status"><span className={workspace ? 'chat-status-dot ready' : 'chat-status-dot'} />{workspace ? `${workspace.company.shortName} / ${workspace.project.name}` : 'Waiting for graph data'}</div>
+    <div className={`chat-status ${workspaceError ? 'has-error' : ''}`}>
+      {workspaceLoading ? <LoadingStatus>{workspace ? 'Refreshing company records…' : 'Loading company records…'}</LoadingStatus>
+        : workspace ? <><span className="chat-status-dot ready" />{workspace.company.shortName} / {workspace.project.name}</>
+          : <><span className="chat-status-dot error" />Connection needs attention</>}
+    </div>
     <div className="chat-scroll" aria-live="polite">
-      {items.length === 0 && <div className="chat-welcome"><h2>Ask about this company</h2><p>Check launch drafts, the writing handoff, company notes, and ownership. Answers include the records used.</p><div className="chat-suggestions">{prompts.map((prompt) => <button key={prompt} type="button" disabled={!workspace || busy} onClick={() => void ask(prompt)}>{prompt}</button>)}</div></div>}
+      {workspaceError && <ErrorNotice className="chat-context-error" title={workspace ? 'Showing saved company records' : 'Company records need a retry'} message={workspaceError} onRetry={onRetryWorkspace} />}
+      {items.length === 0 && workspace && <div className="chat-welcome"><h2>Ask about this company</h2><p>Check launch drafts, the writing handoff, company notes, and ownership. Answers include the records used.</p><div className="chat-suggestions">{prompts.map((prompt) => <button key={prompt} type="button" disabled={busy} onClick={() => void ask(prompt)}>{prompt}</button>)}</div></div>}
+      {items.length === 0 && !workspace && workspaceLoading && <div className="chat-load-skeleton"><LoadingStatus>Loading chat context…</LoadingStatus><SkeletonLines count={4} /></div>}
+      {items.length === 0 && !workspace && !workspaceLoading && !workspaceError && <div className="chat-load-skeleton"><LoadingStatus>Loading chat context…</LoadingStatus><SkeletonLines count={4} /></div>}
       {items.map((item) => <div className={`chat-bubble ${item.role}`} key={item.id}><span>{item.role === 'agent' ? 'Workspace' : 'You'}</span><p>{item.text}</p>{item.response && <><small>Checked {new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(item.response.checkedAt))}</small>{item.response.sources.length > 0 && <div className="chat-citations"><strong>Sources</strong>{item.response.sources.map((source) => <button key={source.id} type="button" onClick={() => onOpenNote(source.id)}>{source.label}</button>)}</div>}</>}</div>)}
-      {busy && <div className="chat-thinking" role="status">Checking company records…</div>}
+      {busy && <div className="chat-thinking"><LoadingStatus>Checking company records…</LoadingStatus></div>}
       {error && <div className="chat-error" role="alert">{error}</div>}
       {advancedAssistant && <details className="chat-advanced"><summary>Campaign tools</summary>{advancedAssistant}</details>}
     </div>
