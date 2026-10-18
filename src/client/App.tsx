@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { BookOpenText, Check, ChevronDown, ChevronLeft, FileWarning, LayoutDashboard, LoaderCircle, Menu, MessageCircle, Workflow } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, FileWarning, LoaderCircle, Menu, MessageCircle } from 'lucide-react';
 import './workspace.css';
 import './connected.css';
 import './company-logos.css';
 import type { ActionProposal, ActivityEntry, CampaignAssistantResponse, CampaignProposalPreview, CampaignReview, DraftFinding, FindingStatus, ProposalAction, WorkspaceSnapshot, WriterDraft } from '../shared/contracts.js';
 import { AppleMailTabs, reviewFilterIcons, type ReviewFilter, type ReviewFilterTab } from './components/AppleMailTabs.js';
-import { MagneticDock } from './components/MagneticDock.js';
+import { MagneticDock, type DockItem } from './components/MagneticDock.js';
 import { ConnectedWorkspace } from './components/ConnectedWorkspace.js';
 import { WorkspaceChat } from './components/WorkspaceChat.js';
 import { WorkspaceOverview } from './components/WorkspaceOverview.js';
 import { PluginsWorkspace } from './components/PluginsWorkspace.js';
-import { LocalTabs } from './components/LocalTabs.js';
+import { WorkspaceSidebar } from './components/WorkspaceSidebar.js';
 import { CompanyLogo } from './components/CompanyLogo.js';
 import { ErrorNotice, LoadingStatus, SkeletonLines } from './components/AsyncStates.js';
 import { ProofStrip } from './components/ProofStrip.js';
@@ -23,13 +23,21 @@ type NavigationSection = 'overview' | 'campaign' | 'memory' | 'brain' | 'plugins
 type LaunchTab = 'drafts' | 'approvals' | 'history';
 type BrainTab = 'graph' | 'notes' | 'coverage' | 'history';
 type DataState = 'loading' | 'ready' | 'error';
-const dockItems = [
-  { id: 'overview', label: 'Overview', href: '#overview', icon: LayoutDashboard },
-  { id: 'campaign', label: 'Launch review', href: '#campaign', icon: LayoutDashboard },
-  { id: 'memory', label: 'Writing handoff', href: '#memory', icon: Workflow },
-  { id: 'brain', label: 'Company records', href: '#brain', icon: BookOpenText },
-  { id: 'plugins', label: 'Plugins', href: '#plugins', icon: PluginsIcon },
+const dockItems: Omit<DockItem, 'active'>[] = [
+  { id: 'overview', label: 'Overview', href: '#overview', icon: 'home-2' },
+  { id: 'campaign', label: 'Launch review', href: '#campaign', icon: 'document-text' },
+  { id: 'memory', label: 'Writing handoff', href: '#memory', icon: 'diagram' },
+  { id: 'brain', label: 'Company records', href: '#brain', icon: 'book' },
+  { id: 'plugins', label: 'Plugins', href: '#plugins', icon: 'category' },
 ];
+
+function pageTitleFor(section: NavigationSection, launchTab: LaunchTab, brainTab: BrainTab): string {
+  if (section === 'campaign') return launchTab === 'drafts' ? 'Drafts' : launchTab === 'approvals' ? 'Approvals' : 'History';
+  if (section === 'brain') return brainTab === 'graph' ? 'Graph' : brainTab === 'notes' ? 'Notes' : brainTab === 'coverage' ? 'Coverage' : 'History';
+  if (section === 'memory') return 'Writing handoff';
+  if (section === 'plugins') return 'Plugins';
+  return 'Overview';
+}
 
 function navigationSectionFromHash(): NavigationSection {
   const hash = window.location.hash.slice(1);
@@ -223,13 +231,6 @@ function formatActivityAt(value: string): string {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
-// Four connected tiles on the same 24px Iconsax Linear grid as the sidebar control.
-function PluginsIcon({ size = 24, strokeWidth = 1.5 }: { size?: number; strokeWidth?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-    <path d="M4.5 3h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 8.5 10h-4A1.5 1.5 0 0 1 3 8.5v-4A1.5 1.5 0 0 1 4.5 3Zm11 0h4A1.5 1.5 0 0 1 21 4.5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 14 8.5v-4A1.5 1.5 0 0 1 15.5 3Zm-11 11h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 8.5 21h-4A1.5 1.5 0 0 1 3 19.5v-4A1.5 1.5 0 0 1 4.5 14Zm11 0h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-  </svg>;
-}
-
 export function App() {
   const [companyKey, setCompanyKey] = useState<DemoCompanyKey>(() =>
     demoCompanyByKey(window.localStorage.getItem('official-demo-company'))?.key ?? defaultDemoCompany.key);
@@ -302,9 +303,9 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
   const rolloutExpanded = review?.findings.some((finding) => finding.evidence.some((item) => item.id === (company.key === 'alder-finch' ? 'source-s4' : `source-expanded-${company.key}`))) ?? false;
 
   useEffect(() => {
-    document.title = `${activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company records' : activeSection === 'memory' ? 'Writing handoff' : activeSection === 'campaign' ? 'Launch review' : 'Overview'} — official`;
+    document.title = `${pageTitleFor(activeSection, launchTab, brainTab)} — official`;
     document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, writing handoffs, and company records in one connected official workspace.');
-  }, [activeSection]);
+  }, [activeSection, launchTab, brainTab]);
 
   useEffect(() => { window.localStorage.setItem('official-sidebar-open', String(sidebarOpen)); }, [sidebarOpen]);
   useEffect(() => {
@@ -321,7 +322,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     if (!focusViewHeading.current) return;
     focusViewHeading.current = false;
     window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.main-content h1')?.focus());
-  }, [activeSection]);
+  }, [activeSection, launchTab, brainTab]);
   useEffect(() => {
     let wasWide = window.innerWidth > 920;
     const onResize = () => {
@@ -834,13 +835,16 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         </a><button ref={sidebarCloseButtonRef} className="sidebar-close" type="button" aria-label="Close sidebar" title="Close sidebar" onClick={closeSidebar}><ChevronLeft size={18} aria-hidden="true" /></button></div>
         <div className="workspace-identity"><div className="workspace-monogram" aria-hidden="true"><CompanyLogo company={company} /></div><div><strong>{workspace?.company.shortName ?? company.shortName}</strong><small>{workspace?.project.name ?? (workspaceError ? 'Project needs a retry' : <LoadingStatus className="sidebar-loading">Loading project</LoadingStatus>)}</small></div></div>
         <div className="workspace-label">WORKSPACE</div>
-        <nav className="nav-list" aria-label="Main navigation">
-          <a className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`} href="#overview" onClick={handleSidebarNavigation} aria-current={activeSection === 'overview' ? 'page' : undefined}><span className="nav-icon"><LayoutDashboard size={17} /></span> Overview</a>
-          <a className={`nav-item ${activeSection === 'campaign' ? 'active' : ''}`} href="#campaign" onClick={handleSidebarNavigation} aria-current={activeSection === 'campaign' ? 'page' : undefined}><span className="nav-icon">◫</span> Launch review <span className="nav-count">{review?.findings.filter((item) => item.needsReview).length ?? '—'}</span></a>
-          <a className={`nav-item ${activeSection === 'memory' ? 'active' : ''}`} href="#memory" onClick={handleSidebarNavigation} aria-current={activeSection === 'memory' ? 'location' : undefined}><span className="nav-icon"><Workflow size={17} /></span> Writing handoff</a>
-          <a className={`nav-item ${activeSection === 'brain' ? 'active' : ''}`} href="#brain" onClick={handleSidebarNavigation} aria-current={activeSection === 'brain' ? 'location' : undefined}><span className="nav-icon"><BookOpenText size={17} /></span> Company records <span className="nav-count">{workspace?.notes.length ?? '—'}</span></a>
-          <a className={`nav-item ${activeSection === 'plugins' ? 'active' : ''}`} href="#plugins" onClick={handleSidebarNavigation} aria-current={activeSection === 'plugins' ? 'page' : undefined}><span className="nav-icon"><PluginsIcon /></span> Plugins</a>
-        </nav>
+        <WorkspaceSidebar
+          activeSection={activeSection}
+          launchPage={launchTab}
+          recordsPage={brainTab}
+          draftCount={review?.findings.length ?? '—'}
+          reviewCount={review?.findings.filter((item) => item.needsReview).length ?? '—'}
+          approvalCount={proposalState === 'ready' ? proposals.filter((item) => item.status === 'pending').length : proposalState === 'loading' ? '…' : '!'}
+          recordCount={workspace?.notes.length ?? '—'}
+          onNavigate={handleSidebarNavigation}
+        />
         <div className="sidebar-bottom">
           <div className="connection-card">
             {graphLoading && !graphError ? <LoaderCircle className="async-spinner connection-loading-icon" size={15} aria-hidden="true" /> : <span className={`connection-dot ${graphError ? 'offline' : graphConnected ? 'online' : ''}`} />}
@@ -857,7 +861,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         <header className="topbar">
           {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" title="Open sidebar" onClick={openSidebar}><Menu size={18} aria-hidden="true" /></button>}
           <a className="brand" href="/" aria-label="official marketing site"><span className="brand-dot" aria-hidden="true" />official</a>
-          <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{activeSection === 'plugins' ? 'Plugins' : activeSection === 'brain' ? 'Company records' : activeSection === 'memory' ? 'Writing handoff' : activeSection === 'campaign' ? 'Launch review' : 'Overview'}</strong></div>
+          <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{pageTitleFor(activeSection, launchTab, brainTab)}</strong></div>
           <div className="topbar-actions"><span className={`connection-inline ${graphError ? 'offline' : graphConnected ? 'online' : 'loading'}`} role="status">{graphLoading && !graphError ? <LoaderCircle className="async-spinner" size={15} aria-hidden="true" /> : <span className="connection-dot" aria-hidden="true" />}{graphStatus}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close workspace chat' : 'Open workspace chat'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><MessageCircle size={17} /><span>Ask workspace</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Connecting a demo plugin saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview the source and its possible role. Disconnect at any time.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, writing handoff, and company records use the selected fictional company’s graph.</p><p>Ask workspace questions to check connected records. Answers cite the notes used, and chat does not change them.</p></>}</section></div><div className="avatar small company-avatar" aria-hidden="true"><CompanyLogo company={company} /></div></div>
         </header>
         <div className="app-dock">
@@ -883,7 +887,9 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           resetBusy={resetBusy}
         /> : <>
         <section className="page-heading review-page-heading" id="campaign">
-          <div><div className="eyebrow">{workspace?.project.name ?? company.shortName} <span className="eyebrow-divider" aria-hidden="true">/</span> FICTIONAL DEMO</div><h1 tabIndex={-1}>Launch review</h1><p className="subheading">{review ? draftsNeedingDecision ? `${draftsNeedingDecision} ${draftsNeedingDecision === 1 ? 'draft needs' : 'drafts need'} a decision. Choose one to inspect its evidence.` : 'No drafts need a decision. You can inspect any draft and its evidence.' : 'Choose a draft to inspect its claim and current evidence.'}</p></div>
+          <div><div className="eyebrow">{workspace?.project.name ?? company.shortName} <span className="eyebrow-divider" aria-hidden="true">/</span> LAUNCH REVIEW</div><h1 tabIndex={-1}>{pageTitleFor(activeSection, launchTab, brainTab)}</h1><p className="subheading">{launchTab === 'drafts'
+            ? review ? draftsNeedingDecision ? `${draftsNeedingDecision} ${draftsNeedingDecision === 1 ? 'draft needs' : 'drafts need'} a decision. Choose one to inspect its evidence.` : 'No drafts need a decision. You can inspect any draft and its evidence.' : 'Choose a draft to inspect its claim and current evidence.'
+            : launchTab === 'approvals' ? 'Review internal proposals before any change is applied.' : 'Review campaign checks and internal decisions recorded for this launch.'}</p></div>
           <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" aria-label={rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`} onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`}</button><button type="button" aria-label={testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'} onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><Check size={16} aria-hidden="true" />{loading ? 'Checking…' : 'Check campaign'}</button></div>
         </section>
 
@@ -895,13 +901,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         {proposalError && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert scenario-alert-error" role="alert"><strong>Review action needs a retry.</strong> {proposalError}</section>}
 
         <div className="review-context"><strong>{review?.campaign.name ?? workspace?.project.name ?? company.shortName}</strong><span>{review ? `${counts.contradicted} contradicted · ${counts.unknown} unknown · ${counts.supported} supported · ${counts.notChecked} not checked` : loading ? 'Waiting for the first successful graph check' : 'No successful graph check yet'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : loading ? 'Checking now' : 'Not recorded'}</small></div>
-        <LocalTabs label="Launch review sections" idPrefix="launch" tabs={[
-          { id: 'drafts' as const, label: 'Drafts', count: review?.findings.length ?? '—' },
-          { id: 'approvals' as const, label: 'Approvals', count: proposalState === 'ready' ? proposals.filter((item) => item.status === 'pending').length : proposalState === 'loading' ? '…' : '!' },
-          { id: 'history' as const, label: 'History' },
-        ]} value={launchTab} onChange={showLaunchTab} />
-
-        {launchTab === 'drafts' && <div className="content-grid" role="tabpanel" id="launch-panel-drafts" aria-labelledby="launch-tab-drafts">
+        {launchTab === 'drafts' && <div className="content-grid" id="launch-panel-drafts">
           <section className="drafts-panel" id="drafts">
             <div className="section-heading drafts-heading"><div><div className="eyebrow">CAMPAIGN REVIEW</div><h2>Drafts and promises</h2></div><AppleMailTabs tabs={reviewTabs} value={draftFilter} onValueChange={changeDraftFilter} /></div>
             <div className="draft-list" id="draft-list" role="tabpanel" aria-labelledby={`draft-filter-${draftFilter}`}>
@@ -958,7 +958,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
             </section>
           </aside>
         </div>}
-        {launchTab === 'approvals' && <div className="approval-layout" role="tabpanel" id="launch-panel-approvals" aria-labelledby="launch-tab-approvals">
+        {launchTab === 'approvals' && <div className="approval-layout" id="launch-panel-approvals">
             <section className="proactive-card">
               <div className="proactive-head"><div className="proactive-icon" aria-hidden="true"><FileWarning size={16} /></div><div><div className="eyebrow">NEEDS ATTENTION</div><h2>Drafts to review</h2></div></div>
               {review?.proactiveItems.length ? <div className="proactive-list">{review.proactiveItems.map((item) => <button className="proactive-item" key={item.id} onClick={() => { showLaunchTab('drafts'); setSelectedId(item.id); scrollTo('draft-details'); }}><span className={`proactive-status ${item.status.toLowerCase()}`} aria-hidden="true" /><span><strong>{item.title}</strong><small><span className="status-label">{item.status}</span> · {item.detail}</small></span><span className="row-chevron" aria-hidden="true">›</span></button>)}</div> : <p className="proactive-empty" role="status" aria-live="polite" aria-atomic="true">{review ? 'No promises currently need a review.' : 'Review suggestions will appear when campaign evidence is available.'}</p>}
@@ -983,7 +983,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
             </section>
 
         </div>}
-        {launchTab === 'history' && <section className="activity-card" id="launch-panel-history" role="tabpanel" aria-labelledby="launch-tab-history"><div className="activity-heading"><span className="activity-icon">◷</span><div><div className="eyebrow">ACTIVITY HISTORY</div><h2>Campaign activity</h2></div></div>{activityState === 'error' && <ErrorNotice className="panel-load-error" title={activity.length ? 'Showing saved activity' : 'Activity history needs another try'} message={activityLoadError ?? 'Campaign activity could not be refreshed.'} onRetry={() => void refreshSupportingData()} />}{activityState === 'loading' && activity.length > 0 && <LoadingStatus className="panel-refresh-status">Updating activity · saved entries remain visible</LoadingStatus>}<div className="activity-list" aria-live="polite">{activityState === 'loading' && activity.length === 0 ? <div className="activity-empty"><LoadingStatus>Loading campaign activity…</LoadingStatus><SkeletonLines count={4} /></div> : activity.length ? activity.map((entry) => <div className="activity-entry" key={entry.id}><span className="activity-line" /><span className="activity-dot" /><div><strong>{entry.title}</strong><small>{formatActivityAt(entry.occurredAt)} · {entry.detail}</small>{entry.runId && <small className="activity-run-id">Run ID: {entry.runId}</small>}</div></div>) : activityState === 'error' ? null : <div className="activity-empty">No campaign activity has been recorded yet.</div>}</div></section>}
+        {launchTab === 'history' && <section className="activity-card" id="launch-panel-history"><div className="activity-heading"><span className="activity-icon">◷</span><div><div className="eyebrow">ACTIVITY HISTORY</div><h2>Campaign activity</h2></div></div>{activityState === 'error' && <ErrorNotice className="panel-load-error" title={activity.length ? 'Showing saved activity' : 'Activity history needs another try'} message={activityLoadError ?? 'Campaign activity could not be refreshed.'} onRetry={() => void refreshSupportingData()} />}{activityState === 'loading' && activity.length > 0 && <LoadingStatus className="panel-refresh-status">Updating activity · saved entries remain visible</LoadingStatus>}<div className="activity-list" aria-live="polite">{activityState === 'loading' && activity.length === 0 ? <div className="activity-empty"><LoadingStatus>Loading campaign activity…</LoadingStatus><SkeletonLines count={4} /></div> : activity.length ? activity.map((entry) => <div className="activity-entry" key={entry.id}><span className="activity-line" /><span className="activity-dot" /><div><strong>{entry.title}</strong><small>{formatActivityAt(entry.occurredAt)} · {entry.detail}</small>{entry.runId && <small className="activity-run-id">Run ID: {entry.runId}</small>}</div></div>) : activityState === 'error' ? null : <div className="activity-empty">No campaign activity has been recorded yet.</div>}</div></section>}
         <footer className="page-footer"><span>Built around evidence, not assumptions.</span><span>Fictional product data <span className="footer-separator">·</span> No external actions</span><a href="/">Marketing site <span aria-hidden="true">↗</span></a></footer>
         </>}
       </main>

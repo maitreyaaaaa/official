@@ -4,7 +4,6 @@ import type { KnowledgeNote, WorkspaceSnapshot, WriterDraft } from '../../shared
 import type { DemoCompany } from '../../shared/demo-companies.js';
 import { CompanyLogo } from './CompanyLogo.js';
 import { ErrorNotice, LoadingStatus, SkeletonLines } from './AsyncStates.js';
-import { LocalTabs } from './LocalTabs.js';
 import { BrainGraph } from './BrainGraph.js';
 import { ProofStrip } from './ProofStrip.js';
 import { savedHandoffInstruction, type ProofComparison } from '../../shared/reviewer-proof.js';
@@ -110,6 +109,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
     { label: 'Direct source on guide', ready: brain.linkedSourceCount > 0 },
   ];
   const handoverReady = readiness.every((item) => item.ready);
+  const recordsPageTitle = brainTab === 'graph' ? 'Graph' : brainTab === 'notes' ? 'Notes' : brainTab === 'coverage' ? 'Coverage' : 'History';
   const historyPanel = <section className="connected-events"><div><span className="connected-label">GRAPH ACTIVITY</span><h2>What changed</h2></div>{workspace.events.length ? workspace.events.map((event) => <div className="connected-event" key={event.id}><span>{dateLabel(event.occurredAt)}</span><strong>{event.title}</strong><p>{event.detail}</p></div>) : <p className="connected-empty">No memory or ownership change has been recorded yet.</p>}</section>;
 
   const noteReader = <article className="note-reader">{selectedNote ? <>
@@ -124,8 +124,8 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
   return <div className="connected-page" id={view}>
     <div className="connected-masthead">
       <div className="connected-mark" aria-hidden="true"><CompanyLogo company={company} /></div>
-      <div><span className="connected-overline">{workspace.company.name} <span aria-hidden="true">/</span> {workspace.project.name}</span>
-        <h1 tabIndex={-1}>{view === 'memory' ? 'Writing handoff' : 'Company records'}</h1>
+      <div><span className="connected-overline">{workspace.company.name} <span aria-hidden="true">/</span> {workspace.project.name}{view === 'brain' && <> <span aria-hidden="true">/</span> Company records <span aria-hidden="true">/</span> {recordsPageTitle}</>}</span>
+        <h1 tabIndex={-1}>{view === 'memory' ? 'Writing handoff' : recordsPageTitle}</h1>
         <p>{view === 'memory'
           ? 'Keep the next writer on the current approved brief, even when the original handoff is old.'
           : 'Browse the notes, decisions, people, and source paths behind this launch.'}</p></div>
@@ -173,14 +173,8 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
         </section>
       </div>
     </> : <>
-      <LocalTabs label="Company record sections" idPrefix="brain" tabs={[
-        { id: 'graph' as const, label: 'Graph', count: notes.length },
-        { id: 'notes' as const, label: 'Notes', count: notes.length },
-        { id: 'coverage' as const, label: 'Coverage', count: handoverReady ? 0 : 1 },
-        { id: 'history' as const, label: 'History' },
-      ]} value={brainTab} onChange={onBrainTabChange} />
-      {brainTab === 'graph' && <div className="brain-graph-layout" id="brain-panel-graph" role="tabpanel" aria-labelledby="brain-tab-graph"><BrainGraph notes={notes} selectedId={selectedNote?.id ?? null} onSelect={selectNote} />{noteReader}</div>}
-      {brainTab === 'coverage' && <div id="brain-panel-coverage" role="tabpanel" aria-labelledby="brain-tab-coverage">
+      {brainTab === 'graph' && <div className="brain-graph-layout" id="brain-panel-graph"><BrainGraph notes={notes} selectedId={selectedNote?.id ?? null} onSelect={selectNote} />{noteReader}</div>}
+      {brainTab === 'coverage' && <div id="brain-panel-coverage">
       <section className="connected-card coverage-card">
         <div className="connected-card-heading"><span className="connected-icon"><ShieldCheck size={19} /></span><div><span className="connected-label">COMPANY CONTINUITY</span><h2>Who can carry the launch review?</h2></div></div>
         <div className="coverage-main"><div><p>{brain.processSummary}</p><div className="coverage-people"><span><Users size={15} /> Primary: <strong>{brain.primaryName}</strong></span><span><Users size={15} /> Backup: <strong>{brain.backupName ?? 'Not confirmed'}</strong></span></div><p className="connected-help">{brain.affectedProject} depends on this process. {brain.decisionCurrent ? `The guide cites ${brain.decisionTitle}.` : 'The current decision link needs review.'}</p></div><div className="coverage-status"><span className="connected-label">{ownerUnavailable ? 'SCENARIO RESULT' : 'CURRENT COVERAGE'}</span><strong>{brain.coverage}</strong><small>{brain.backupProposalStatus ? 'A backup proposal is pending; it does not count yet.' : brain.rosterReviewed ? 'Based on the reviewed roster and approved links.' : 'Roster review is missing.'}</small></div></div>
@@ -192,7 +186,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
         <p className="connected-help">Unaffected control: {brain.controlProcess.name} — {brain.controlProcess.coverage}. No person is assigned from a job title or model guess.</p>
       </section>
       </div>}
-      {brainTab === 'notes' && <div className="brain-layout" id="brain-panel-notes" role="tabpanel" aria-labelledby="brain-tab-notes">
+      {brainTab === 'notes' && <div className="brain-layout" id="brain-panel-notes">
         <aside className="notes-browser" aria-label="Company records notes">
           <div className="notes-browser-title"><BookOpenText size={19} /><strong>All notes</strong><span>{notes.length}</span></div>
           <label className="notes-search"><Search size={17} aria-hidden="true" /><span className="sr-only">Search company notes</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search notes" /></label>
@@ -201,7 +195,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
         </aside>
         {noteReader}
       </div>}
-      {brainTab === 'history' && <div id="brain-panel-history" role="tabpanel" aria-labelledby="brain-tab-history">{historyPanel}</div>}
+      {brainTab === 'history' && <div id="brain-panel-history">{historyPanel}</div>}
     </>}
     {view === 'memory' && <details className="memory-history"><summary>Graph activity</summary>{historyPanel}</details>}
   </div>;

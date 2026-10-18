@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
-import type { ElementType } from 'react';
+import { IconsaxIcon, type IconsaxName } from './IconsaxIcon.js';
 
 export type DockItem = {
   id: string;
   label: string;
   href: string;
-  icon: ElementType;
+  icon: IconsaxName;
   active: boolean;
 };
 
@@ -19,8 +19,6 @@ function DockLink({ item, pointer, reducedMotion }: { item: DockItem; pointer: R
   });
   const scale = useSpring(useTransform(distance, [-112, 0, 112], [1, 1.26, 1]), { stiffness: 330, damping: 24, mass: 0.55 });
   const lift = useSpring(useTransform(scale, (value) => (value - 1) * -5), { stiffness: 330, damping: 24, mass: 0.55 });
-  const Icon = item.icon;
-
   return (
     <motion.a
       ref={ref}
@@ -36,7 +34,7 @@ function DockLink({ item, pointer, reducedMotion }: { item: DockItem; pointer: R
       onBlur={() => setHovered(false)}
       whileTap={reducedMotion ? undefined : { scale: 0.92 }}
     >
-      <Icon aria-hidden="true" size={19} strokeWidth={1.8} />
+      <span className={`dock-icon dock-tone-${item.id}`}><IconsaxIcon name={item.icon} size={19} /></span>
       <span className="dock-label">{item.label}</span>
       <span className={`dock-tooltip${hovered ? ' visible' : ''}`}>{item.label}</span>
       {item.active && <span className="dock-active-dot" aria-hidden="true" />}
