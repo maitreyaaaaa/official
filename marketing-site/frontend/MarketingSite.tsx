@@ -29,6 +29,20 @@ const pageDetails: Record<MarketingPage, { title: string; description: string }>
   },
 };
 
+const introStorageKey = 'official-marketing-intro-seen';
+const introHoldDuration = 700;
+const introRevealDuration = 1.05;
+
+function shouldShowMarketingIntro(): boolean {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+
+  try {
+    return window.sessionStorage.getItem(introStorageKey) !== 'seen';
+  } catch {
+    return true;
+  }
+}
+
 const navigationItems: Array<{ label: string; page: MarketingPage; href: string }> = [
   { label: 'What it does', page: 'review', href: '/review' },
   { label: 'How it works', page: 'method', href: '/method' },
@@ -321,6 +335,24 @@ function NotFoundPage() {
 }
 
 export function MarketingSite({ page }: { page: MarketingPage }) {
+  const [introPhase, setIntroPhase] = useState<'holding' | 'exiting' | 'done'>(() => (
+    shouldShowMarketingIntro() ? 'holding' : 'done'
+  ));
+  const introActive = introPhase !== 'done';
+
+  useEffect(() => {
+    if (introPhase === 'done') return;
+
+    try {
+      window.sessionStorage.setItem(introStorageKey, 'seen');
+    } catch {
+      // The intro still works when session storage is unavailable.
+    }
+
+    const exitTimer = window.setTimeout(() => setIntroPhase('exiting'), introHoldDuration);
+    return () => window.clearTimeout(exitTimer);
+  }, []);
+
   useEffect(() => {
     const lenis = new Lenis({
       anchors: true,
@@ -350,14 +382,37 @@ export function MarketingSite({ page }: { page: MarketingPage }) {
   }, []);
 
   return (
-    <div className="marketing-site">
-      <SiteHeader page={page} />
-      {page === 'home' && <HomePage />}
-      {page === 'review' && <ReviewPage />}
-      {page === 'method' && <MethodPage />}
-      {page === 'guardrails' && <GuardrailsPage />}
-      {page === 'notFound' && <NotFoundPage />}
-      <SiteFooter />
-    </div>
+    <>
+      <motion.div
+        className="marketing-site"
+        aria-hidden={introActive}
+        inert={introActive}
+        initial={false}
+        animate={introPhase === 'holding' ? { opacity: 0, y: 16 } : { opacity: 1, y: 0 }}
+        transition={{ duration: introRevealDuration, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <SiteHeader page={page} />
+        {page === 'home' && <HomePage />}
+        {page === 'review' && <ReviewPage />}
+        {page === 'method' && <MethodPage />}
+        {page === 'guardrails' && <GuardrailsPage />}
+        {page === 'notFound' && <NotFoundPage />}
+        <SiteFooter />
+      </motion.div>
+      {introActive && (
+        <motion.div
+          className="marketing-site-intro"
+          aria-hidden="true"
+          initial={false}
+          animate={{ y: introPhase === 'exiting' ? '-100%' : '0%' }}
+          transition={{ duration: introRevealDuration, ease: [0.65, 0, 0.35, 1] }}
+          onAnimationComplete={() => {
+            if (introPhase === 'exiting') setIntroPhase('done');
+          }}
+        >
+          <img src="/brand/official-logo-landscape.svg" alt="" draggable={false} />
+        </motion.div>
+      )}
+    </>
   );
 }

@@ -16,6 +16,28 @@
 
 html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100px; }
 
+.marketing-site-intro {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #ffd500;
+  will-change: transform;
+}
+
+.marketing-site-intro img {
+  display: block;
+  width: min(720px, 92vw);
+  max-height: 70vh;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  user-select: none;
+}
+
+.marketing-site[aria-hidden='true'] { pointer-events: none; }
+
 .marketing-site {
   --site-paper: #ffd500;
   --site-white: #fffefa;
@@ -395,6 +417,8 @@ html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100p
 
 @media (prefers-reduced-motion: reduce) {
   html.marketing-scroll-smooth { scroll-behavior: auto; }
+  .marketing-site-intro { display: none; }
+  .marketing-site[aria-hidden='true'] { opacity: 1 !important; transform: none !important; }
   .launch-statement-reveal { min-height: auto !important; }
   .launch-statement-reveal .scroll-reveal-stage { position: relative; min-height: 360px; padding-block: 80px 48px; }
   .launch-statement-reveal .scroll-reveal-hint { display: none; }
