@@ -62,7 +62,7 @@ The integrated TypeScript/Vite build passes and `npm test` passed **88/88** dete
 
 ### Vercel production acceptance — 2026-10-17
 
-- Public reviewer site: [official-sand.vercel.app](https://official-sand.vercel.app/). The marketing site `/` and reviewer workspace `/app` load on the production alias. Vercel preview deployment URLs require a Vercel login; use the production alias for reviewers.
+- Public reviewer entry: [official-sand.vercel.app](https://official-sand.vercel.app/) opens the marketing homepage. Select **Open review workspace** there to enter the reviewer workspace at `/app`. Vercel preview deployment URLs require a Vercel login; use the production alias for reviewers.
 - Production `/api/health` returns `200` with FalkorDB connected. The hosted app returns four campaign findings from the fictional Alder & Finch fixture: two Contradicted, one Supported, and one Not checked. Fixture seeding is enabled and the initial baseline is restored after acceptance.
 - Browser-verified production flows: changing access to all accounts changes the three CSV claims to Supported; restoring internal-tester access returns the two contradictions. A pause proposal was created, approved, and resumed after a fresh Supported check. Activity entries recorded the checks and human decisions.
 - Fixed deployment-specific issues found during this pass: the SPA fallback had intercepted API paths; the function runtime imported the local Vite server; deeper campaign routes were not registered as Vercel functions; and hosted write guards were not given the request host. Production UI actions now follow the server's hosted-demo capability flags.
@@ -70,7 +70,7 @@ The integrated TypeScript/Vite build passes and `npm test` passed **88/88** dete
 
 ### Integrated workspace production release — 2026-10-18
 
-- Commit `a809d67` was pushed to `main`; GitHub's Vercel status reported the deployment completed successfully. The public alias [official-sand.vercel.app/app](https://official-sand.vercel.app/app) served the new compact Overview, Launch review, and Company Brain notes in a production browser session.
+- Commit `a809d67` was pushed to `main`; GitHub's Vercel status reported the deployment completed successfully. The public [marketing homepage](https://official-sand.vercel.app/) leads to the workspace, where the new compact Overview, Launch review, and Company Brain notes were confirmed in a production browser session.
 - Production `/api/health` returned `200` with `falkorDb: connected`. The Overview loaded graph-backed counts, and Launch review showed four findings: two Contradicted, one Supported, and one Not checked. Company Brain showed eight notes. Chat was closed on first load.
 - `npm run build` and `git diff --cached --check` passed before the push. Approval, writer, and backup mutations were not replayed in production during this release check. No automated WCAG conformance scan was completed for the new layout.
 

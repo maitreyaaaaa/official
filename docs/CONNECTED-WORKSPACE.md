@@ -20,7 +20,7 @@ The Plugins view lists 25 sources across messages, meetings, projects, customer 
 
 ## Local walkthrough
 
-1. Start the documented FalkorDB stack and `npm run dev`. Open `http://127.0.0.1:3001/app`. The app initializes fixture `connected-companies-v11` when seeding is enabled.
+1. Start the documented FalkorDB stack and `npm run dev`. Open `http://127.0.0.1:3001/`, then select **Open review workspace**. The app initializes fixture `connected-companies-v11` when seeding is enabled.
 2. Use the three-step guide on Launch review. First inspect the baseline claim and its source path: two Contradicted, one Supported, one Not checked. Changing rollout or test evidence changes only dependent findings. Campaign activity is lower on this same page.
 3. Open Agent memory. Inspect handoff revision 1, approve the calm tone if pending, then start a fresh writer. Its draft uses the current approved tone, reviewed opening, and live evidence result. The text stays pending until a person approves it internally. If rollout or test facts change, approval of that old draft returns 409 and the UI labels it historical.
 4. Open Company Brain. Search and open a note, follow backlinks, and inspect dated source records. Simulate Maya unavailable. Without a confirmed backup, the process is Uncovered. Propose Zara: coverage stays Uncovered. Approve: coverage becomes Covered by backup; Release QA remains covered by Ines. The internal handover names the guide, decision, and source links. Expanding the rollout makes the old guide incomplete until reviewed against that change.
@@ -41,7 +41,7 @@ The Plugins view lists 25 sources across messages, meetings, projects, customer 
 ## Current boundaries
 
 - The two-company extension was verified locally on 2026-10-18: build and 88 deterministic checks passed; FalkorDB returned four expected findings for each company, eight Alder notes and nine Northstar notes. Northstar's tone approval, writer session, backup proposal and approval, and reset completed while Alder's brief and backup stayed unchanged. Browser review confirmed switching companies and opening a graph node with the correct note and citations.
-- The integrated workspace and compact Overview reached the [public Vercel alias](https://official-sand.vercel.app/app) on 2026-10-18. Production read-only browser review confirmed the Overview, Launch review drafts, Company Brain notes, and connected FalkorDB health. The integrated approval and writer mutations were previously exercised locally; they were not replayed on this production release.
+- The integrated workspace and compact Overview reached the public Vercel deployment on 2026-10-18. Start from the [marketing homepage](https://official-sand.vercel.app/) and select **Open review workspace** to enter `/app`. Production read-only browser review confirmed the Overview, Launch review drafts, Company Brain notes, and connected FalkorDB health. The integrated approval and writer mutations were previously exercised locally; they were not replayed on this production release.
 - There is no authenticated reviewer identity, customer ingestion, automatic crawling, background scheduling, external publishing, or real customer data. Fixed demo approvals record the fictional reviewer name in graph records; they do not authenticate that person.
 - Writer copy and workspace chat are deterministic, bounded demo behavior. The handover is an internal brief; it is not sent to anyone.
 - The two companies are fixed fictional demo fixtures. There is no customer onboarding or company data import.

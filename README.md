@@ -1,6 +1,6 @@
 # official
 
-**Live app:** [Open the official workspace](https://official-sand.vercel.app/app)
+**Official site:** [Visit the marketing homepage](https://official-sand.vercel.app/)
 
 **Graph Hacks tracks:** Track 01 — Agents That Act on Connected Data · Track 02 — Agent Memory and Coordination · Track 03 — Company Brain
 
@@ -38,7 +38,7 @@ All three tracks use the same FalkorDB graph and company context. Track 01 provi
   <img src="docs/demo-poster.svg" alt="official product walkthrough. Video coming soon." width="960" />
 </p>
 
-<p align="center"><strong>Demo video coming soon.</strong> Use the <a href="https://official-sand.vercel.app/app">live app</a> to explore the workspace.</p>
+<p align="center"><strong>Demo video coming soon.</strong> Start at the <a href="https://official-sand.vercel.app/">official site</a> for the overview and link to the workspace.</p>
 
 <!-- When the recording is ready, link the poster to its public video URL:
 [![Watch the official walkthrough](docs/demo-poster.svg)](VIDEO_URL)
@@ -55,7 +55,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://127.0.0.1:3001/app](http://127.0.0.1:3001/app). The sample environment uses fictional data. Keep credentials in `.env`; do not commit them.
+Open [http://127.0.0.1:3001/](http://127.0.0.1:3001/). Start at the marketing page, then select **Open review workspace** to enter the app. The sample environment uses fictional data. Keep credentials in `.env`; do not commit them.
 
 To run the checks:
 
