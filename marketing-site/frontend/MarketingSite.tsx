@@ -4,7 +4,7 @@ import { cancelFrame, frame, motion, useReducedMotion, useScroll, useTransform }
 import 'lenis/dist/lenis.css';
 import './marketing-site.css';
 import type { MarketingPage } from './routes.js';
-import { getMarketingIntroHoldRemaining, markMarketingIntroSeen, shouldShowMarketingIntro } from './intro.js';
+import { completeMarketingIntro, getMarketingIntroHoldRemaining, shouldShowMarketingIntro } from './intro.js';
 import { ScrollRevealText } from './ScrollRevealText.js';
 
 const pageDetails: Record<MarketingPage, { title: string; description: string }> = {
@@ -391,7 +391,7 @@ export function MarketingSite({ page }: { page: MarketingPage }) {
           transition={{ duration: introRevealDuration, ease: [0.65, 0, 0.35, 1] }}
           onAnimationComplete={() => {
             if (introPhase === 'exiting') {
-              markMarketingIntroSeen();
+              completeMarketingIntro();
               setIntroPhase('done');
             }
           }}
