@@ -338,6 +338,47 @@
 @media (max-width: 920px) { .connected-shell .main-content, .connected-shell.sidebar-closed .main-content { margin-left: 0; } .connected-shell .sidebar { box-shadow: 14px 0 50px #18322535; } .connected-shell .topbar > .brand { display: inline-flex; } }
 @media (max-width: 920px) { .connected-shell .workspace-nav-list .nav-submenu { position: static; width: auto; margin: 2px 0 7px 25px; padding: 3px 0 3px 7px; border: 0; border-left: 1px solid #e1e6de; border-radius: 0; background: transparent; box-shadow: none; } .connected-shell .workspace-nav-list .nav-child { min-height: 34px; } }
 @media (max-width: 680px) { .connected-shell .main-content { padding-inline: 17px; } .connected-shell .topbar { min-height: 64px; } .connected-shell .topbar-actions .connection-inline, .connected-shell .topbar-actions .avatar, .connected-shell .topbar-actions .help-wrap { display: none; } .connected-shell .chat-toggle span { display: none; } .connected-shell .app-dock { display: flex; } .connected-shell .magnetic-dock { max-width: calc(100vw - 18px); gap: 2px; padding: 5px; } .connected-shell .dock-link { width: clamp(52px,18vw,68px); height: 50px; gap: 1px; padding: 3px; } .connected-shell .dock-label { font-size: 8px; white-space: normal; text-align: center; } .connected-shell .connected-page { padding-top: 25px; } .connected-shell .connected-masthead { gap: 12px; } .connected-shell .connected-mark { width: 48px; height: 48px; font-size: 19px; } .connected-shell .connected-summary-grid { grid-template-columns: 1fr; gap: 8px; } .connected-shell .connected-summary { min-height: 86px; } .connected-shell .coverage-main { grid-template-columns: 1fr; } .connected-shell .note-relations { grid-template-columns: 1fr; gap: 10px; } .connected-shell .connected-card { padding: 19px; } .workspace-chat { width: min(100vw,390px); } }
+@media (min-width: 641px) and (max-height: 700px) {
+  .connected-shell .sidebar { padding: 8px 10px 7px; }
+  .connected-shell .sidebar-close { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
+  .connected-shell .workspace-identity { gap: 8px; margin: 10px 3px 6px; padding: 7px; }
+  .connected-shell .workspace-monogram { width: 32px; height: 32px; border-radius: 9px; font-size: 13px; }
+  .connected-shell .workspace-identity strong { font-size: 12px; }
+  .connected-shell .workspace-identity small { font-size: 9px; }
+  .connected-shell .workspace-label { margin: 10px 12px 4px; font-size: 9px; }
+  .connected-shell .workspace-nav-roots { gap: 1px; }
+  .connected-shell .workspace-nav-list .nav-item,
+  .connected-shell .workspace-nav-list .nav-child { min-height: 32px; gap: 8px; font-size: 11px; }
+  .connected-shell .workspace-nav-list .nav-group-row { min-height: 32px; }
+  .connected-shell .workspace-nav-list .nav-disclosure { width: 26px; height: 28px; }
+  .connected-shell .workspace-nav-list .nav-child { min-height: 30px; }
+  .connected-shell .workspace-nav-list .nav-submenu-current { margin: 1px 0 4px 23px; padding-block: 2px; }
+  .connected-shell .workspace-nav-list .nav-submenu li + li { margin-top: 1px; }
+  .connected-shell .sidebar-bottom { flex: 0 0 auto; }
+  .connected-shell .connection-card { gap: 8px; margin-top: 7px; margin-bottom: 5px; padding: 7px 8px; }
+  .connected-shell .connection-card strong { font-size: 10px; }
+  .connected-shell .connection-card small { margin-top: 2px; font-size: 9px; }
+  .connected-shell .company-switcher { margin-top: 5px; }
+  .connected-shell .company-switcher-toggle { gap: 8px; padding: 7px 8px; }
+  .connected-shell .company-switcher-toggle .avatar { width: 26px; height: 26px; font-size: 10px; }
+  .connected-shell .company-switcher-toggle strong { font-size: 10px; }
+  .connected-shell .company-switcher-toggle small { margin-top: 2px; font-size: 9px; }
+}
+@media (min-width: 641px) and (max-height: 520px) {
+  .connected-shell .sidebar { padding: 5px 8px; }
+  .connected-shell .workspace-identity { margin: 5px 3px 3px; padding: 5px; }
+  .connected-shell .workspace-monogram { width: 28px; height: 28px; }
+  .connected-shell .workspace-label { margin: 6px 10px 3px; }
+  .connected-shell .workspace-nav-list .nav-item,
+  .connected-shell .workspace-nav-list .nav-child { min-height: 29px; }
+  .connected-shell .workspace-nav-list .nav-group-row { min-height: 29px; }
+  .connected-shell .workspace-nav-list .nav-child { min-height: 27px; }
+  .connected-shell .workspace-nav-list .nav-submenu-current { margin-bottom: 2px; }
+  .connected-shell .connection-card { margin-top: 4px; margin-bottom: 3px; padding: 5px 7px; }
+  .connected-shell .company-switcher { margin-top: 3px; }
+  .connected-shell .company-switcher-toggle { padding-block: 5px; }
+  .connected-shell .company-switcher-toggle small { font-size: 9px; }
+}
 @media (prefers-reduced-motion: reduce) { .connected-shell .sidebar, .connected-shell .main-content, .workspace-chat { transition: none; } }
 
 .proof-strip { margin: 0 0 18px; padding: 16px 18px; border: 1px solid #dce8da; border-radius: 13px; background: #f8fbf6; color: #344e39; }
