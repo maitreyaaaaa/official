@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title description">
+  <title id="title">official — a connected workspace for three Graph Hacks tracks</title>
+  <desc id="description">A calm, editorial demo poster showing connected launch evidence, writer memory, and company knowledge around FalkorDB. The recorded walkthrough is coming soon.</desc>
+  <rect width="1200" height="560" fill="#f3f3ed"/>
+  <rect x="30" y="30" width="1140" height="500" rx="18" fill="#fff" stroke="#dfe4dc"/>
+
+  <text x="78" y="91" fill="#263a30" font-family="Inter, Arial, sans-serif" font-size="27" font-weight="700" letter-spacing="-1">official</text>
+  <text x="1120" y="87" fill="#627166" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" text-anchor="end">GRAPH HACKS · THREE TRACKS</text>
+  <line x1="78" y1="114" x2="1122" y2="114" stroke="#e7eae3"/>
+
+  <text x="78" y="183" fill="#25382e" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="650" letter-spacing="-1.5">Three tracks.</text>
+  <text x="78" y="234" fill="#25382e" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="650" letter-spacing="-1.5">One connected workspace.</text>
+  <text x="80" y="272" fill="#647168" font-family="Inter, Arial, sans-serif" font-size="16">Follow launch evidence, shared writing context,</text>
+  <text x="80" y="297" fill="#647168" font-family="Inter, Arial, sans-serif" font-size="16">and company knowledge through FalkorDB.</text>
+
+  <g fill="none" stroke="#a9b8aa" stroke-width="2">
+    <path d="M910 230 794 174M930 230 1043 174M910 261 794 322M930 261 1043 322"/>
+  </g>
+  <g>
+    <rect x="843" y="215" width="154" height="66" rx="13" fill="#304d3b"/>
+    <text x="920" y="243" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle">FalkorDB</text>
+    <text x="920" y="262" fill="#d7e2d7" font-family="Inter, Arial, sans-serif" font-size="10" letter-spacing=".7" text-anchor="middle">CONNECTED CONTEXT</text>
+  </g>
+  <g font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" text-anchor="middle">
+    <rect x="713" y="148" width="162" height="48" rx="10" fill="#f7f8f4" stroke="#dfe5dc"/>
+    <circle cx="731" cy="172" r="5" fill="#b8863d"/>
+    <text x="797" y="176" fill="#37483c">Launch evidence</text>
+    <rect x="963" y="148" width="162" height="48" rx="10" fill="#f7f8f4" stroke="#dfe5dc"/>
+    <circle cx="981" cy="172" r="5" fill="#4e8e8a"/>
+    <text x="1047" y="176" fill="#37483c">Writer memory</text>
+    <rect x="713" y="300" width="162" height="48" rx="10" fill="#f7f8f4" stroke="#dfe5dc"/>
+    <circle cx="731" cy="324" r="5" fill="#557e5e"/>
+    <text x="797" y="328" fill="#37483c">Company records</text>
+    <rect x="963" y="300" width="162" height="48" rx="10" fill="#f7f8f4" stroke="#dfe5dc"/>
+    <circle cx="981" cy="324" r="5" fill="#6482a0"/>
+    <text x="1047" y="328" fill="#37483c">People &amp; decisions</text>
+  </g>
+
+  <rect x="78" y="374" width="1044" height="88" rx="12" fill="#f4f7f2" stroke="#e1e8df"/>
+  <line x1="426" y1="390" x2="426" y2="446" stroke="#dce4da"/>
+  <line x1="774" y1="390" x2="774" y2="446" stroke="#dce4da"/>
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="101" y="410" fill="#758176" font-size="10" font-weight="700" letter-spacing="1.2">01 · CONNECTED DATA</text>
+    <text x="101" y="435" fill="#304137" font-size="14" font-weight="600">Explain each finding</text>
+    <text x="450" y="410" fill="#758176" font-size="10" font-weight="700" letter-spacing="1.2">02 · MEMORY &amp; COORDINATION</text>
+    <text x="450" y="435" fill="#304137" font-size="14" font-weight="600">Continue from a handoff</text>
+    <text x="798" y="410" fill="#758176" font-size="10" font-weight="700" letter-spacing="1.2">03 · COMPANY BRAIN</text>
+    <text x="798" y="435" fill="#304137" font-size="14" font-weight="600">Find the people and records</text>
+  </g>
+
+  <text x="78" y="497" fill="#435449" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1">DEMO VIDEO</text>
+  <text x="1122" y="497" fill="#708074" font-family="Inter, Arial, sans-serif" font-size="12" text-anchor="end">Recorded walkthrough coming soon</text>
+</svg>
