@@ -1,8 +1,20 @@
-# official
+<h1 align="center">
+  <img src="public/brand/official-logo-landscape.png" alt="official" width="320" />
+</h1>
 
-**Official site:** [Visit the Official Site](https://official-sand.vercel.app/)
+<p align="center"><strong>Evidence-backed launch reviews, approved writer handoffs, and connected company records.</strong></p>
 
-**Graph Hacks tracks:** Track 01 — Agents That Act on Connected Data · Track 02 — Agent Memory and Coordination · Track 03 — Company Brain
+<p align="center">
+  <a href="https://official-sand.vercel.app/"><img src="https://img.shields.io/badge/LIVE%20WORKSPACE-OPEN-43543D?style=flat-square" alt="Open the live workspace" /></a>
+  <img src="https://img.shields.io/badge/FRONTEND-React%2019-20232A?style=flat-square&amp;logo=react" alt="Frontend: React 19" />
+  <img src="https://img.shields.io/badge/LANGUAGE-TypeScript-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="Language: TypeScript" />
+  <img src="https://img.shields.io/badge/BUILD-Vite%207-646CFF?style=flat-square&amp;logo=vite&amp;logoColor=white" alt="Build: Vite 7" />
+  <img src="https://img.shields.io/badge/SERVER-Express%205-444444?style=flat-square&amp;logo=express" alt="Server: Express 5" />
+  <img src="https://img.shields.io/badge/GRAPH-FalkorDB-7B4AB5?style=flat-square" alt="Graph database: FalkorDB" />
+  <img src="https://img.shields.io/badge/RUNTIME-Node.js%2022%2B-339933?style=flat-square&amp;logo=nodedotjs&amp;logoColor=white" alt="Runtime: Node.js 22 or later" />
+</p>
+
+<p align="center">Track 01 · Connected data &nbsp;|&nbsp; Track 02 · Agent memory and coordination &nbsp;|&nbsp; Track 03 · Company Brain</p>
 
 ## Overview
 
