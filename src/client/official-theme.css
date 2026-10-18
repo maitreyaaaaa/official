@@ -146,12 +146,20 @@
 }
 
 .app-shell.connected-shell .chat-toggle {
-  min-height: 32px;
-  padding: 0 4px;
+  min-height: 40px;
+  gap: 8px;
+  padding: 0 6px;
   border: 0;
   border-radius: 4px;
   background: transparent;
   color: var(--official-accent-dark);
+  font-size: 14px;
+}
+
+.app-shell.connected-shell .chat-toggle-mascot {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
 }
 
 .app-shell.connected-shell .chat-toggle:hover {
