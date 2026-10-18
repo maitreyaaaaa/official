@@ -4,6 +4,7 @@ import { cancelFrame, frame, motion, useReducedMotion, useScroll, useTransform }
 import 'lenis/dist/lenis.css';
 import './marketing-site.css';
 import type { MarketingPage } from './routes.js';
+import { getMarketingIntroHoldRemaining, markMarketingIntroSeen, shouldShowMarketingIntro } from './intro.js';
 import { ScrollRevealText } from './ScrollRevealText.js';
 
 const pageDetails: Record<MarketingPage, { title: string; description: string }> = {
@@ -29,19 +30,7 @@ const pageDetails: Record<MarketingPage, { title: string; description: string }>
   },
 };
 
-const introStorageKey = 'official-marketing-intro-seen';
-const introHoldDuration = 700;
 const introRevealDuration = 1.05;
-
-function shouldShowMarketingIntro(): boolean {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-
-  try {
-    return window.sessionStorage.getItem(introStorageKey) !== 'seen';
-  } catch {
-    return true;
-  }
-}
 
 const navigationItems: Array<{ label: string; page: MarketingPage; href: string }> = [
   { label: 'What it does', page: 'review', href: '/review' },
@@ -343,13 +332,7 @@ export function MarketingSite({ page }: { page: MarketingPage }) {
   useEffect(() => {
     if (introPhase === 'done') return;
 
-    try {
-      window.sessionStorage.setItem(introStorageKey, 'seen');
-    } catch {
-      // The intro still works when session storage is unavailable.
-    }
-
-    const exitTimer = window.setTimeout(() => setIntroPhase('exiting'), introHoldDuration);
+    const exitTimer = window.setTimeout(() => setIntroPhase('exiting'), getMarketingIntroHoldRemaining());
     return () => window.clearTimeout(exitTimer);
   }, []);
 
@@ -407,7 +390,10 @@ export function MarketingSite({ page }: { page: MarketingPage }) {
           animate={{ y: introPhase === 'exiting' ? '-100%' : '0%' }}
           transition={{ duration: introRevealDuration, ease: [0.65, 0, 0.35, 1] }}
           onAnimationComplete={() => {
-            if (introPhase === 'exiting') setIntroPhase('done');
+            if (introPhase === 'exiting') {
+              markMarketingIntroSeen();
+              setIntroPhase('done');
+            }
           }}
         >
           <img src="/brand/official-logo-landscape.svg" alt="" draggable={false} />

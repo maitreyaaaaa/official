@@ -337,3 +337,5 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
 }
 :root { --route-loading-bg: #f8f8f5; }
 .route-loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--route-loading-bg); color: #56645a; font: 500 13px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; }
+.marketing-route-splash { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; overflow: hidden; background: #ffd500; }
+.marketing-route-splash img { display: block; width: min(720px, 92vw); max-height: 70vh; object-fit: contain; mix-blend-mode: multiply; user-select: none; }
