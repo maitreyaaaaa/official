@@ -71,7 +71,7 @@ export function PluginsWorkspace({ company }: { company: DemoCompany }) {
   }
 
   return <section className="plugins-workspace" id="plugins" aria-labelledby="plugins-title">
-    <header className="plugins-intro">
+    <header className="plugins-intro" data-tour="plugins">
       <span className="eyebrow">{company.shortName.toUpperCase()} / DEMO WORKSPACE</span>
       <h1 id="plugins-title" tabIndex={-1}>Plugins</h1>
       <p>Bring the places your team works into one picture. Explore a source, then connect its demo to see how a future integration would fit.</p>

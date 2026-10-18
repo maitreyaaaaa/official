@@ -1,0 +1,82 @@
+.guided-tour-welcome {
+  position: fixed;
+  width: min(470px, calc(100vw - 32px));
+  max-width: none;
+  padding: 32px;
+  overflow: visible;
+  color: #20342e;
+  background: radial-gradient(circle at 88% 10%, rgba(231, 239, 224, 0.9), transparent 34%), #fffefa;
+  border: 1px solid #e2e7de;
+  border-radius: 24px;
+  box-shadow: 0 28px 90px rgba(12, 30, 25, 0.28);
+  font-family: 'DM Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.guided-tour-welcome::backdrop { background: rgba(16, 29, 25, 0.68); backdrop-filter: blur(3px); }
+.guided-tour-welcome-close { position: absolute; top: 14px; right: 15px; width: 36px; height: 36px; border: 0; border-radius: 50%; color: #65736b; background: transparent; font-size: 25px; line-height: 1; cursor: pointer; }
+.guided-tour-welcome-mark { display: grid; width: 78px; height: 78px; margin-bottom: 18px; place-items: center; overflow: hidden; border: 1px solid #e7ebe1; border-radius: 22px; background: #f2f5ec; }
+.guided-tour-welcome-mark img { width: 86px; height: 86px; object-fit: contain; }
+.guided-tour-eyebrow { color: #557a5c; font-size: 10px; font-weight: 800; letter-spacing: 0.13em; }
+.guided-tour-welcome h1 { max-width: 370px; margin: 8px 0 10px; color: #20342e; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(27px, 6vw, 34px); font-weight: 500; letter-spacing: -0.035em; line-height: 1.12; }
+.guided-tour-welcome p { margin: 0; color: #68736a; font-size: 14px; line-height: 1.65; }
+.guided-tour-welcome-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 25px; }
+.guided-tour-later, .guided-tour-start { min-height: 42px; padding: 0 16px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.guided-tour-later { border: 1px solid #e1e7df; color: #52625a; background: #fff; }
+.guided-tour-start { border: 1px solid #31583d; color: #fff; background: #31583d; box-shadow: 0 5px 14px rgba(49, 88, 61, 0.18); }
+.guided-tour-start span { padding-left: 7px; }
+.guided-tour-welcome :is(button):focus-visible, .guided-tour-card :is(button):focus-visible { outline: 3px solid #a88c51; outline-offset: 3px; }
+
+.guided-tour-card {
+  width: min(390px, calc(100vw - 28px));
+  padding: 17px 18px 14px;
+  color: #20342e;
+  background: #fffefa;
+  border: 1px solid rgba(221, 228, 218, 0.96);
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(13, 31, 26, 0.24);
+  font-family: 'DM Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.guided-tour-topline { display: flex; min-height: 24px; align-items: center; justify-content: space-between; gap: 12px; }
+.guided-tour-step { color: #78847a; font-size: 9px; font-weight: 800; letter-spacing: 0.13em; }
+.guided-tour-step span { padding: 0 4px; color: #b49c67; }
+.guided-tour-close { display: grid; width: 28px; height: 28px; margin: -7px -8px 0 0; place-items: center; border: 0; border-radius: 50%; color: #778279; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; }
+.guided-tour-message { display: grid; grid-template-columns: 53px 1fr; gap: 12px; align-items: start; padding: 7px 0 15px; }
+.guided-tour-mascot { width: 53px; height: 53px; object-fit: contain; filter: drop-shadow(0 5px 5px rgba(39, 50, 68, 0.13)); animation: guided-tour-greet 600ms ease-out both; }
+.guided-tour-copy h2 { margin: 1px 0 6px; color: #20342e; font-family: Georgia, 'Times New Roman', serif; font-size: 21px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.2; }
+.guided-tour-body { color: #5f6d64; font-size: 13px; line-height: 1.58; }
+.guided-tour-progress { height: 3px; overflow: hidden; border-radius: 99px; background: #edf0e9; }
+.guided-tour-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #557a5c, #b49c67); transition: width 180ms ease-out; }
+.guided-tour-actions { display: flex; min-height: 43px; align-items: end; justify-content: space-between; gap: 9px; padding-top: 12px; }
+.guided-tour-back, .guided-tour-skip, .guided-tour-next { border: 0; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.guided-tour-back { padding: 8px 5px; color: #52625a; background: transparent; }
+.guided-tour-skip { margin-left: auto; padding: 8px 5px; color: #778279; background: transparent; }
+.guided-tour-next { min-height: 35px; padding: 0 13px; border: 1px solid #31583d; border-radius: 999px; color: #fff; background: #31583d; }
+.guided-tour-next span { padding-left: 8px; }
+.help-tour-button { display: flex; width: 100%; align-items: center; justify-content: space-between; margin-top: 12px; padding: 10px 11px; border: 1px solid #e5e9e2; border-radius: 10px; color: #31583d; background: #f7f9f4; font: inherit; font-size: 12px; font-weight: 700; text-align: left; cursor: pointer; }
+.help-tour-button:hover { background: #edf4ed; }
+
+@keyframes guided-tour-greet {
+  0% { opacity: 0; transform: translateY(5px) rotate(-7deg); }
+  65% { opacity: 1; transform: translateY(-2px) rotate(3deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+
+@media (max-width: 520px) {
+  .guided-tour-welcome { padding: 28px 23px 23px; border-radius: 20px; }
+  .guided-tour-card { padding: 14px 14px 12px; }
+  .guided-tour-message { grid-template-columns: 42px 1fr; gap: 9px; }
+  .guided-tour-mascot { width: 42px; height: 42px; }
+  .guided-tour-copy h2 { font-size: 19px; }
+  .guided-tour-body { font-size: 12px; }
+}
+
+@media (max-width: 680px) {
+  .connected-shell .topbar-actions .help-wrap { display: block; }
+  .connected-shell .topbar-actions .help-wrap .icon-button { display: grid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guided-tour-mascot { animation: none; }
+  .guided-tour-progress span { transition: none; }
+}

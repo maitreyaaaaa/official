@@ -83,11 +83,11 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
   };
 
   if (loading && !workspace) return <section className="connected-page connected-skeleton" aria-busy="true">
-    <div className="connected-masthead"><div className="skeleton-block skeleton-mark" aria-hidden="true" /><div><LoadingStatus>Loading company records…</LoadingStatus><SkeletonLines count={2} className="skeleton-heading-lines" /></div></div>
+    <div className="connected-masthead" data-tour={view === 'memory' ? 'writing-handoff' : view === 'brain' ? 'company-records' : undefined}><div className="skeleton-block skeleton-mark" aria-hidden="true" /><div><LoadingStatus>Loading company records…</LoadingStatus><SkeletonLines count={2} className="skeleton-heading-lines" /></div></div>
     <div className="connected-summary-grid">{[1, 2, 3].map((item) => <div className="connected-summary" aria-hidden="true" key={item}><SkeletonLines count={3} /></div>)}</div>
     <div className="connected-two-column">{[1, 2].map((item) => <div className="connected-card" aria-hidden="true" key={item}><SkeletonLines count={5} /></div>)}</div>
   </section>;
-  if (!workspace) return <section className="connected-page"><ErrorNotice
+  if (!workspace) return <section className="connected-page" data-tour={view === 'memory' ? 'writing-handoff' : view === 'brain' ? 'company-records' : undefined}><ErrorNotice
     className="connected-error"
     title="Company records could not be loaded"
     message={error ?? 'The connected workspace has not returned records yet.'}
@@ -122,7 +122,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
         </> : <p className="connected-empty">{notes.length ? 'Clear the filters to choose a note.' : 'No company notes are available yet.'}</p>}</article>;
 
   return <div className="connected-page" id={view}>
-    <div className="connected-masthead">
+    <div className="connected-masthead" data-tour={view === 'memory' ? 'writing-handoff' : view === 'brain' ? 'company-records' : undefined}>
       <div className="connected-mark" aria-hidden="true"><CompanyLogo company={company} /></div>
       <div><span className="connected-overline">{workspace.company.name} <span aria-hidden="true">/</span> {workspace.project.name}{view === 'brain' && <> <span aria-hidden="true">/</span> Company records <span aria-hidden="true">/</span> {recordsPageTitle}</>}</span>
         <h1 tabIndex={-1}>{view === 'memory' ? 'Writing handoff' : recordsPageTitle}</h1>

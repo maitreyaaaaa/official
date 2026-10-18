@@ -173,7 +173,7 @@ export function WorkspaceSidebar({ activeSection, launchPage, recordsPage, draft
     </ul>
   );
 
-  return <nav className="nav-list workspace-nav-list" aria-label="Main navigation">
+  return <nav className="nav-list workspace-nav-list" aria-label="Main navigation" data-tour="workspace-navigation">
     <ul className="workspace-nav-roots">
       <li>
         <a className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`} href="#overview" onClick={onNavigate} aria-current={activeSection === 'overview' ? 'page' : undefined}>
