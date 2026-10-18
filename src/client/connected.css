@@ -91,6 +91,7 @@
 .connected-shell .header-context { min-width: 0; }
 .connected-shell .header-context span, .connected-shell .header-context strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .connected-shell .chat-toggle { flex: 0 0 auto; padding: 0 10px; font-size: 12px; font-weight: 650; }
+.connected-shell .chat-toggle-mascot { display: block; flex: 0 0 18px; width: 18px; height: 18px; object-fit: contain; }
 .connected-shell .app-dock { display: none; }
 .workspace-overview { padding: clamp(26px, 4vw, 46px) 0 64px; }
 .overview-intro { max-width: 760px; }
