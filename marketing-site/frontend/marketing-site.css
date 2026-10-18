@@ -233,7 +233,11 @@ html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100p
 .trace-item small { color: #78847b; font-size: 8px; font-weight: 700; letter-spacing: .13em; }
 .trace-item strong { font-size: clamp(16px, 1.8vw, 21px); line-height: 1.14; }
 .trace-detail { color: #78847b; font-size: 9px; }
-.trace-item.trace-emphasis { border-color: #dfa994; background: #f6ede7; }
+.trace-item.trace-emphasis { border-color: #b42318; background: #b42318; }
+.trace-item.trace-emphasis .trace-index { background: #b42318; color: #fff; }
+.trace-item.trace-emphasis small,
+.trace-item.trace-emphasis strong,
+.trace-item.trace-emphasis .trace-detail { color: #fff; }
 .trace-arrow { color: #859183; text-align: center; }
 .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 35px; padding: 65px 0 12px; }
 .steps-grid article { padding-top: 15px; border-top: 1px solid #b7c1b7; }
