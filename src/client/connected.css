@@ -352,6 +352,8 @@
 .app-shell .connection-inline.offline { color: #a51d1d; }
 .app-shell .connection-inline.offline .connection-dot, .app-shell .connection-dot.offline { background: #c62828; }
 .app-shell .connection-alert.async-error { display: flex; }
+.app-shell .status-supported { border-color: #246f38; background: #2c8a43; color: #fff; }
+.app-shell .proposal-executed, .app-shell .instruction-state.approved, .app-shell .instruction-state.approved_internal { border-color: #246f38; background: #2c8a43; color: #fff; }
 .app-shell .scenario-alert-error { border-color: #a51d1d; background: #c62828; color: #fff; }
 .app-shell .scenario-alert-error strong { color: #fff; }
 .app-shell .assistant-error { padding: 9px 11px; border: 1px solid #a51d1d; border-radius: 8px; background: #c62828; color: #fff; }

@@ -128,7 +128,7 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
 .draft-quote { overflow: hidden; color: #58645c; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .draft-reason { overflow: hidden; color: #5d6a62; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .status-pill { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 4px 7px; border: 1px solid transparent; border-radius: 5px; font-size: 8px; font-weight: 700; letter-spacing: .1px; }
-.status-supported { border-color: #d9eadb; background: #edf6ee; color: #3d6d48; }
+.status-supported { border-color: #246f38; background: #2c8a43; color: #fff; }
 .status-contradicted { border-color: #a51d1d; background: #c62828; color: #fff; }
 .status-unknown { border-color: #eddfc6; background: #fff8e9; color: #765522; }
 .status-not-checked { border-color: #e5e9e5; background: #f4f6f3; color: #5d6a62; }
