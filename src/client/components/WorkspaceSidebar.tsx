@@ -185,7 +185,7 @@ export function WorkspaceSidebar({ activeSection, launchPage, recordsPage, draft
           <a className="nav-item nav-parent-link" href="#campaign" onClick={onNavigate} aria-current={activeSection === 'campaign' ? 'location' : undefined}>
             <span className="nav-icon tone-amber"><IconsaxIcon name="document-text" /></span><span className="nav-label">Launch review</span><span className="nav-count">{reviewCount}</span>
           </a>
-          <button className="nav-disclosure" type="button" aria-label={`${isSubmenuOpen('launch') ? 'Hide' : 'Show'} Launch review pages`} aria-expanded={isSubmenuOpen('launch')} aria-controls="nav-submenu-launch" onClick={() => toggleParent('launch')}>
+          <button className="nav-disclosure" type="button" aria-label={`${isSubmenuOpen('launch') ? 'Hide' : 'Show'} Launch review pages`} data-tooltip={`${isSubmenuOpen('launch') ? 'Hide' : 'Show'} Launch review pages`} aria-expanded={isSubmenuOpen('launch')} aria-controls="nav-submenu-launch" onClick={() => toggleParent('launch')}>
             <span aria-hidden="true" />
           </button>
         </div>
@@ -201,7 +201,7 @@ export function WorkspaceSidebar({ activeSection, launchPage, recordsPage, draft
           <a className="nav-item nav-parent-link" href="#brain" onClick={onNavigate} aria-current={activeSection === 'brain' ? 'location' : undefined}>
             <span className="nav-icon tone-green"><IconsaxIcon name="book" /></span><span className="nav-label">Company records</span><span className="nav-count">{recordCount}</span>
           </a>
-          <button className="nav-disclosure" type="button" aria-label={`${isSubmenuOpen('records') ? 'Hide' : 'Show'} Company records pages`} aria-expanded={isSubmenuOpen('records')} aria-controls="nav-submenu-records" onClick={() => toggleParent('records')}>
+          <button className="nav-disclosure" type="button" aria-label={`${isSubmenuOpen('records') ? 'Hide' : 'Show'} Company records pages`} data-tooltip={`${isSubmenuOpen('records') ? 'Hide' : 'Show'} Company records pages`} aria-expanded={isSubmenuOpen('records')} aria-controls="nav-submenu-records" onClick={() => toggleParent('records')}>
             <span aria-hidden="true" />
           </button>
         </div>

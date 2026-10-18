@@ -55,7 +55,7 @@ export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace
 
   const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void ask(question); };
   return <aside className={`workspace-chat ${open ? 'open' : 'closed'}`} aria-label="Workspace chat" aria-hidden={!open}>
-    <div className="chat-head"><div><strong>Workspace chat</strong><small>Answers from connected company records</small></div><button type="button" aria-label="Close chat" title="Close chat" onClick={onClose}><PanelRightClose size={18} /></button></div>
+    <div className="chat-head"><div><strong>Workspace chat</strong><small>Answers from connected company records</small></div><button type="button" aria-label="Close chat" data-tooltip="Close workspace chat" onClick={onClose}><PanelRightClose size={18} /></button></div>
     <div className={`chat-status ${workspaceError ? 'has-error' : ''}`}>
       {workspaceLoading ? <LoadingStatus>{workspace ? 'Refreshing company records…' : 'Loading company records…'}</LoadingStatus>
         : workspace ? <><span className="chat-status-dot ready" />{workspace.company.shortName} / {workspace.project.name}</>
@@ -71,6 +71,6 @@ export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace
       {error && <div className="chat-error" role="alert">{error}</div>}
       {advancedAssistant && <details className="chat-advanced"><summary>Campaign tools</summary>{advancedAssistant}</details>}
     </div>
-    <div className="chat-compose"><p>Answers use the selected company’s fictional graph. No records are changed.</p><form onSubmit={submit}><label className="sr-only" htmlFor="workspace-question">Ask about company records</label><textarea id="workspace-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} rows={2} placeholder="Ask about drafts, handoffs, owners, or notes…" disabled={!workspace || busy} /><button type="submit" aria-label="Send question" disabled={!workspace || busy || !question.trim()}><ArrowUp size={18} /></button></form></div>
+    <div className="chat-compose"><p>Answers use the selected company’s fictional graph. No records are changed.</p><form onSubmit={submit}><label className="sr-only" htmlFor="workspace-question">Ask about company records</label><textarea id="workspace-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} rows={2} placeholder="Ask about drafts, handoffs, owners, or notes…" disabled={!workspace || busy} /><button type="submit" aria-label="Send question" data-tooltip="Send question" disabled={!workspace || busy || !question.trim()}><ArrowUp size={18} /></button></form></div>
   </aside>;
 }

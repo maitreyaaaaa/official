@@ -313,7 +313,7 @@
 .app-shell .draft-row:hover { background: #fbfcfa; transform: none; }
 .app-shell .draft-row.selected { background: #f7faf5; box-shadow: inset 3px 0 #5a805e; }
 .app-shell .draft-kind-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 13px; background: #edf2ef; color: #526a65; font-size: 17px; }
-.app-shell .kind-email { background: #f2eef5; color: #684a7b; }
+.app-shell .kind-email { background: #e8f1f4; color: #2d7182; }
 .app-shell .kind-social-post { background: #edf1f7; color: #4d6895; }
 .app-shell .draft-copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
 .app-shell .draft-title { display: flex; align-items: center; gap: 8px; color: #2e3b31; font-size: 14px; font-weight: 700; }

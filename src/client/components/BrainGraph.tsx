@@ -83,7 +83,7 @@ export function BrainGraph({ notes, selectedId, onSelect }: BrainGraphProps) {
   }, [notes.length]);
 
   return <section className="brain-graph-card" aria-label="Company note graph">
-    <div className="brain-graph-head"><div><span className="connected-label">CONNECTED KNOWLEDGE</span><h2>Company graph</h2><p>Drag to explore. Scroll to zoom. Select a note to read its details.</p></div><div className="brain-graph-controls"><button type="button" aria-label="Zoom out" onClick={() => zoom(1 / 1.2)}><Minus size={17} /></button><button type="button" aria-label="Zoom in" onClick={() => zoom(1.2)}><Plus size={17} /></button><button type="button" aria-label="Fit graph" onClick={fit}><Maximize2 size={16} /></button></div></div>
+    <div className="brain-graph-head"><div><span className="connected-label">CONNECTED KNOWLEDGE</span><h2>Company graph</h2><p>Drag to explore. Scroll to zoom. Select a note to read its details.</p></div><div className="brain-graph-controls"><button type="button" aria-label="Zoom out" data-tooltip="Zoom out" onClick={() => zoom(1 / 1.2)}><Minus size={17} /></button><button type="button" aria-label="Zoom in" data-tooltip="Zoom in" onClick={() => zoom(1.2)}><Plus size={17} /></button><button type="button" aria-label="Fit graph" data-tooltip="Fit graph to view" onClick={fit}><Maximize2 size={16} /></button></div></div>
     <div className="brain-graph-viewport" ref={viewportRef}
       onPointerDown={(event) => {
         if ((event.target as Element).closest('button')) return;

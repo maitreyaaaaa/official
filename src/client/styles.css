@@ -120,7 +120,7 @@ h1 { margin-bottom: 5px; font: 700 27px/1.2 Inter, ui-sans-serif, system-ui, san
 .draft-row:hover { transform: translateX(2px); background: #fbfcfa; }
 .draft-row.selected { background: #f7faf6; box-shadow: inset 2px 0 #6e9a76; }
 .draft-kind-icon { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: #edf2f1; color: #526a65; font-size: 13px; }
-.kind-email { background: #f3eef8; color: #684a7b; }
+.kind-email { background: #e8f1f4; color: #2d7182; }
 .kind-social-post { background: #edf2fb; color: #4d6895; }
 .draft-copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
 .draft-title { display: flex; align-items: center; gap: 7px; color: #37413a; font-size: 10px; font-weight: 700; }

@@ -58,6 +58,46 @@
   color: var(--official-accent-dark);
 }
 
+.app-shell.connected-shell button[data-tooltip] {
+  position: relative;
+}
+
+.app-shell.connected-shell button[data-tooltip]::after {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 120;
+  width: max-content;
+  max-width: 210px;
+  padding: 6px 8px;
+  border: 1px solid #36443a;
+  border-radius: 5px;
+  background: #26312a;
+  box-shadow: 0 4px 12px #17221c22;
+  color: #fff;
+  content: attr(data-tooltip);
+  font: 500 11px/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+}
+
+.app-shell.connected-shell button[data-tooltip]:hover::after,
+.app-shell.connected-shell button[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.app-shell.connected-shell .chat-compose form button[data-tooltip]::after {
+  top: auto;
+  bottom: calc(100% + 7px);
+}
+
 .app-shell.connected-shell .nav-item {
   border-radius: 5px;
 }
@@ -153,9 +193,24 @@
 }
 
 .app-shell.connected-shell .overview-card-icon {
-  border-radius: 0;
-  background: transparent;
+  border-radius: 7px;
+  background: var(--mint);
   color: var(--official-accent);
+}
+
+.app-shell.connected-shell .overview-action-card:nth-child(1) .overview-card-icon {
+  background: #fff2df;
+  color: #a66b18;
+}
+
+.app-shell.connected-shell .overview-action-card:nth-child(2) .overview-card-icon {
+  background: #e7f3f4;
+  color: #287f85;
+}
+
+.app-shell.connected-shell .overview-action-card:nth-child(3) .overview-card-icon {
+  background: #e8f2e8;
+  color: #4e8758;
 }
 
 .app-shell.connected-shell .primary-button {
@@ -165,6 +220,14 @@
 
 .app-shell.connected-shell .primary-button:hover:not(:disabled) {
   background: #314735;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell.connected-shell .campaign-banner:hover,
+.app-shell.connected-shell .stat-card:hover,
+.app-shell.connected-shell .draft-row:hover {
+  transform: none;
   box-shadow: none;
 }
 
@@ -206,7 +269,7 @@
 }
 
 .app-shell.connected-shell .main-content h1 {
-  font-size: clamp(30px, 3.2vw, 42px);
+  font-size: clamp(28px, 2.8vw, 36px);
   line-height: 1.16;
 }
 
@@ -300,5 +363,11 @@
 @media (max-width: 680px) {
   .app-shell.connected-shell .main-content {
     background: var(--official-paper);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.connected-shell button[data-tooltip]::after {
+    transition: none;
   }
 }
