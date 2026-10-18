@@ -46,7 +46,8 @@
 }
 
 .app-shell .topbar {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: var(--z-sticky);
   display: flex;
   min-height: 82px;
