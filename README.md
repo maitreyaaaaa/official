@@ -1,6 +1,6 @@
 # official
 
-**Official site:** [Visit the marketing homepage](https://official-sand.vercel.app/)
+**Official site:** [Visit the Official Site](https://official-sand.vercel.app/)
 
 **Graph Hacks tracks:** Track 01 — Agents That Act on Connected Data · Track 02 — Agent Memory and Coordination · Track 03 — Company Brain
 
