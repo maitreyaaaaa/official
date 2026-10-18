@@ -1,0 +1,62 @@
+﻿1
+00:00:00,000 --> 00:00:04,740
+Meet official, a workspace for manual
+underwriting of launch claims.
+
+2
+00:00:05,145 --> 00:00:10,560
+A reviewer checks each claim against product,
+rollout, and audience facts.
+
+3
+00:00:11,185 --> 00:00:16,960
+official links each promise to reviewed product,
+rollout, test, and audience records.
+
+4
+00:00:17,525 --> 00:00:19,460
+Reviewers follow each source.
+
+5
+00:00:19,605 --> 00:00:25,880
+Each claim gets one result: Supported,
+Contradicted, Unknown, or Not checked.
+
+6
+00:00:26,405 --> 00:00:29,280
+Missing or old evidence cannot prove a claim.
+
+7
+00:00:29,305 --> 00:00:33,000
+Milo guides the fictional workspace tour.
+
+8
+00:00:33,185 --> 00:00:36,540
+Open a finding to inspect its sources.
+
+9
+00:00:37,065 --> 00:00:41,100
+If copy needs a change, official prepares an
+internal proposal.
+
+10
+00:00:41,305 --> 00:00:42,540
+It does not publish.
+
+11
+00:00:42,925 --> 00:00:44,940
+People approve each change.
+
+12
+00:00:45,285 --> 00:00:48,580
+The writing handoff carries approved guidance.
+
+13
+00:00:48,985 --> 00:00:53,060
+The FalkorDB graph links claims to their
+evidence.
+
+14
+00:00:53,625 --> 00:00:58,060
+Plugins preview connections;
+they do not import data.

@@ -8,3 +8,8 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+
+# Local video production files are not required to run the app.
+videos/official-intro/
+videos/official-demo-final/*.ass
+videos/official-demo-final/*.wav

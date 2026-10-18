@@ -47,14 +47,18 @@ All three tracks use the same FalkorDB graph and company context. Track 01 provi
 ## Demo
 
 <p align="center">
-  <img src="docs/demo-poster.svg" alt="official product walkthrough. Video coming soon." width="960" />
+  <a href="videos/official-demo-final/official-demo-captioned.mp4">
+    <img src="docs/demo-poster.svg" alt="Watch the official 59-second product walkthrough" width="960" />
+  </a>
 </p>
 
-<p align="center"><strong>Demo video coming soon.</strong> Start at the <a href="https://official-sand.vercel.app/">official site</a> for the overview and link to the workspace.</p>
+<p align="center">
+  <strong><a href="videos/official-demo-final/official-demo-captioned.mp4">Watch the 59-second demo (MP4)</a></strong>
+  &nbsp;·&nbsp; <a href="videos/official-demo-final/captions.srt">Download captions (SRT)</a>
+  &nbsp;·&nbsp; <a href="videos/official-demo-final/voiceover-script.txt">Read the voiceover script</a>
+</p>
 
-<!-- When the recording is ready, link the poster to its public video URL:
-[![Watch the official walkthrough](docs/demo-poster.svg)](VIDEO_URL)
--->
+<p align="center">For the overview and workspace link, visit the <a href="https://official-sand.vercel.app/">official site</a>.</p>
 
 ## Run it locally
 
