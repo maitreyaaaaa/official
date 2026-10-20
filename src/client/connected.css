@@ -450,3 +450,9 @@
 @media (prefers-reduced-motion: reduce) {
   .app-shell .async-spinner, .app-shell .skeleton-line, .app-shell .skeleton-block { animation: none; }
 }
+
+@media (max-width: 680px) {
+  .connected-shell .dock-label { font-size: 10px; line-height: 1.15; }
+  .workspace-chat { left: 0; right: 0; width: min(100%, 390px); }
+  .workspace-chat .chat-compose { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+}

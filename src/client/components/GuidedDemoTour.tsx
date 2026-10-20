@@ -39,19 +39,28 @@ function TourTooltip({ index, size, isLastStep, step, backProps, closeProps, pri
 
 type GuidedDemoTourProps = {
   requestId: number;
+  suppressWelcome?: boolean;
   onStart: () => void;
   onPrepareStep: (hash: string, showSidebar: boolean) => Promise<void>;
   onFinish: () => void;
 };
 
-export function GuidedDemoTour({ requestId, onStart, onPrepareStep, onFinish }: GuidedDemoTourProps) {
+export function GuidedDemoTour({ requestId, suppressWelcome = false, onStart, onPrepareStep, onFinish }: GuidedDemoTourProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const hasFinishedRef = useRef(false);
   const lastRequestRef = useRef(0);
-  const [welcomeOpen, setWelcomeOpen] = useState(() => !hasSeenTour());
+  const [welcomeOpen, setWelcomeOpen] = useState(() => !suppressWelcome && !hasSeenTour());
   const [running, setRunning] = useState(false);
   const [tourSession, setTourSession] = useState(0);
+  const [compactLayout, setCompactLayout] = useState(() => window.matchMedia('(max-width: 680px)').matches);
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    const layoutQuery = window.matchMedia('(max-width: 680px)');
+    const updateLayout = () => setCompactLayout(layoutQuery.matches);
+    layoutQuery.addEventListener('change', updateLayout);
+    return () => layoutQuery.removeEventListener('change', updateLayout);
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -77,58 +86,57 @@ export function GuidedDemoTour({ requestId, onStart, onPrepareStep, onFinish }: 
   }, [requestId, startTour]);
 
   const steps = useMemo<Step[]>(() => {
-    const compactLayout = window.innerWidth <= 640;
     const showSidebar = (hash: string) => hash === '#overview' ? !compactLayout : window.innerWidth > 920;
     const before = (hash: string) => () => onPrepareStep(hash, showSidebar(hash));
     return [
       {
         id: 'workspace-navigation',
         target: () => document.querySelector<HTMLElement>(compactLayout ? '.app-dock' : '[data-tour="workspace-navigation"]'),
-        placement: compactLayout ? 'top' : 'right',
+        placement: compactLayout ? 'auto' : 'right',
         title: 'Your workspace, at a glance',
         content: compactLayout
-          ? 'Use the bottom dock to move between Overview, Launch review, Writing handoff, Company records, and Plugins. The company switcher keeps each fictional workspace separate.'
-          : 'Use this sidebar to move between Overview, Launch review, Writing handoff, Company records, and Plugins. The company switcher keeps each fictional workspace separate.',
+          ? 'Use the bottom dock to move between Overview, Launch review, Writing brief, Company records, and Plugins. The company switcher keeps each fictional workspace separate.'
+          : 'Use this sidebar to move between Overview, Launch review, Writing brief, Company records, and Plugins. The company switcher keeps each fictional workspace separate.',
         before: before('#overview'),
       },
       {
-        id: 'launch-review', target: '[data-tour="launch-review"]', placement: 'bottom',
+        id: 'launch-review', target: '[data-tour="launch-review"]', placement: compactLayout ? 'auto' : 'bottom',
         title: 'Start with the launch check',
-        content: 'This summary shows how many draft claims are supported, contradicted, unknown, or not checked, plus when the evidence was last reviewed.',
+        content: 'This summary shows how many draft claims are supported, conflict with current evidence, need evidence, or have not been checked.',
         before: before('#campaign'),
       },
       {
-        id: 'evidence-trail', target: '[data-tour="evidence-trail"]', placement: 'left',
+        id: 'evidence-trail', target: '[data-tour="evidence-trail"] .detail-card-heading', placement: compactLayout ? 'auto' : 'left',
         title: 'Follow the evidence',
         content: 'Choose a draft to see its linked promise and source records here. The trail helps explain why a claim received its current status.',
         before: before('#campaign'),
       },
       {
-        id: 'approval-queue', target: '[data-tour="approval-queue"]', placement: 'left',
+        id: 'approval-queue', target: '[data-tour="approval-queue"] .section-heading', placement: compactLayout ? 'auto' : 'left',
         title: 'Keep people in control',
         content: 'Internal proposals wait in this queue. Creating a proposal does not change the draft; a person must approve it before the change is applied.',
         before: before('#approvals'),
       },
       {
-        id: 'writing-handoff', target: '[data-tour="writing-handoff"]', placement: 'bottom',
+        id: 'writing-handoff', target: '[data-tour="writing-handoff"]', placement: compactLayout ? 'auto' : 'bottom',
         title: 'Carry approved context forward',
-        content: 'Writing handoff gives the next writer the current brief and approved guidance, with the source and revision context alongside it.',
+        content: 'Writing brief gives the next writer the current approved guidance and shows what changed since the earlier handoff.',
         before: before('#memory'),
       },
       {
-        id: 'company-records', target: '[data-tour="company-records"]', placement: 'bottom',
+        id: 'company-records', target: '[data-tour="company-records"]', placement: compactLayout ? 'auto' : 'bottom',
         title: 'Explore company records',
-        content: 'Browse the company graph, reviewed notes, coverage, and history. These views make the relationships behind a launch easier to inspect.',
-        before: before('#brain'),
+        content: 'Start with reviewed notes. Open the graph when you want to explore how notes and decisions connect, or check Coverage to see who can carry the review.',
+        before: before('#brain-notes'),
       },
       {
-        id: 'plugins', target: '[data-tour="plugins"]', placement: 'bottom',
+        id: 'plugins', target: '[data-tour="plugins"] h1', placement: compactLayout ? 'auto' : 'bottom',
         title: 'Preview possible connections',
         content: 'The plugin catalog shows where future integrations could fit. In this demo, connecting a plugin only saves a local selection; it does not sign in or import provider data.',
         before: before('#plugins'),
       },
     ];
-  }, [onPrepareStep]);
+  }, [compactLayout, onPrepareStep]);
 
   const handleTourEvent = useCallback((data: Parameters<NonNullable<React.ComponentProps<typeof Joyride>['onEvent']>>[0], controls: Parameters<NonNullable<React.ComponentProps<typeof Joyride>['onEvent']>>[1]) => {
     if (data.type === EVENTS.STEP_AFTER && data.action === ACTIONS.CLOSE && data.origin === ORIGIN.KEYBOARD) {
@@ -162,7 +170,7 @@ export function GuidedDemoTour({ requestId, onStart, onPrepareStep, onFinish }: 
       <div className="guided-tour-welcome-mark"><img src="/brand/official-mascot.png" alt="" aria-hidden="true" /></div>
       <span className="guided-tour-eyebrow">A QUICK LOOK AROUND</span>
       <h1 id="guided-tour-welcome-title">Take a tour of this workspace?</h1>
-      <p id="guided-tour-welcome-description">I’ll point out how launch reviews, evidence, approvals, writing handoff, company records, and demo connections fit together. This tour only navigates the fictional workspace.</p>
+      <p id="guided-tour-welcome-description">I’ll point out how launch reviews, evidence, approvals, the writing brief, company records, and demo connections fit together. This tour only navigates the fictional workspace.</p>
       <div className="guided-tour-welcome-actions">
         <button className="guided-tour-later" type="button" onClick={dismissWelcome}>Maybe later</button>
         <button className="guided-tour-start" type="button" onClick={startTour}>Start the tour <span aria-hidden="true">→</span></button>
@@ -176,6 +184,7 @@ export function GuidedDemoTour({ requestId, onStart, onPrepareStep, onFinish }: 
       scrollToFirstStep
       onEvent={handleTourEvent}
       tooltipComponent={TourTooltip}
+      floatingOptions={{ strategy: 'fixed', shiftOptions: { padding: 12 } }}
       options={{
         buttons: ['back', 'skip', 'close', 'primary'],
         blockTargetInteraction: true,

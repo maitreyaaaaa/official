@@ -64,9 +64,9 @@ export function PluginsWorkspace({ company }: { company: DemoCompany }) {
     try {
       window.localStorage.setItem(storageKey(company), JSON.stringify(next));
       setConnected(next);
-      setMessage(`${plugin.name} ${wasConnected ? 'demo disconnected' : 'demo connected'} for ${company.shortName}. No account was accessed or data imported.`);
+      setMessage(`${plugin.name} ${wasConnected ? 'removed from' : 'added to'} the ${company.shortName} demo. No account was accessed or data imported.`);
     } catch {
-      setMessage('This browser could not save the demo connection. Check browser storage settings and try again.');
+      setMessage('This browser could not save the demo selection. Check browser storage settings and try again.');
     }
   }
 
@@ -74,16 +74,16 @@ export function PluginsWorkspace({ company }: { company: DemoCompany }) {
     <header className="plugins-intro" data-tour="plugins">
       <span className="eyebrow">{company.shortName.toUpperCase()} / DEMO WORKSPACE</span>
       <h1 id="plugins-title" tabIndex={-1}>Plugins</h1>
-      <p>Bring the places your team works into one picture. Explore a source, then connect its demo to see how a future integration would fit.</p>
-      <div className="plugins-demo-notice" role="note"><span className="plugins-demo-mark" aria-hidden="true">i</span><span><strong>Demo connections only.</strong> One click saves a selection in this browser for {company.shortName}. Official does not sign in, request permissions, sync, or read data from any provider here.</span></div>
+      <p>Preview how tools such as Gmail and Slack could contribute to company records. Choose a tool to see its possible role in this fictional workspace.</p>
+      <div className="plugins-demo-notice" role="note"><span className="plugins-demo-mark" aria-hidden="true">i</span><span><strong>Demo selection only.</strong> Your choice is saved in this browser for {company.shortName}. Official does not sign in, request permissions, sync, or read provider data here.</span></div>
     </header>
 
     <div className="plugins-toolbar">
-      <div className="plugins-toolbar-title"><strong>Explore the catalog</strong><span>{connected.length} demo connected · {plugins.length} available</span></div>
+      <div className="plugins-toolbar-title"><strong>Explore the catalog</strong><span>{connected.length} selected for demo · {plugins.length} available</span></div>
       <div className="plugins-controls">
         <label className="plugins-search"><span className="sr-only">Search plugins</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search plugins" /></label>
         <label className="plugins-category"><span className="sr-only">Filter by category</span><select value={category} onChange={(event) => setCategory(event.target.value as PluginCategory | 'All')}><option value="All">All categories</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="plugins-connected-filter"><input type="checkbox" checked={connectedOnly} onChange={(event) => setConnectedOnly(event.target.checked)} /> Connected only</label>
+        <label className="plugins-connected-filter"><input type="checkbox" checked={connectedOnly} onChange={(event) => setConnectedOnly(event.target.checked)} /> Selected only</label>
       </div>
     </div>
 
@@ -98,10 +98,10 @@ export function PluginsWorkspace({ company }: { company: DemoCompany }) {
           const isConnected = connected.includes(plugin.id);
           const expanded = expandedId === plugin.id;
           return <article className={`plugin-card ${isConnected ? 'is-connected' : ''}`} key={plugin.id}>
-            <div className="plugin-card-top"><span className="plugin-mark"><img src={`/plugin-icons/${plugin.id}.${plugin.id === 'confluence' ? 'svg' : 'png'}`} alt="" width="30" height="30" /></span><span className={`plugin-state ${isConnected ? 'connected' : ''}`}>{isConnected ? 'Demo connected' : 'Not connected'}</span></div>
+            <div className="plugin-card-top"><span className="plugin-mark"><img src={`/plugin-icons/${plugin.id}.${plugin.id === 'confluence' ? 'svg' : 'png'}`} alt="" width="30" height="30" /></span><span className={`plugin-state ${isConnected ? 'connected' : ''}`}>{isConnected ? 'Selected for demo' : 'Not selected'}</span></div>
             <h3>{plugin.name}</h3><p>{plugin.description}</p>
-            <div className="plugin-card-actions"><button type="button" className={isConnected ? 'plugin-disconnect' : 'plugin-connect'} onClick={() => toggleConnection(plugin)} aria-label={`${isConnected ? 'Disconnect' : 'Connect'} ${plugin.name} demo for ${company.shortName}`}>{isConnected ? 'Disconnect demo' : 'Connect demo'}</button><button type="button" className="plugin-details-toggle" aria-expanded={expanded} aria-controls={`plugin-details-${plugin.id}`} onClick={() => setExpandedId(expanded ? null : plugin.id)}>{expanded ? 'Hide details' : 'How it fits'} <span aria-hidden="true">{expanded ? '−' : '+'}</span></button></div>
-            {expanded && <div className="plugin-details" id={`plugin-details-${plugin.id}`}><strong>Future source preview</strong><p><b>Could read:</b> {plugin.signal}.</p><p><b>Useful for:</b> {plugin.use}</p><small>This is a capability preview. No provider data appears in company records, the writing handoff, or launch review.</small></div>}
+            <div className="plugin-card-actions"><button type="button" className={isConnected ? 'plugin-disconnect' : 'plugin-connect'} onClick={() => toggleConnection(plugin)} aria-label={`${isConnected ? 'Remove' : 'Add'} ${plugin.name} ${isConnected ? 'from' : 'to'} the ${company.shortName} demo`}>{isConnected ? 'Remove from demo' : 'Add to demo'}</button><button type="button" className="plugin-details-toggle" aria-expanded={expanded} aria-controls={`plugin-details-${plugin.id}`} onClick={() => setExpandedId(expanded ? null : plugin.id)}>{expanded ? 'Hide details' : 'How it fits'} <span aria-hidden="true">{expanded ? '−' : '+'}</span></button></div>
+            {expanded && <div className="plugin-details" id={`plugin-details-${plugin.id}`}><strong>Possible use</strong><p><b>Could read:</b> {plugin.signal}.</p><p><b>Useful for:</b> {plugin.use}</p><small>This is a preview only. No provider data appears in company records, the writing brief, or launch review.</small></div>}
           </article>;
         })}</div>
       </section>;

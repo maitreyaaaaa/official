@@ -17,7 +17,7 @@ interface WorkspaceChatProps {
 }
 
 type ChatItem = { id: number; role: 'user' | 'agent'; text: string; response?: WorkspaceChatResponse };
-const prompts = ['What drafts need review?', 'What changed in the writer handoff?', 'Who covers launch evidence?', 'Which company notes have sources?'];
+const prompts = ['What drafts need review?', 'What changed in the writing brief?', 'Who covers launch evidence?', 'Which company notes have sources?'];
 
 export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace, workspaceLoading, workspaceError, onRetryWorkspace, ownerUnavailable, advancedAssistant }: WorkspaceChatProps) {
   const [items, setItems] = useState<ChatItem[]>([]);
@@ -63,7 +63,7 @@ export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace
     </div>
     <div className="chat-scroll" aria-live="polite">
       {workspaceError && <ErrorNotice className="chat-context-error" title={workspace ? 'Showing saved company records' : 'Company records need a retry'} message={workspaceError} onRetry={onRetryWorkspace} />}
-      {items.length === 0 && workspace && <div className="chat-welcome"><h2>Ask about this company</h2><p>Check launch drafts, the writing handoff, company notes, and ownership. Answers include the records used.</p><div className="chat-suggestions">{prompts.map((prompt) => <button key={prompt} type="button" disabled={busy} onClick={() => void ask(prompt)}>{prompt}</button>)}</div></div>}
+      {items.length === 0 && workspace && <div className="chat-welcome"><h2>Ask about this company</h2><p>Check launch drafts, the writing brief, company notes, and ownership. Answers include the records used.</p><div className="chat-suggestions">{prompts.map((prompt) => <button key={prompt} type="button" disabled={busy} onClick={() => void ask(prompt)}>{prompt}</button>)}</div></div>}
       {items.length === 0 && !workspace && workspaceLoading && <div className="chat-load-skeleton"><LoadingStatus>Loading chat context…</LoadingStatus><SkeletonLines count={4} /></div>}
       {items.length === 0 && !workspace && !workspaceLoading && !workspaceError && <div className="chat-load-skeleton"><LoadingStatus>Loading chat context…</LoadingStatus><SkeletonLines count={4} /></div>}
       {items.map((item) => <div className={`chat-bubble ${item.role}`} key={item.id}><span>{item.role === 'agent' ? 'Workspace' : 'You'}</span><p>{item.text}</p>{item.response && <><small>Checked {new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(item.response.checkedAt))}</small>{item.response.sources.length > 0 && <div className="chat-citations"><strong>Sources</strong>{item.response.sources.map((source) => <button key={source.id} type="button" onClick={() => onOpenNote(source.id)}>{source.label}</button>)}</div>}</>}</div>)}
@@ -71,6 +71,6 @@ export function WorkspaceChat({ campaignId, open, onClose, onOpenNote, workspace
       {error && <div className="chat-error" role="alert">{error}</div>}
       {advancedAssistant && <details className="chat-advanced"><summary>Campaign tools</summary>{advancedAssistant}</details>}
     </div>
-    <div className="chat-compose"><p>Answers use the selected company’s fictional graph. No records are changed.</p><form onSubmit={submit}><label className="sr-only" htmlFor="workspace-question">Ask Milo about company records</label><textarea id="workspace-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} rows={2} placeholder="Ask about drafts, handoffs, owners, or notes…" disabled={!workspace || busy} /><button type="submit" aria-label="Send question" data-tooltip="Send question" disabled={!workspace || busy || !question.trim()}><ArrowUp size={18} /></button></form></div>
+    <div className="chat-compose"><p>Answers use the selected company’s fictional graph. No records are changed.</p><form onSubmit={submit}><label className="sr-only" htmlFor="workspace-question">Ask Milo about company records</label><textarea id="workspace-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} rows={2} placeholder="Ask about drafts, writing guidance, owners, or notes…" disabled={!workspace || busy} /><button type="submit" aria-label="Send question" data-tooltip="Send question" disabled={!workspace || busy || !question.trim()}><ArrowUp size={18} /></button></form></div>
   </aside>;
 }

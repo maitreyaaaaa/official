@@ -148,8 +148,8 @@ export function WorkspaceSidebar({ activeSection, launchPage, recordsPage, draft
     { id: 'history', label: 'History', href: '#activity', icon: 'clock', active: launchPage === 'history' },
   ];
   const recordsChildren: Destination[] = [
-    { id: 'graph', label: 'Graph', href: '#brain', icon: 'hierarchy-3', active: recordsPage === 'graph' },
     { id: 'notes', label: 'Notes', href: '#brain-notes', icon: 'note-2', count: recordCount, active: recordsPage === 'notes' },
+    { id: 'graph', label: 'Graph', href: '#brain', icon: 'hierarchy-3', active: recordsPage === 'graph' },
     { id: 'coverage', label: 'Coverage', href: '#coverage', icon: 'shield-tick', active: recordsPage === 'coverage' },
     { id: 'history', label: 'History', href: '#brain-history', icon: 'clock', active: recordsPage === 'history' },
   ];
@@ -193,12 +193,12 @@ export function WorkspaceSidebar({ activeSection, launchPage, recordsPage, draft
       </li>
       <li>
         <a className={`nav-item ${activeSection === 'memory' ? 'active' : ''}`} href="#memory" onClick={onNavigate} aria-current={activeSection === 'memory' ? 'page' : undefined}>
-          <span className="nav-icon tone-teal"><IconsaxIcon name="diagram" /></span><span className="nav-label">Writing handoff</span>
+          <span className="nav-icon tone-teal"><IconsaxIcon name="diagram" /></span><span className="nav-label">Writing brief</span>
         </a>
       </li>
       <li className={`nav-group tone-green ${activeParent === 'records' ? 'is-current' : ''} ${isSubmenuOpen('records') ? 'is-open' : ''}`} onPointerEnter={(event) => handlePointerEnter('records', event)} onPointerLeave={(event) => handlePointerLeave('records', event)} onFocusCapture={(event) => { if (!(event.target instanceof HTMLElement) || !event.target.closest('.nav-disclosure')) handleFocus('records'); }} onBlurCapture={handleBlur} onKeyDown={handleEscape('records')}>
         <div className={`nav-group-row ${activeSection === 'brain' ? 'active' : ''}`}>
-          <a className="nav-item nav-parent-link" href="#brain" onClick={onNavigate} aria-current={activeSection === 'brain' ? 'location' : undefined}>
+          <a className="nav-item nav-parent-link" href="#brain-notes" onClick={onNavigate} aria-current={activeSection === 'brain' ? 'location' : undefined}>
             <span className="nav-icon tone-green"><IconsaxIcon name="book" /></span><span className="nav-label">Company records</span><span className="nav-count">{recordCount}</span>
           </a>
           <button className="nav-disclosure" type="button" aria-label={`${isSubmenuOpen('records') ? 'Hide' : 'Show'} Company records pages`} data-tooltip={`${isSubmenuOpen('records') ? 'Hide' : 'Show'} Company records pages`} aria-expanded={isSubmenuOpen('records')} aria-controls="nav-submenu-records" onClick={() => toggleParent('records')}>

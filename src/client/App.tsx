@@ -27,15 +27,15 @@ type DataState = 'loading' | 'ready' | 'error';
 const dockItems: Omit<DockItem, 'active'>[] = [
   { id: 'overview', label: 'Overview', href: '#overview', icon: 'home-2' },
   { id: 'campaign', label: 'Launch review', href: '#campaign', icon: 'document-text' },
-  { id: 'memory', label: 'Writing handoff', href: '#memory', icon: 'diagram' },
-  { id: 'brain', label: 'Company records', href: '#brain', icon: 'book' },
+  { id: 'memory', label: 'Writing brief', href: '#memory', icon: 'diagram' },
+  { id: 'brain', label: 'Company records', href: '#brain-notes', icon: 'book' },
   { id: 'plugins', label: 'Plugins', href: '#plugins', icon: 'category' },
 ];
 
 function pageTitleFor(section: NavigationSection, launchTab: LaunchTab, brainTab: BrainTab): string {
   if (section === 'campaign') return launchTab === 'drafts' ? 'Drafts' : launchTab === 'approvals' ? 'Approvals' : 'History';
   if (section === 'brain') return brainTab === 'graph' ? 'Graph' : brainTab === 'notes' ? 'Notes' : brainTab === 'coverage' ? 'Coverage' : 'History';
-  if (section === 'memory') return 'Writing handoff';
+  if (section === 'memory') return 'Writing brief';
   if (section === 'plugins') return 'Plugins';
   return 'Overview';
 }
@@ -44,7 +44,7 @@ function navigationSectionFromHash(): NavigationSection {
   const hash = window.location.hash.slice(1);
   if (hash === 'campaign' || hash === 'drafts' || hash === 'approvals' || hash === 'review-queue' || hash === 'activity') return 'campaign';
   if (hash === 'memory') return 'memory';
-  if (hash === 'brain' || hash === 'brain-notes' || hash === 'coverage' || hash === 'brain-history') return 'brain';
+  if (hash === 'brain' || hash === 'brain-notes' || hash === 'brain-graph' || hash === 'coverage' || hash === 'brain-history') return 'brain';
   if (hash === 'plugins') return 'plugins';
   return 'overview';
 }
@@ -60,8 +60,8 @@ function brainTabFromHash(): BrainTab {
   const hash = window.location.hash.slice(1);
   if (hash === 'coverage') return 'coverage';
   if (hash === 'brain-history') return 'history';
-  if (hash === 'brain-notes') return 'notes';
-  return 'graph';
+  if (hash === 'brain' || hash === 'brain-graph') return 'graph';
+  return 'notes';
 }
 
 async function initializeFixture(campaignId: string): Promise<void> {
@@ -210,7 +210,8 @@ function isCampaignProposalPreview(value: unknown): value is CampaignProposalPre
 }
 
 function StatusPill({ status, decorative = false }: { status: FindingStatus; decorative?: boolean }) {
-  return <span aria-hidden={decorative || undefined} className={`status-pill status-${status.toLowerCase().replace(' ', '-')}`}>{status}</span>;
+  const label = status === 'Contradicted' ? 'Conflicts' : status === 'Unknown' ? 'Needs evidence' : status;
+  return <span aria-hidden={decorative || undefined} className={`status-pill status-${status.toLowerCase().replace(' ', '-')}`}>{label}</span>;
 }
 
 function formatCheckedAt(value: string): string {
@@ -233,10 +234,19 @@ function formatActivityAt(value: string): string {
 }
 
 export function App() {
-  const [companyKey, setCompanyKey] = useState<DemoCompanyKey>(() =>
-    demoCompanyByKey(window.localStorage.getItem('official-demo-company'))?.key ?? defaultDemoCompany.key);
+  const [companyKey, setCompanyKey] = useState<DemoCompanyKey>(() => {
+    const requested = new URLSearchParams(window.location.search).get('company');
+    return demoCompanyByKey(requested)?.key
+      ?? demoCompanyByKey(window.localStorage.getItem('official-demo-company'))?.key
+      ?? defaultDemoCompany.key;
+  });
   const company = demoCompanyByKey(companyKey) ?? defaultDemoCompany;
+  useEffect(() => { window.localStorage.setItem('official-demo-company', companyKey); }, [companyKey]);
   const selectCompany = (key: DemoCompanyKey) => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('company');
+    url.searchParams.delete('draft');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     window.localStorage.setItem('official-demo-company', key);
     window.location.hash = '#overview';
     setCompanyKey(key);
@@ -254,7 +264,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
   const [proposalState, setProposalState] = useState<DataState>('loading');
   const [activityLoadError, setActivityLoadError] = useState<string | null>(null);
   const [proposalLoadError, setProposalLoadError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => window.location.hash === '#campaign'
+    ? new URLSearchParams(window.location.search).get('draft') : null);
   const [draftFilter, setDraftFilter] = useState<ReviewFilter>('all');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -308,7 +319,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
 
   useEffect(() => {
     document.title = `${pageTitleFor(activeSection, launchTab, brainTab)} — official`;
-    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, writing handoffs, and company records in one connected official workspace.');
+    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Review launch claims, keep writing guidance current, and inspect company records in one official workspace.');
   }, [activeSection, launchTab, brainTab]);
 
   useEffect(() => { sidebarOpenRef.current = sidebarOpen; window.localStorage.setItem('official-sidebar-open', String(sidebarOpen)); }, [sidebarOpen]);
@@ -357,8 +368,8 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         ? { section: 'campaign' as const, launch: 'approvals' as const, records: 'graph' as const }
         : hash === '#memory'
           ? { section: 'memory' as const, launch: 'drafts' as const, records: 'graph' as const }
-          : hash === '#brain'
-            ? { section: 'brain' as const, launch: 'drafts' as const, records: 'graph' as const }
+          : hash === '#brain-notes'
+            ? { section: 'brain' as const, launch: 'drafts' as const, records: 'notes' as const }
             : hash === '#plugins'
               ? { section: 'plugins' as const, launch: 'drafts' as const, records: 'graph' as const }
               : { section: 'overview' as const, launch: 'drafts' as const, records: 'graph' as const };
@@ -371,7 +382,9 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
     setLaunchTab(route.launch);
     setBrainTab(route.records);
     setSidebarOpen(showSidebar);
-    if (window.location.hash !== hash) window.location.hash = hash;
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+    }
     await new Promise<void>((resolve) => {
       window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
         window.setTimeout(resolve, sidebarChanged ? 270 : 60);
@@ -910,7 +923,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           {!sidebarOpen && <button ref={sidebarOpenButtonRef} className="sidebar-open" type="button" aria-label="Open sidebar" data-tooltip="Show workspace navigation" onClick={openSidebar}><Menu size={18} aria-hidden="true" /></button>}
           <a className="brand" href="/" aria-label="official marketing site"><span className="brand-dot" aria-hidden="true" />official</a>
           <div className="header-context"><span>{workspace?.company.shortName ?? company.shortName}</span><span className="slash" aria-hidden="true">/</span><strong>{pageTitleFor(activeSection, launchTab, brainTab)}</strong></div>
-          <div className="topbar-actions"><span className={`connection-inline ${graphError ? 'offline' : graphConnected ? 'online' : 'loading'}`} role="status">{graphLoading && !graphError ? <LoaderCircle className="async-spinner" size={15} aria-hidden="true" /> : <span className="connection-dot" aria-hidden="true" />}{graphStatus}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close Milo chat' : 'Ask Milo'} data-tooltip={chatOpen ? 'Close Milo chat' : 'Ask Milo about company records'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><img className="chat-toggle-mascot" src="/brand/official-mascot.png" alt="" aria-hidden="true" /><span>Ask Milo</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" data-tooltip={activeSection === 'plugins' ? 'How demo connections work' : activeSection === 'campaign' ? 'How to read a check' : 'How this workspace works'} aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Connecting a demo plugin saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview the source and its possible role. Disconnect at any time.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Contradicted</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Unknown</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, writing handoff, and company records use the selected fictional company’s graph.</p><p>Ask Milo questions to check connected records. Answers cite the notes used, and chat does not change them.</p></>}<button className="help-tour-button" type="button" onClick={() => { setShowHelp(false); setTourRequest((request) => request + 1); }}>Take the guided tour <span aria-hidden="true">â†’</span></button></section></div><div className="avatar small company-avatar" aria-hidden="true"><CompanyLogo company={company} /></div></div>
+          <div className="topbar-actions"><span className={`connection-inline ${graphError ? 'offline' : graphConnected ? 'online' : 'loading'}`} role="status">{graphLoading && !graphError ? <LoaderCircle className="async-spinner" size={15} aria-hidden="true" /> : <span className="connection-dot" aria-hidden="true" />}{graphStatus}</span><span className="demo-badge"><span className="demo-dot" aria-hidden="true" /> Fictional demo</span><button className="chat-toggle" type="button" aria-label={chatOpen ? 'Close Milo chat' : 'Ask Milo'} data-tooltip={chatOpen ? 'Close Milo chat' : 'Ask Milo about company records'} aria-expanded={chatOpen} onClick={() => setChatOpen((open) => !open)}><img className="chat-toggle-mascot" src="/brand/official-mascot.png" alt="" aria-hidden="true" /><span>Ask Milo</span></button><div className="help-wrap"><button className="icon-button" aria-label="Help" data-tooltip={activeSection === 'plugins' ? 'How demo connections work' : activeSection === 'campaign' ? launchTab === 'approvals' ? 'How approvals work' : 'How to read a check' : 'How this workspace works'} aria-expanded={showHelp} aria-controls="help-panel" onClick={() => setShowHelp((visible) => !visible)}>?</button><section className="help-popover" id="help-panel" aria-label={`${activeSection === 'plugins' ? 'How demo plugins work' : activeSection === 'campaign' ? launchTab === 'approvals' ? 'How approvals work' : 'How campaign checks work' : 'How this workspace works'}`} hidden={!showHelp}>{activeSection === 'plugins' ? <><strong>How demo plugins work</strong><p>Adding a plugin to the demo saves only its selected state in this browser for {company.shortName}. It does not sign in or import provider data.</p><p>Use How it fits on each card to preview its possible role. Remove it from the demo at any time.</p></> : activeSection === 'campaign' && launchTab === 'approvals' ? <><strong>How approvals work</strong><p>A flagged draft has a claim that needs review. It is not yet an approval request.</p><p>Open the draft to propose a pause or rewrite. That proposal appears here for a person to approve or reject. Only approval changes the internal draft.</p></> : activeSection === 'campaign' ? <><strong>How to read a check</strong><p><b>Supported</b> requires a reviewed promise, fresh reviewed rollout and deployment records, and a passing test on the deployed revision.</p><p><b>Conflicts</b> means a fresh reviewed rollout excludes that audience. Missing, old, unreviewed, or conflicting evidence is <b>Needs evidence</b>.</p><p><b>Not checked</b> means no promise is linked. Checks do not change draft copy; local demo settings save a status-only history record. The scenario control changes only the fictional local graph.</p></> : <><strong>How this workspace works</strong><p>The launch review, writing brief, and company records use the selected fictional company’s graph.</p><p>Ask Milo questions to check connected records. Answers cite the notes used, and chat does not change them.</p></>}<button className="help-tour-button" type="button" onClick={() => { setShowHelp(false); setTourRequest((request) => request + 1); }}>Take the guided tour <span aria-hidden="true">â†’</span></button></section></div><div className="avatar small company-avatar" aria-hidden="true"><CompanyLogo company={company} /></div></div>
         </header>
         <div className="app-dock">
           <MagneticDock items={dockItems.map((item) => ({ ...item, active: activeSection === item.id }))} />
@@ -930,14 +943,14 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
           onRefresh={() => { void refresh(); void refreshWorkspace(ownerUnavailable); }}
           onOpenFinding={openLandingFinding} onOpenSources={showLandingSources}
           onOpenLaunch={() => showLaunchTab('drafts')} onOpenMemory={() => { focusViewHeading.current = true; window.location.hash = '#memory'; }}
-          onOpenBrain={() => { focusViewHeading.current = true; window.location.hash = '#brain'; }} onOpenCoverage={() => { focusViewHeading.current = true; window.location.hash = '#coverage'; }}
+          onOpenBrain={() => { focusViewHeading.current = true; window.location.hash = '#brain-notes'; }} onOpenCoverage={() => { focusViewHeading.current = true; window.location.hash = '#coverage'; }}
           onReset={() => void resetDemo()} canReset={demoRolloutAvailable && !resetBusy && !loading && !simulating && !proposalBusy && !workspaceBusy}
           resetBusy={resetBusy}
         /> : <>
         <section className="page-heading review-page-heading" id="campaign">
           <div><div className="eyebrow">{workspace?.project.name ?? company.shortName} <span className="eyebrow-divider" aria-hidden="true">/</span> LAUNCH REVIEW</div><h1 tabIndex={-1}>{pageTitleFor(activeSection, launchTab, brainTab)}</h1><p className="subheading">{launchTab === 'drafts'
-            ? review ? draftsNeedingDecision ? `${draftsNeedingDecision} ${draftsNeedingDecision === 1 ? 'draft needs' : 'drafts need'} a decision. Choose one to inspect its evidence.` : 'No drafts need a decision. You can inspect any draft and its evidence.' : 'Choose a draft to inspect its claim and current evidence.'
-            : launchTab === 'approvals' ? 'Review internal proposals before any change is applied.' : 'Review campaign checks and internal decisions recorded for this launch.'}</p></div>
+            ? review ? draftsNeedingDecision ? `${draftsNeedingDecision} ${draftsNeedingDecision === 1 ? 'claim needs' : 'claims need'} review. Choose a draft to see why.` : 'No claims need review. You can still inspect each draft and its evidence.' : 'Choose a draft to inspect its claim and current evidence.'
+            : launchTab === 'approvals' ? 'Flagged drafts need a proposed change before there is anything to approve.' : 'Review campaign checks and internal decisions recorded for this launch.'}</p></div>
           <div className="heading-actions"><details className="scenario-menu"><summary className="secondary-button scenario-button" title={demoRolloutAvailable ? 'Changes only the fictional graph fixture' : 'Demo writes are disabled on this deployment'}>Demo scenarios <span aria-hidden="true">⌄</span></summary><div className="scenario-menu-panel"><button type="button" aria-label={rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`} onClick={() => void runRolloutScenario(!rolloutExpanded)} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : rolloutExpanded ? `Restore ${audienceLabel(company.limitedAudienceId).toLowerCase()} rollout` : `Include ${audienceLabel(company.broadAudienceId).toLowerCase()}`}</button><button type="button" aria-label={testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'} onClick={() => void runTestScenario()} disabled={!demoRolloutAvailable || !review || loading || simulating || Boolean(proposalBusy)}>{simulating ? 'Updating scenario…' : testScenarioMissing ? 'Restore production test' : 'Simulate missing test result'}</button></div></details><button className="primary-button" title={demoRolloutAvailable ? 'Runs a check and records activity history' : 'Runs a read-only campaign check'} onClick={() => void refresh(demoRolloutAvailable)} disabled={loading || simulating || Boolean(proposalBusy)}><Check size={16} aria-hidden="true" />{loading ? 'Checking…' : 'Check campaign'}</button></div>
         </section>
 
@@ -948,10 +961,10 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         {proposalMessage && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert" role="status"><span className="scenario-check" aria-hidden="true">✓</span>{proposalMessage}</section>}
         {proposalError && <section ref={proposalFeedbackRef} tabIndex={-1} className="scenario-alert scenario-alert-error" role="alert"><strong>Review action needs a retry.</strong> {proposalError}</section>}
 
-        <div className="review-context" data-tour="launch-review"><strong>{review?.campaign.name ?? workspace?.project.name ?? company.shortName}</strong><span>{review ? `${counts.contradicted} contradicted · ${counts.unknown} unknown · ${counts.supported} supported · ${counts.notChecked} not checked` : loading ? 'Waiting for the first successful graph check' : 'No successful graph check yet'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : loading ? 'Checking now' : 'Not recorded'}</small></div>
+        <div className="review-context" data-tour="launch-review"><strong>{review?.campaign.name ?? workspace?.project.name ?? company.shortName}</strong><span>{review ? `${counts.contradicted} ${counts.contradicted === 1 ? 'conflicting claim' : 'conflicting claims'} · ${counts.unknown} need evidence · ${counts.supported} supported · ${counts.notChecked} not checked` : loading ? 'Waiting for the first successful check' : 'No successful check yet'}</span><small>Last checked: {review ? formatCheckedAt(review.checkedAt) : loading ? 'Checking now' : 'Not recorded'}</small></div>
         {launchTab === 'drafts' && <div className="content-grid" id="launch-panel-drafts">
           <section className="drafts-panel" id="drafts">
-            <div className="section-heading drafts-heading"><div><div className="eyebrow">CAMPAIGN REVIEW</div><h2>Drafts and promises</h2></div><AppleMailTabs tabs={reviewTabs} value={draftFilter} onValueChange={changeDraftFilter} /></div>
+            <div className="section-heading drafts-heading"><div><div className="eyebrow">LAUNCH REVIEW</div><h2>Drafts and claims</h2></div><AppleMailTabs tabs={reviewTabs} value={draftFilter} onValueChange={changeDraftFilter} /></div>
             <div className="draft-list" id="draft-list" role="tabpanel" aria-labelledby={`draft-filter-${draftFilter}`}>
               {visibleFindings.map((finding, index) => (
                 <motion.button initial={reduceMotion ? false : { opacity: 0 }} animate={reduceMotion ? undefined : { opacity: 1 }} transition={reduceMotion ? { duration: 0 } : { duration: 0.2, delay: index * 0.025 }} className={`draft-row ${finding.draftId === selectedId ? 'selected' : ''}`} key={finding.draftId} aria-pressed={finding.draftId === selectedId} aria-controls="draft-details" onClick={() => setSelectedId(finding.draftId)}>
@@ -973,7 +986,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
               <div className="detail-card-heading"><div><div className="eyebrow">{selected?.status === 'Supported' ? 'WHY THIS IS SUPPORTED' : selected?.status === 'Contradicted' ? 'WHY IT NEEDS ATTENTION' : selected?.status === 'Unknown' ? 'WHY IT NEEDS REVIEW' : 'DRAFT CHECK'}</div><h2>{selected?.title ?? (review?.findings.length === 0 ? 'No drafts yet' : 'Select a draft')}</h2></div>{selected && <StatusPill status={selected.status} />}</div>
               {selected ? <>
                 <div className="detail-claim"><span className="micro-label">DRAFT COPY</span><p className="claim-text">{selected.text || 'No draft copy was recorded.'}</p>{selected.wordingSourceTitle && <p className="wording-source">Reuses wording from {selected.wordingSourceTitle}</p>}</div>
-                <div className="detail-claim linked-promise"><span className="micro-label">LINKED PROMISE BEING CHECKED</span><p className="claim-text">{selected.promiseText ?? (selected.status === 'Not checked' ? 'No promise is linked to this draft.' : 'No readable promise text is available for this linked path.')}</p>{selected.promiseText && <p className="claim-context">Checked for {selected.audienceName || 'an unspecified audience'}{selected.featureName ? ' · ' + selected.featureName : ''}</p>}</div>
+                <div className="detail-claim linked-promise"><span className="micro-label">CLAIM BEING CHECKED</span><p className="claim-text">{selected.promiseText ?? (selected.status === 'Not checked' ? 'No claim is linked to this draft.' : 'No readable claim text is available for this linked record.')}</p>{selected.promiseText && <p className="claim-context">Checked for {selected.audienceName || 'an unspecified audience'}{selected.featureName ? ' · ' + selected.featureName : ''}</p>}</div>
                 <p className="detail-reason">{selected.reason}</p>
                 {selected.status === 'Unknown' && <div className="unknown-next-step"><strong>Review next</strong><p>{unknownReviewStep(selected.reason)}</p></div>}
                 {selected.draftState === 'paused' && <p className="proposal-help">Paused inside official. A reviewer can resume this draft after a fresh check supports its promise.</p>}
@@ -1008,12 +1021,12 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
         </div>}
         {launchTab === 'approvals' && <div className="approval-layout" id="launch-panel-approvals">
             <section className="proactive-card">
-              <div className="proactive-head"><div className="proactive-icon" aria-hidden="true"><FileWarning size={16} /></div><div><div className="eyebrow">NEEDS ATTENTION</div><h2>Drafts to review</h2></div></div>
-              {review?.proactiveItems.length ? <div className="proactive-list">{review.proactiveItems.map((item) => <button className="proactive-item" key={item.id} onClick={() => { showLaunchTab('drafts'); setSelectedId(item.id); scrollTo('draft-details'); }}><span className={`proactive-status ${item.status.toLowerCase()}`} aria-hidden="true" /><span><strong>{item.title}</strong><small><span className="status-label">{item.status}</span> · {item.detail}</small></span><span className="row-chevron" aria-hidden="true">›</span></button>)}</div> : <p className="proactive-empty" role="status" aria-live="polite" aria-atomic="true">{review ? 'No promises currently need a review.' : 'Review suggestions will appear when campaign evidence is available.'}</p>}
+              <div className="proactive-head"><div className="proactive-icon" aria-hidden="true"><FileWarning size={16} /></div><div><div className="eyebrow">NEEDS ATTENTION</div><h2>Flagged drafts</h2></div></div>
+              {review?.proactiveItems.length ? <div className="proactive-list">{review.proactiveItems.map((item) => <button className="proactive-item" key={item.id} onClick={() => { showLaunchTab('drafts'); setSelectedId(item.id); scrollTo('draft-details'); }}><span className={`proactive-status ${item.status.toLowerCase()}`} aria-hidden="true" /><span><strong>{item.title}</strong><small><span className="status-label">{item.status === 'Contradicted' ? 'Conflicts' : item.status === 'Unknown' ? 'Needs evidence' : item.status}</span> · {item.detail}</small></span><span className="row-chevron" aria-hidden="true">›</span></button>)}</div> : <p className="proactive-empty" role="status" aria-live="polite" aria-atomic="true">{review ? 'No claims currently need review.' : 'Review suggestions will appear when campaign evidence is available.'}</p>}
             </section>
 
             <section className="review-queue-card" id="review-queue" data-tour="approval-queue">
-              <div className="section-heading"><div><div className="eyebrow">HUMAN REVIEW</div><h2>Proposal queue</h2></div><span className="filter-button">{proposalState === 'ready' ? `${proposals.filter((item) => item.status === 'pending').length} pending` : proposalState === 'loading' ? 'Updating…' : proposals.length ? 'Last loaded' : 'Retry needed'}</span></div>
+              <div className="section-heading"><div><div className="eyebrow">HUMAN REVIEW</div><h2>Changes awaiting approval</h2></div><span className="filter-button">{proposalState === 'ready' ? `${proposals.filter((item) => item.status === 'pending').length} pending` : proposalState === 'loading' ? 'Updating…' : proposals.length ? 'Last loaded' : 'Retry needed'}</span></div>
               {proposalState === 'error' && <ErrorNotice className="panel-load-error" title={proposals.length ? 'Showing saved proposals' : 'Proposals need another try'} message={proposalLoadError ?? 'The proposal queue could not be refreshed.'} onRetry={() => void refreshSupportingData()} />}
               {proposalState === 'loading' && proposals.length > 0 && <LoadingStatus className="panel-refresh-status">Updating proposals · saved results remain visible</LoadingStatus>}
               {proposalState === 'loading' && proposals.length === 0 ? <div className="proposal-empty"><LoadingStatus>Loading proposals…</LoadingStatus><SkeletonLines count={3} /></div> : proposals.length ? <div className="proposal-list">{proposals.map((proposal) => {
@@ -1026,7 +1039,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
                   {proposal.status === 'pending' && demoRolloutAvailable && <div className="proposal-compose-actions"><button className="primary-button" aria-label={`Approve proposal for ${draft?.title ?? proposal.draftId}`} onClick={() => void decideProposal(proposal, 'approve')} disabled={proposalState !== 'ready' || Boolean(proposalBusy) || loading || simulating}>{proposalBusy === proposal.id ? 'Saving…' : 'Approve'}</button><button className="text-button" aria-label={`Reject proposal for ${draft?.title ?? proposal.draftId}`} onClick={() => void decideProposal(proposal, 'reject')} disabled={proposalState !== 'ready' || Boolean(proposalBusy) || loading || simulating}>Reject</button></div>}
                   {proposal.status === 'pending' && !demoRolloutAvailable && <p className="proposal-help">This deployment is read-only. Review controls are enabled in the local demo.</p>}
                 </article>;
-              })}</div> : proposalState === 'error' ? null : <div className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">No proposals are waiting. Review the drafts to prepare an internal change.<button className="text-button" type="button" onClick={() => showLaunchTab('drafts')}>Open drafts</button></div>}
+              })}</div> : proposalState === 'error' ? null : <div className="proposal-empty" role="status" aria-live="polite" aria-atomic="true">No changes have been proposed yet. Open a flagged draft to propose a pause or rewrite; it will appear here for approval.<button className="text-button" type="button" onClick={() => showLaunchTab('drafts')}>Open flagged drafts</button></div>}
               <p className="proposal-help">Approval is limited to internal drafts. The local demo does not verify reviewer identity or publish content.</p>
             </section>
 
@@ -1038,7 +1051,7 @@ function CompanyApp({ company, onSelectCompany }: { company: DemoCompany; onSele
       <WorkspaceChat key={`${company.key}-${chatEpoch}`} open={chatOpen} onClose={() => setChatOpen(false)} workspace={workspace} workspaceLoading={workspaceLoading} workspaceError={workspaceError} onRetryWorkspace={() => void refreshWorkspace(ownerUnavailable)} ownerUnavailable={ownerUnavailable}
         advancedAssistant={company.key === 'alder-finch' ? advancedAssistant : null}
         campaignId={campaignId} onOpenNote={(id) => { setSelectedNoteId(id); setBrainEpoch((epoch) => epoch + 1); window.location.hash = '#brain-notes'; }} />
-      <GuidedDemoTour requestId={tourRequest} onStart={beginGuidedTour} onPrepareStep={prepareGuidedTourStep} onFinish={finishGuidedTour} />
+      <GuidedDemoTour requestId={tourRequest} suppressWelcome={window.location.hash === '#campaign' && new URLSearchParams(window.location.search).has('draft')} onStart={beginGuidedTour} onPrepareStep={prepareGuidedTourStep} onFinish={finishGuidedTour} />
     </div>
   );
 }

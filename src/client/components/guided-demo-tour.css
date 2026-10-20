@@ -2,8 +2,10 @@
   position: fixed;
   width: min(470px, calc(100vw - 32px));
   max-width: none;
+  max-height: calc(100dvh - 32px);
   padding: 32px;
-  overflow: visible;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   color: #20342e;
   background: radial-gradient(circle at 88% 10%, rgba(231, 239, 224, 0.9), transparent 34%), #fffefa;
   border: 1px solid #e2e7de;
@@ -27,8 +29,11 @@
 .guided-tour-welcome :is(button):focus-visible, .guided-tour-card :is(button):focus-visible { outline: 3px solid #a88c51; outline-offset: 3px; }
 
 .guided-tour-card {
-  width: min(390px, calc(100vw - 28px));
+  width: min(390px, calc(100vw - 40px));
+  max-height: calc(100dvh - 24px);
   padding: 17px 18px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   color: #20342e;
   background: #fffefa;
   border: 1px solid rgba(221, 228, 218, 0.96);
@@ -47,7 +52,7 @@
 .guided-tour-body { color: #5f6d64; font-size: 13px; line-height: 1.58; }
 .guided-tour-progress { height: 3px; overflow: hidden; border-radius: 99px; background: #edf0e9; }
 .guided-tour-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #557a5c, #b49c67); transition: width 180ms ease-out; }
-.guided-tour-actions { display: flex; min-height: 43px; align-items: end; justify-content: space-between; gap: 9px; padding-top: 12px; }
+.guided-tour-actions { position: sticky; bottom: 0; display: flex; min-height: 43px; align-items: end; justify-content: space-between; gap: 9px; padding-top: 12px; background: #fffefa; }
 .guided-tour-back, .guided-tour-skip, .guided-tour-next { border: 0; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .guided-tour-back { padding: 8px 5px; color: #52625a; background: transparent; }
 .guided-tour-skip { margin-left: auto; padding: 8px 5px; color: #778279; background: transparent; }
@@ -64,7 +69,7 @@
 
 @media (max-width: 520px) {
   .guided-tour-welcome { padding: 28px 23px 23px; border-radius: 20px; }
-  .guided-tour-card { padding: 14px 14px 12px; }
+  .guided-tour-card { width: min(390px, calc(100vw - 40px)); padding: 14px 14px 12px; }
   .guided-tour-message { grid-template-columns: 42px 1fr; gap: 9px; }
   .guided-tour-mascot { width: 42px; height: 42px; }
   .guided-tour-copy h2 { font-size: 19px; }

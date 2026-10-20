@@ -104,9 +104,9 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
   const guide = noteById.get(brain.guideNoteId);
   const readiness = [
     { label: 'Confirmed backup', ready: brain.rosterReviewed && Boolean(brain.backupName) },
-    { label: 'Guide current with rollout', ready: brain.guideCurrent && Boolean(guide) },
-    { label: 'Current linked decision', ready: brain.decisionCurrent },
-    { label: 'Direct source on guide', ready: brain.linkedSourceCount > 0 },
+    { label: 'Guide matches current rollout', ready: brain.guideCurrent && Boolean(guide) },
+    { label: 'Guide links to current decision', ready: brain.decisionCurrent },
+    { label: 'Guide links to an original record', ready: brain.linkedSourceCount > 0 },
   ];
   const handoverReady = readiness.every((item) => item.ready);
   const recordsPageTitle = brainTab === 'graph' ? 'Graph' : brainTab === 'notes' ? 'Notes' : brainTab === 'coverage' ? 'Coverage' : 'History';
@@ -117,18 +117,18 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
           <span className="connected-label">REVIEWED COMPANY NOTE</span><h2 ref={noteHeadingRef} tabIndex={-1}>{selectedNote.title}</h2><p className="note-summary">{selectedNote.summary}</p>
           <div className="note-meta"><span>Reviewed by {selectedNote.reviewedBy}</span><span>{dateLabel(selectedNote.reviewedAt)}</span></div>
           <div className="note-body">{selectedNote.body.split('\n').map((line, index) => <p key={`${selectedNote.id}-${index}`}>{line}</p>)}</div>
-          <div className="note-relations"><section><h3><GitBranch size={16} /> Linked notes</h3>{selectedNote.links.length ? selectedNote.links.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No outgoing note links.</p>}</section><section><h3><ArrowRight size={16} /> Backlinks</h3>{selectedNote.backlinks.length ? selectedNote.backlinks.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No incoming note links.</p>}</section></div>
-          <section className="note-sources"><h3><CircleHelp size={16} /> Sources and decisions</h3>{selectedNote.sources.length ? selectedNote.sources.map((source) => <div className="note-source" key={source.id}><strong>{source.label}</strong><p>{source.detail}</p><small>{source.id}</small></div>) : <p>This reviewed note has no linked source record. Read it as a workspace note, not independent product proof.</p>}</section>
+          <div className="note-relations"><section><h3><GitBranch size={16} /> Related notes</h3>{selectedNote.links.length ? selectedNote.links.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No related notes linked from this note.</p>}</section><section><h3><ArrowRight size={16} /> Notes that refer to this</h3>{selectedNote.backlinks.length ? selectedNote.backlinks.map((id) => noteById.get(id)).filter((note): note is KnowledgeNote => Boolean(note)).map((note) => <NoteLink key={note.id} note={note} onSelect={selectNote} />) : <p>No other notes refer to this one.</p>}</section></div>
+          <section className="note-sources"><h3><CircleHelp size={16} /> Supporting records and decisions</h3>{selectedNote.sources.length ? selectedNote.sources.map((source) => <div className="note-source" key={source.id}><strong>{source.label}</strong><p>{source.detail}</p><details><summary>Show record ID</summary><small>{source.id}</small></details></div>) : <p>This note has no linked source record. Read it as company context, not independent proof of a product claim.</p>}</section>
         </> : <p className="connected-empty">{notes.length ? 'Clear the filters to choose a note.' : 'No company notes are available yet.'}</p>}</article>;
 
   return <div className="connected-page" id={view}>
     <div className="connected-masthead" data-tour={view === 'memory' ? 'writing-handoff' : view === 'brain' ? 'company-records' : undefined}>
       <div className="connected-mark" aria-hidden="true"><CompanyLogo company={company} /></div>
       <div><span className="connected-overline">{workspace.company.name} <span aria-hidden="true">/</span> {workspace.project.name}{view === 'brain' && <> <span aria-hidden="true">/</span> Company records <span aria-hidden="true">/</span> {recordsPageTitle}</>}</span>
-        <h1 tabIndex={-1}>{view === 'memory' ? 'Writing handoff' : recordsPageTitle}</h1>
+        <h1 tabIndex={-1}>{view === 'memory' ? 'Writing brief' : recordsPageTitle}</h1>
         <p>{view === 'memory'
-          ? 'Keep the next writer on the current approved brief, even when the original handoff is old.'
-          : 'Browse the notes, decisions, people, and source paths behind this launch.'}</p></div>
+          ? 'See the current approved guidance before creating or reviewing an internal draft.'
+          : brainTab === 'graph' ? 'Explore how the company notes and decisions connect.' : brainTab === 'coverage' ? 'See who owns the launch review and whether a backup is confirmed.' : 'Browse the reviewed notes, decisions, guides, and people behind this launch.'}</p></div>
     </div>
     {message && <div className="connected-message" role="status"><Check size={16} aria-hidden="true" />{message}</div>}
     {loading && <div className="connected-refreshing"><LoadingStatus>Refreshing company records…</LoadingStatus><span>Showing the last loaded records while the new copy arrives.</span></div>}
@@ -136,40 +136,40 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
     {proof && ((view === 'memory' && proof.title.startsWith('Approved brief')) || (view === 'brain' && proof.title.startsWith('Coverage'))) && <ProofStrip proof={proof} />}
 
     {view === 'memory' ? <>
-      <div className="connected-quick-status"><strong>{handoffStale ? 'Handoff needs a refresh' : 'Handoff current'}</strong><span>Saved brief revision {workspace.memory.handoff.revision} · Current revision {workspace.memory.briefRevision}</span><span>{workspace.memory.drafts.filter((draft) => draft.status === 'pending_approval').length} internal drafts awaiting review</span></div>
-      {proposedTone && <div className="memory-next-action"><div><span className="connected-label">NEXT REVIEW</span><strong>Proposed tone needs approval</strong><p>{proposedTone.text} The next writer will use the current approved tone until this change is reviewed.</p></div><button className="primary-button" type="button" onClick={() => onAction('approve-tone')} disabled={!canWrite || Boolean(busy)}>{busy === 'approve-tone' ? 'Approving…' : 'Approve tone'}</button></div>}
+      <div className="connected-quick-status"><strong>{handoffStale ? 'Saved brief needs review' : 'Writing brief is current'}</strong><span>Saved version {workspace.memory.handoff.revision} · Current version {workspace.memory.briefRevision}</span><span>{workspace.memory.drafts.filter((draft) => draft.status === 'pending_approval').length} internal drafts awaiting review</span></div>
+      {proposedTone && <div className="memory-next-action"><div><span className="connected-label">NEXT REVIEW</span><strong>A tone change needs approval</strong><p>{proposedTone.text} The next writer will use the current approved tone until this change is reviewed.</p></div><button className="primary-button" type="button" onClick={() => onAction('approve-tone')} disabled={!canWrite || Boolean(busy)}>{busy === 'approve-tone' ? 'Approving…' : 'Approve tone change'}</button></div>}
       <div className="connected-two-column">
         <section className="connected-card memory-card">
-          <div className="connected-card-heading"><span className="connected-icon"><GitBranch size={19} /></span><div><span className="connected-label">PLANNER → WRITER</span><h2>Handoff and current memory</h2></div></div>
+          <div className="connected-card-heading"><span className="connected-icon"><GitBranch size={19} /></span><div><span className="connected-label">PLANNER → WRITER</span><h2>What the next writer receives</h2></div></div>
           <p className="connected-lede">{workspace.memory.handoff.summary}</p>
-          <div className={`memory-revision ${handoffStale ? 'needs-refresh' : ''}`}><strong>{handoffStale ? 'Handoff out of date' : 'Handoff current'}</strong><span>{handoffStale ? `Saved at revision ${workspace.memory.handoff.revision}; the live graph is at revision ${workspace.memory.briefRevision}.` : 'The saved and current brief revisions match.'}</span></div>
-          <div className="handoff-diff" aria-label="Saved handoff compared with current approved brief">
-            <h3>Saved handoff → current approved brief</h3>
+          <div className={`memory-revision ${handoffStale ? 'needs-refresh' : ''}`}><strong>{handoffStale ? 'Saved guidance is out of date' : 'Saved guidance matches the current brief'}</strong><span>{handoffStale ? `Saved version ${workspace.memory.handoff.revision}; current approved version ${workspace.memory.briefRevision}.` : 'The saved and current approved versions match.'}</span></div>
+          <div className="handoff-diff" aria-label="Saved guidance compared with current approved brief">
+            <h3>Saved guidance → current approved brief</h3>
             <div><span>Saved tone</span><p>{oldTone?.text ?? 'No tone instruction in the saved handoff.'}</p></div>
             <div><span>Current tone</span><p>{currentTone?.text ?? 'No approved tone instruction.'}{currentTone && oldTone && currentTone.id !== oldTone.id ? ' Replaced after the handoff.' : ''}</p></div>
             <div><span>Opening rule</span><p>{currentOpening?.text ?? 'No approved opening rule.'} {oldOpening?.id === currentOpening?.id && currentOpening ? '(unchanged)' : '(review needed)'}</p></div>
-            {proposedTone && <small>Pending tone stays outside the current brief until approval.</small>}
+            {proposedTone && <small>The proposed tone is not in the current brief until someone approves it.</small>}
           </div>
           <h3 className="connected-subtitle">Instruction versions</h3>
           <div className="instruction-list">{workspace.memory.instructions.map((instruction) => <article key={instruction.id} className="instruction-item"><span className={`instruction-state ${instruction.status}`}>{instruction.status.replace('_', ' ')}</span><div><strong>{instruction.topic}</strong><p>{instruction.text}</p><small>Revision {instruction.revision}{instruction.approvedBy ? ` · Approved by ${instruction.approvedBy}` : ' · Waiting for review'}</small></div></article>)}</div>
-          {!canWrite && <p className="connected-help">This deployment is read-only. You can still inspect the current company memory.</p>}
+          {!canWrite && <p className="connected-help">This deployment is read-only. You can still inspect the current approved guidance.</p>}
         </section>
         <section className="connected-card memory-card">
-          <div className="connected-card-heading"><span className="connected-icon"><BookOpenText size={19} /></span><div><span className="connected-label">REVIEWED EPISODE</span><h2>Notes for the next writer</h2></div></div>
+          <div className="connected-card-heading"><span className="connected-icon"><BookOpenText size={19} /></span><div><span className="connected-label">EARLIER REVIEW FEEDBACK</span><h2>Notes for the next writer</h2></div></div>
           <p className="connected-lede">{workspace.memory.episode.summary}</p>
-          <p className="connected-help">Reviewed by {workspace.memory.episode.reviewedBy}. This is an episode for this campaign; it does not become a global rule.</p>
-          <div className="writer-flow"><span>Task received</span><ArrowRight size={15} /><span>Memory refreshed</span><ArrowRight size={15} /><span>Draft prepared</span><ArrowRight size={15} /><span>Human review</span></div>
-          <p className="connected-help">The fresh writing session reads current approved instructions, the old handoff, and this review event from FalkorDB. The draft records the memory IDs it used.</p>
-          <button className="primary-button connected-action" type="button" onClick={() => onAction('run-writer')} disabled={!canWrite || Boolean(busy) || !currentTone}>{busy === 'run-writer' ? 'Preparing…' : 'Start fresh writer session'}</button>
-          <h3 className="connected-subtitle">Recent writer sessions</h3>
+          <p className="connected-help">Reviewed by {workspace.memory.episode.reviewedBy}. This feedback applies to this campaign; it is not a company-wide rule.</p>
+          <div className="writer-flow"><span>Task received</span><ArrowRight size={15} /><span>Guidance loaded</span><ArrowRight size={15} /><span>Draft prepared</span><ArrowRight size={15} /><span>Human review</span></div>
+          <p className="connected-help">A new internal draft uses current approved instructions, the earlier handoff, and this review feedback. The draft keeps references to the records it used.</p>
+          <button className="primary-button connected-action" type="button" onClick={() => onAction('run-writer')} disabled={!canWrite || Boolean(busy) || !currentTone}>{busy === 'run-writer' ? 'Preparing…' : 'Create draft with current guidance'}</button>
+          <h3 className="connected-subtitle">Internal drafts</h3>
           {workspace.memory.drafts.length ? <div className="writer-drafts">{workspace.memory.drafts.map((draft) => <article className="writer-draft" key={draft.id}>
             <div><strong>{draft.title}</strong><span className={`instruction-state ${draft.status}`}>{draft.status.replace('_', ' ')}</span></div>
             <small>{dateLabel(draft.createdAt)} · Brief revision {draft.briefRevision} · Evidence revision {draft.factRevision || 'earlier'} · {draft.tone}</small>
-            <p>{draft.text}</p><small>Memory used: {draft.memoryIds.join(', ')}</small>
+            <p>{draft.text}</p><small>Guidance record IDs: {draft.memoryIds.join(', ')}</small>
             {draft.availabilityBasis && <small>{draft.availabilityBasis}</small>}
-            {(draft.briefRevision !== workspace.memory.briefRevision || draft.factRevision !== workspace.memory.currentFactRevision) && <small className="connected-help">Historical draft: the brief or rollout evidence changed after it was prepared. Start a fresh session before relying on its wording.</small>}
+            {(draft.briefRevision !== workspace.memory.briefRevision || draft.factRevision !== workspace.memory.currentFactRevision) && <small className="connected-help">This draft is out of date: the brief or rollout changed after it was prepared. Create a new draft before relying on its wording.</small>}
             {draft.status === 'pending_approval' && <div className="writer-review-actions"><button type="button" className="secondary-button" disabled={!canWrite || Boolean(busy) || draft.briefRevision !== workspace.memory.briefRevision || draft.factRevision !== workspace.memory.currentFactRevision} onClick={() => onReviewDraft(draft, 'approve')}>Approve internally</button><button type="button" className="secondary-button" disabled={!canWrite || Boolean(busy)} onClick={() => onReviewDraft(draft, 'reject')}>Reject</button></div>}
-          </article>)}</div> : <p className="connected-empty">No fresh writer session has run yet. Start one to compare the saved handoff with the live brief.</p>}
+          </article>)}</div> : <p className="connected-empty">No internal draft has been prepared yet. Create one using current guidance.</p>}
         </section>
       </div>
     </> : <>
@@ -181,7 +181,7 @@ export function ConnectedWorkspace({ company, view, brainTab, onBrainTabChange, 
         <div className="coverage-actions"><label className="scenario-switch"><input type="checkbox" checked={ownerUnavailable} onChange={(event) => onOwnerUnavailable(event.target.checked)} /> Simulate {brain.primaryName} unavailable</label>{!brain.backupName && !brain.backupProposalStatus && <button className="secondary-button" type="button" disabled={!canWrite || Boolean(busy)} onClick={() => onAction('propose-backup')}>{busy === 'propose-backup' ? 'Preparing…' : `Propose ${company.backupName} as backup`}</button>}{brain.backupProposalStatus && <button className="primary-button" type="button" disabled={!canWrite || Boolean(busy)} onClick={() => onAction('approve-backup')}>{busy === 'approve-backup' ? 'Approving…' : 'Approve backup assignment'}</button>}</div>
         <div className={`handover-brief ${handoverReady ? 'ready' : 'incomplete'}`}>
           <div><span className="connected-label">INTERNAL HANDOVER</span><strong>{handoverReady ? 'Ready for an approved backup' : 'Handover needs review'}</strong><p>{handoverReady ? `${brain.backupName} can use the reviewed guide and linked sources for ${brain.affectedProject}.` : 'Resolve each missing check before treating this handover as ready.'}</p><ul className="readiness-list">{readiness.map((item) => <li key={item.label}><span aria-hidden="true">{item.ready ? '✓' : '○'}</span>{item.label}: <strong>{item.ready ? 'Confirmed' : 'Needs review'}</strong></li>)}</ul></div>
-          <div><small>Guide: {guide?.title ?? 'Missing from the company graph'}</small><small>Decision: {brain.decisionTitle}</small><small>Direct source links: {brain.linkedSourceCount}</small>{guide && <button className="knowledge-link" type="button" onClick={() => { focusOpenedGuide.current = true; selectNote(guide.id); onBrainTabChange('notes'); }}>Open guide and sources <ChevronRight size={15} /></button>}</div>
+          <div><small>Guide: {guide?.title ?? 'Missing from company records'}</small><small>Decision: {brain.decisionTitle}</small><small>Original records linked to guide: {brain.linkedSourceCount}</small>{guide && <button className="knowledge-link" type="button" onClick={() => { focusOpenedGuide.current = true; selectNote(guide.id); onBrainTabChange('notes'); }}>Open guide and sources <ChevronRight size={15} /></button>}</div>
         </div>
         <p className="connected-help">Unaffected control: {brain.controlProcess.name} — {brain.controlProcess.coverage}. No person is assigned from a job title or model guess.</p>
       </section>

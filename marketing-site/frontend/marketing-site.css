@@ -288,7 +288,7 @@ html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100p
 .faq-list details p { max-width: 610px; margin: -1px 35px 20px 0; color: var(--site-muted); font-size: 11px; line-height: 1.65; }
 
 .marketing-footer { overflow: hidden; border-top: 1px solid var(--site-line); background: var(--site-paper); }
-.footer-inner { display: grid; gap: 27px; padding-block: 25px 17px; }
+.footer-inner { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 27px; padding-block: 25px 17px; }
 .footer-topline { display: flex; min-height: 38px; align-items: center; gap: 22px; }
 .footer-inner .marketing-brand { font-size: 22px; }
 .footer-inner .marketing-brand > span { width: 10px; height: 10px; }
@@ -413,6 +413,50 @@ html.marketing-scroll-smooth { scroll-behavior: smooth; scroll-padding-top: 100p
   .footer-topline > a { width: 100%; margin-left: 0; }
   .footer-display-wordmark { font-size: 31vw; }
   .footer-caption { flex-wrap: wrap; gap: 6px 15px; font-size: 8px; }
+}
+
+@media (max-width: 760px) {
+  .marketing-site .eyebrow { font-size: 10px; }
+  .hero-intro { font-size: 15px; }
+  .hero-actions { flex-wrap: wrap; gap: 16px 22px; }
+  .button { min-height: 48px; font-size: 13px; }
+  .text-link { min-height: 44px; align-items: center; font-size: 12px; }
+  .hero-note { max-width: 440px; align-items: flex-start; font-size: 10px; line-height: 1.5; }
+  .mascot-display { margin-inline: 0; }
+  .evidence-mascot { width: min(100%, 420px); }
+  .scroll-reveal-hint > span { font-size: 9px; }
+  .workflow-card p,
+  .workspace-card p,
+  .example-copy > p:not(.eyebrow) { font-size: 13px; line-height: 1.55; }
+  .chain-heading { font-size: 9px; }
+  .chain-node small,
+  .chain-result small { font-size: 10px; }
+  .status-row { grid-template-columns: 13px minmax(90px, max-content) minmax(0, 1fr); align-items: start; gap: 8px; }
+  .status-row strong { font-size: 12px; }
+  .status-row p,
+  .control-points > p:not(.control-boundary),
+  .action-strip p,
+  .closing-cta p:last-child { font-size: 12px; line-height: 1.55; }
+  .sheet-top,
+  .method-board-head { font-size: 9px; }
+  .page-footnote { font-size: 11px; line-height: 1.5; }
+  .footer-inner { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+  .footer-topline,
+  .footer-caption { min-width: 0; width: 100%; }
+  .footer-topline > a { width: auto; max-width: 100%; margin-left: auto; font-size: 12px; overflow-wrap: anywhere; }
+  .footer-display-wordmark { left: auto; width: 100%; max-width: 100%; transform: none; font-size: clamp(58px, 25vw, 96px); white-space: normal; overflow-wrap: anywhere; }
+  .footer-caption { justify-content: flex-start; font-size: 10px; line-height: 1.45; }
+  .footer-caption > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+}
+
+@media (min-width: 761px) and (max-width: 1080px) {
+  .footer-inner { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+  .footer-topline,
+  .footer-caption { min-width: 0; width: 100%; }
+  .footer-topline > a { max-width: 100%; overflow-wrap: anywhere; }
+  .footer-display-wordmark { left: auto; width: 100%; max-width: 100%; transform: none; font-size: clamp(100px, 17vw, 180px); white-space: normal; overflow-wrap: anywhere; }
+  .footer-caption { flex-wrap: wrap; gap: 8px 18px; font-size: 10px; line-height: 1.45; }
+  .footer-caption > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 }
 
 @media (prefers-reduced-motion: reduce) {

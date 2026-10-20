@@ -51,7 +51,7 @@ export function WorkspaceOverview({ review, workspace, reviewLoading, workspaceL
     <header className="overview-intro">
       <span className="eyebrow">{workspace?.company.name ?? 'COMPANY WORKSPACE'} <span aria-hidden="true">/</span> {workspace?.project.name ?? 'CONNECTED LAUNCH'}</span>
       <h1 id="overview-title" tabIndex={-1}>What needs your attention</h1>
-      <p>One launch across claims, writer memory, and company knowledge. Choose a task to see its evidence and next step.</p>
+      <p>Review launch claims, use the current writing brief, and find the company records behind the work. Choose a task to see what needs to happen next.</p>
       <div className={`overview-status ${errors.length ? 'has-error' : loading ? 'is-loading' : ''}`} role="status" aria-live="polite" aria-atomic="true">
         {errors.length
           ? 'Some records could not be refreshed. Saved records remain visible where possible.'
@@ -73,7 +73,7 @@ export function WorkspaceOverview({ review, workspace, reviewLoading, workspaceL
         <span className="overview-card-kicker">01 / LAUNCH CLAIMS</span>
         {review ? <>
           <CardFreshness loading={reviewLoading} error={reviewError} />
-          <h2>{claimsToReview > 0 ? `${claimsToReview} ${claimsToReview === 1 ? 'draft needs' : 'drafts need'} review` : 'No drafts need review'}</h2>
+          <h2>{claimsToReview > 0 ? `${claimsToReview} ${claimsToReview === 1 ? 'claim needs' : 'claims need'} review` : 'No claims need review'}</h2>
           <p>{claimsToReview > 0 ? 'Compare the draft promise with the current rollout and test evidence.' : 'All linked claims have a current result. You can inspect every draft.'}</p>
         </> : reviewLoading ? <CardSkeleton /> : <div className="overview-card-failed"><h2>Campaign check needs a retry</h2><p>Campaign evidence will appear after the next successful check.</p></div>}
         <button className="overview-card-link" type="button" onClick={onOpenLaunch}>Open Launch review <ArrowRight size={17} aria-hidden="true" /></button>
@@ -81,13 +81,13 @@ export function WorkspaceOverview({ review, workspace, reviewLoading, workspaceL
 
       <article className="overview-action-card" aria-busy={workspaceLoading}>
         <span className="overview-card-icon"><Workflow size={20} aria-hidden="true" /></span>
-        <span className="overview-card-kicker">02 / WRITING HANDOFF</span>
+        <span className="overview-card-kicker">02 / WRITING BRIEF</span>
         {workspace ? <>
           <CardFreshness loading={workspaceLoading} error={workspaceError} />
-          <h2>{pendingTone ? 'Tone approval is waiting' : pendingWriterDrafts > 0 ? `${pendingWriterDrafts} ${pendingWriterDrafts === 1 ? 'draft awaits' : 'drafts await'} review` : staleHandoff ? 'Handoff needs a refresh' : 'Writer handoff is current'}</h2>
-          <p>Check the approved brief before a fresh writing session or internal draft decision.</p>
-        </> : workspaceLoading ? <CardSkeleton /> : <div className="overview-card-failed"><h2>Writing handoff needs a retry</h2><p>Retry to load the latest approved brief and writer status.</p></div>}
-        <button className="overview-card-link" type="button" onClick={onOpenMemory}>Open writing handoff <ArrowRight size={17} aria-hidden="true" /></button>
+          <h2>{pendingTone ? 'A tone change needs approval' : pendingWriterDrafts > 0 ? `${pendingWriterDrafts} ${pendingWriterDrafts === 1 ? 'draft awaits' : 'drafts await'} review` : staleHandoff ? 'The saved brief is out of date' : 'Writing brief is current'}</h2>
+          <p>Review approved guidance before creating or approving an internal draft.</p>
+        </> : workspaceLoading ? <CardSkeleton /> : <div className="overview-card-failed"><h2>Writing brief needs a retry</h2><p>Retry to load the latest approved guidance and draft status.</p></div>}
+        <button className="overview-card-link" type="button" onClick={onOpenMemory}>Open writing brief <ArrowRight size={17} aria-hidden="true" /></button>
       </article>
 
       <article className="overview-action-card" aria-busy={workspaceLoading}>
@@ -98,16 +98,16 @@ export function WorkspaceOverview({ review, workspace, reviewLoading, workspaceL
           <h2>{backupNeeded ? 'Backup is not confirmed' : guideNeedsReview ? 'Handover guide needs review' : 'Launch review is covered'}</h2>
           <p>Find the guide and source records, then inspect ownership coverage.</p>
         </> : workspaceLoading ? <CardSkeleton /> : <div className="overview-card-failed"><h2>Company records need a retry</h2><p>Company notes and coverage will appear when records load.</p></div>}
-        <button className="overview-card-link" type="button" onClick={backupNeeded || guideNeedsReview ? onOpenCoverage : onOpenBrain}>Review company records <ArrowRight size={17} aria-hidden="true" /></button>
+        <button className="overview-card-link" type="button" onClick={backupNeeded || guideNeedsReview ? onOpenCoverage : onOpenBrain}>{backupNeeded || guideNeedsReview ? 'Review coverage' : 'Browse company records'} <ArrowRight size={17} aria-hidden="true" /></button>
       </article>
     </div>
 
     <details className="overview-walkthrough">
-      <summary><CircleCheck size={19} aria-hidden="true" /><span><strong>Walk through the three-track demo</strong><small>Optional guided path · about 3 minutes</small></span></summary>
+      <summary><CircleCheck size={19} aria-hidden="true" /><span><strong>Follow a sample launch</strong><small>Optional guided path · about 3 minutes</small></span></summary>
       <div className="overview-walkthrough-body">
         <ol>
           <li><strong>Check the claim.</strong> Compare the landing page draft with its reviewed rollout. <button type="button" onClick={onOpenFinding} disabled={!review}>Open claim</button> <button type="button" onClick={onOpenSources} disabled={!review}>See evidence</button></li>
-          <li><strong>Refresh the writer.</strong> Review the proposed tone, start a fresh session, then inspect the internal draft. <button type="button" onClick={onOpenMemory}>Open writing handoff</button></li>
+          <li><strong>Prepare a new draft.</strong> Review the proposed tone, use current guidance, then inspect the internal draft. <button type="button" onClick={onOpenMemory}>Open writing brief</button></li>
           <li><strong>Cover the owner.</strong> Follow the guide, propose a backup, and confirm the assignment. <button type="button" onClick={onOpenCoverage}>Review coverage</button></li>
         </ol>
         <div className="overview-reset"><p>{workspace?.company.name ?? 'This company'} and all records are fictional. Reset restores this launch scenario for another walkthrough; earlier graph history remains.</p><button type="button" className="text-button" onClick={onReset} disabled={!canReset}>{resetBusy ? 'Resetting…' : 'Reset fictional demo'}</button></div>
